@@ -41,8 +41,24 @@ No se modificó el PHP, no se arrancó su MariaDB y no se importaron registros r
 
 Al cerrar este incremento quedó ejecutándose el host de desarrollo en `http://localhost:5080`. La muestra está en `/preview`; el proceso puede detenerse al cerrar la sesión y se recupera con `Start-Development.ps1 -SkipBuild`.
 
+## Prototipo móvil Flutter (5 de noviembre de 2026)
+
+Prototipo navegable en `mobile/` con **datos ficticios en memoria**; no se conecta a la API ni a SQL. Ver `mobile/README.md` y ADR-004.
+
+- Perfiles: estudiante (inicio, cursos, agenda/tareas con entrega, notas, avisos), familia (dos hijos, notas con bloqueo por solvencia, estado de cuenta, comprobantes), docente (clases del día, asistencia, libreta por bimestre, revisión), administración (indicadores, directorio/expediente, matrícula con incidencias, anuncios, cuentas y códigos de un uso) y caja (resumen, cobro con vista previa e idempotencia, recibos, validación de comprobantes, movimientos).
+- Marca desde `config/institution.json` mediante `mobile/tool/sync_institution.dart`; tema claro/oscuro, navegación adaptable (barra inferior / riel lateral) y estados de carga, vacío y error con reintento.
+
+| Comprobación (Linux, Flutter 3.47.9) | Resultado |
+| --- | --- |
+| `flutter analyze` con reglas estrictas | Sin observaciones |
+| `flutter test` | 50 correctas: unitarias de configuración, formatos, solvencia, pagos idempotentes, entregas, libreta y códigos; navegación de los 5 perfiles en 390, 320 y 1024 px; flujos completos |
+| `flutter build web --release --no-web-resources-cdn` | Correcto |
+| Recorrido Playwright de la build web (390×844 y 1366×860), capturas revisadas | Sin errores de consola tras corregir un desbordamiento de `1 << 32` en web y etiquetas largas de navegación |
+
+No se probó en dispositivos/emuladores Android o iOS (no disponibles en el entorno). Las capturas de QA no se versionan.
+
 ## Próximo bloque
 
 Completar IAM: permisos por acción/recurso, auditoría durable, activación por invitación y recuperación asistida verificada sin depender exclusivamente del correo. Después implementar personas/encargados/ciclo/matrícula; luego finanzas/solvencia antes de abrir consulta de notas. Ver `ROADMAP.md` y `HANDOFF.md`.
 
-La fase 1 del plan maestro sigue **parcial**. No existen todavía directorio persistente, matrícula, cobros, tareas, notas publicadas, boletas/PDF, promoción, importador, Flutter ni Redis. La muestra del directorio no reemplaza su implementación real.
+La fase 1 del plan maestro sigue **parcial**. No existen todavía directorio persistente, matrícula, cobros, tareas, notas publicadas, boletas/PDF, promoción, importador ni Redis. Flutter existe solo como prototipo con datos ficticios (`mobile/`), sin integración con la API. La muestra del directorio no reemplaza su implementación real.

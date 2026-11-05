@@ -18,6 +18,7 @@ Los IDs conservan trazabilidad con §20 del plan maestro. La aclaración más re
 | ASM-001…005 | Libreta, publicación, recuperación, boletas y promoción | Solo núcleo de cálculo en memoria; resto pendiente |
 | ATT / COM | Asistencia, avisos y notificaciones durables | Pendiente según dependencias |
 | Piloto | Restauración, conciliación, capacitación y corte | Pendiente; entregar evidencias antes de activar operación real |
+| MOB-000 | Prototipo Flutter navegable con datos ficticios | Implementado en `mobile/` (ADR-004); no integra API ni cuenta como MOB |
 | MOB / EXT | Flutter y módulos adicionales | Posteriores a API/operación estables |
 
 La base de identidad ya tiene flujos persistentes; la fase operativa sigue parcial por CI, MFA, despliegue, backups/restauración y endurecimiento de producción. El siguiente bloque funcional es PEO-001/002: personas y facultades familiares, seguido de ciclos/matrícula. No sustituir esos módulos con el directorio de muestra. Cada incremento entrega un flujo con persistencia, autorización y pruebas reales.

@@ -1,11 +1,11 @@
 {
-    "name": "school_platform_app",
-    "short_name": "school_platform_app",
+    "name": "Plataforma escolar",
+    "short_name": "Escolar",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Prototipo de la plataforma escolar.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

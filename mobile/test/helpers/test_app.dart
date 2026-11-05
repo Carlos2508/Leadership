@@ -38,9 +38,7 @@ Future<void> initTestEnvironment() async {
 }
 
 /// Contenedor de Riverpod con dependencias de prueba.
-Future<ProviderContainer> createTestContainer({
-  Map<String, Object> prefs = const {},
-}) async {
+Future<ProviderContainer> createTestContainer({Map<String, Object> prefs = const {}}) async {
   SharedPreferences.setMockInitialValues(prefs);
   final preferences = await SharedPreferences.getInstance();
   return ProviderContainer(

@@ -822,16 +822,18 @@ class DemoDatabase {
         charges.add(charge);
         if (paid) paidCharges.add(charge);
       }
-      // Pagos agrupados de a dos cuotas para mostrar aplicaciones múltiples.
-      for (var i = 0; i < paidCharges.length; i += 2) {
-        final group = paidCharges.sublist(i, min(i + 2, paidCharges.length));
-        _recordSeedPayment(
-          s,
-          group,
-          group.first.dueDate
-              .subtract(Duration(days: 2 + _random.nextInt(6)))
-              .add(Duration(hours: 9 + _random.nextInt(8))),
-        );
+      // Un pago por cuota; las dos primeras se pagan juntas para mostrar un
+      // pago aplicado a varias obligaciones. Ningún pago queda en el futuro.
+      final latest = now.subtract(const Duration(hours: 2));
+      var i = 0;
+      while (i < paidCharges.length) {
+        final size = i == 0 && paidCharges.length > 1 ? 2 : 1;
+        final group = paidCharges.sublist(i, i + size);
+        final planned = group.first.dueDate
+            .subtract(Duration(days: 1 + _random.nextInt(6)))
+            .add(Duration(hours: 8 + _random.nextInt(9)));
+        _recordSeedPayment(s, group, planned.isAfter(latest) ? latest : planned);
+        i += size;
       }
     }
     payments.sort((a, b) => b.paidAt.compareTo(a.paidAt));
@@ -1139,7 +1141,10 @@ class DemoDatabase {
     final g1a = groups.first;
     final members = roster(g1a.gradeLabel, g1a.section);
     var i = 0;
-    for (final s in members.take(6)) {
+    for (final s in [
+      ...members.where((m) => m.id == studentId),
+      ...members.where((m) => m.id != studentId),
+    ].take(6)) {
       final isSofia = s.id == studentId;
       final id = 'rev-${(++i).toString().padLeft(2, '0')}';
       reviewQueue.add(

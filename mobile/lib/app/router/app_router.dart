@@ -301,7 +301,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             selectedIcon: Icons.assignment_ind_rounded,
           ),
           ShellDestination(
-            label: 'Comunicados',
+            label: 'Anuncios',
             icon: Icons.campaign_outlined,
             selectedIcon: Icons.campaign_rounded,
           ),
@@ -332,7 +332,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             selectedIcon: Icons.point_of_sale_rounded,
           ),
           ShellDestination(
-            label: 'Comprobantes',
+            label: 'Validar',
             icon: Icons.receipt_long_outlined,
             selectedIcon: Icons.receipt_long_rounded,
           ),

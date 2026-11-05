@@ -6,6 +6,8 @@ La marca y datos institucionales se editan en [`config/institution.json`](config
 
 Ya incluye bienvenida, ingreso/salida real con Identity, gestión de cuentas/perfiles, invitaciones, activación y recuperación sin exigir correo, cierre de sesiones y auditoría persistente. La muestra del directorio es ficticia y solo existe en Development. Expedientes, matrícula, finanzas, tareas y notas publicadas todavía no están implementados.
 
+El prototipo móvil Flutter, con datos ficticios y sin conexión a la API, está en [`mobile/`](mobile/README.md).
+
 ## Ejecutar en Windows
 
 Desde la raíz, con .NET y SQL Server local disponibles:

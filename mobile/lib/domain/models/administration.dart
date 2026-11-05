@@ -99,7 +99,7 @@ class EnrollmentCase {
 
 enum AccountState {
   active('Activa'),
-  invited('Invitación pendiente'),
+  invited('Invitada'),
   inactive('Inactiva');
 
   const AccountState(this.label);

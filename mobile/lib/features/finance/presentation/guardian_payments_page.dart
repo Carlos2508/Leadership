@@ -79,7 +79,7 @@ class _Statement extends ConsumerWidget {
             ResponsiveGrid(
               children: [
                 StatTile(
-                  label: 'Por pagar (30 días)',
+                  label: 'Por pagar',
                   value: format.currency(data.totalPending),
                   icon: Icons.account_balance_wallet_rounded,
                   tone: data.totalPending > 0 ? AppTone.accent : AppTone.success,

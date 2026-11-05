@@ -31,17 +31,21 @@ class Formatters {
   late final NumberFormat _currency;
   late final NumberFormat _decimal;
 
+  /// Resuelve la cultura configurada a un locale disponible en intl.
+  /// Para español de Latinoamérica sin datos propios (p. ej. es-GT) usa es_419,
+  /// que comparte separadores y formato de moneda (Q1,250.50).
   static String _resolveLocale(String culture) {
+    bool exists(String l) => DateFormat.localeExists(l) && NumberFormat.localeExists(l);
     final normalized = culture.replaceAll('-', '_');
-    return Intl.verifiedLocale(
+    final parts = normalized.split('_');
+    final language = parts.first.toLowerCase();
+    final candidates = [
       normalized,
-      DateFormat.localeExists,
-      onFailure: (_) => Intl.verifiedLocale(
-        normalized.split('_').first,
-        DateFormat.localeExists,
-        onFailure: (_) => 'es',
-      )!,
-    )!;
+      if (language == 'es' && parts.length > 1 && parts[1].toUpperCase() != 'ES') 'es_419',
+      language,
+      'es',
+    ];
+    return candidates.firstWhere(exists, orElse: () => 'es');
   }
 
   /// "4 de noviembre"

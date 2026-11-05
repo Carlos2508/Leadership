@@ -33,7 +33,7 @@ class _RegisterPaymentPageState extends ConsumerState<RegisterPaymentPage> {
 
   /// Clave única por intento: un doble toque o reintento no duplica el pago.
   final String _idempotencyKey =
-      '${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 32)}';
+      '${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(0x7fffffff)}';
 
   final Set<String> _selected = {};
   PaymentMethod _method = PaymentMethod.cash;

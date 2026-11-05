@@ -41,6 +41,10 @@ Inicio normal: `./scripts/Start-Development.ps1 -SkipBuild` en 5080 si la web ya
 
 Al cerrar el primer incremento quedó iniciado ese host en 5080. También se probó el artefacto publicado en 5086 (HTML/JS 200, bundle igual al actual) y se detuvo aquel proceso de prueba. No asumir que el host 5080 seguirá vivo en otra sesión; comprobarlo antes de iniciar otro.
 
+## Prototipo móvil
+
+`mobile/` contiene un prototipo Flutter con datos ficticios (ADR-004, `mobile/README.md`). Antes de ejecutarlo: `flutter pub get` y `dart run tool/sync_institution.dart` desde `mobile/`. Verificar con `flutter analyze` y `flutter test` (50 pruebas). El servidor simulado (`lib/data/demo`) ilustra reglas pendientes de política; no copiarlo a la API ni tratarlo como especificación aprobada. Para integrar la API, implementar las interfaces de `lib/domain/repositories` con HTTP y sustituir los proveedores de `lib/data/repository_providers.dart`; falta OIDC + PKCE y almacenamiento seguro. No se probó en Android/iOS reales.
+
 ## Siguiente incremento recomendado
 
 Cerrar IAM de forma útil antes de datos escolares: permisos explícitos por acción/recurso, auditoría durable y activación/recuperación asistida. Construir primero un flujo de invitación de una cuenta con token de un uso, caducidad y revocación; no exigir correo cuando no existe. Aprovisionar el primer operador de producción por un procedimiento verificable, diferente del comando local de Development.

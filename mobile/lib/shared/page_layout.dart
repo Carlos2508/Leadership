@@ -245,7 +245,7 @@ class DetailPage extends StatelessWidget {
                   heightFactor: 1,
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
-                    child: bottomBar,
+                    child: SizedBox(width: double.infinity, child: bottomBar),
                   ),
                 ),
               ),

@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Lógica de negocio · Plataforma escolar</title>
+<style>
+  @font-face { font-family: 'Fraunces'; src: url('../../src/SchoolPlatform.Host/wwwroot/fonts/fraunces.woff2') format('woff2'); font-weight: 100 900; }
+  @font-face { font-family: 'Figtree'; src: url('../../src/SchoolPlatform.Host/wwwroot/fonts/figtree.woff2') format('woff2'); font-weight: 300 900; }
+  :root { --deep: #073B25; --primary: #0B5835; --accent: #ECA42E; --ink: #193b2b; --muted: #586e59; --mint: #e6f5ec; --line: #dfe8df; }
+  @page { size: Letter; margin: 18mm 17mm 18mm 17mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Figtree', 'Segoe UI', sans-serif; color: var(--ink); font-size: 10.6pt; line-height: 1.55; margin: 0; }
+  h1, h2, h3 { font-family: 'Fraunces', Georgia, serif; color: var(--deep); font-weight: 600; letter-spacing: -0.01em; }
+  h2 { font-size: 21pt; margin: 0 0 4px; page-break-after: avoid; }
+  h3 { font-size: 13.5pt; margin: 18px 0 6px; page-break-after: avoid; }
+  p { margin: 0 0 8px; }
+  ul, ol { margin: 4px 0 10px; padding-left: 20px; }
+  li { margin-bottom: 3px; }
+  strong { color: var(--deep); }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 7.5pt; font-weight: 750; letter-spacing: 1.6px; color: var(--primary); text-transform: uppercase; }
+  .eyebrow::before { content: ''; width: 18px; height: 3px; border-radius: 3px; background: var(--accent); }
+  section.chapter { page-break-before: always; }
+  .lead { font-size: 11.5pt; color: var(--muted); margin-bottom: 14px; }
+  /* Cover */
+  .cover { height: 228mm; display: flex; flex-direction: column; justify-content: space-between; padding: 6mm 0; }
+  .cover-band { background: var(--deep); color: #fff; border-radius: 22px; padding: 34px 34px 38px; position: relative; overflow: hidden; }
+  .cover-band::after { content: ''; position: absolute; right: -60px; top: -60px; width: 260px; height: 260px; border-radius: 50%; background: radial-gradient(circle, rgba(236,164,46,.45), transparent 70%); }
+  .cover h1 { color: #fff; font-size: 38pt; line-height: 1.02; margin: 18px 0 14px; max-width: 520px; }
+  .cover .eyebrow { color: #f3c77a; }
+  .cover p { color: #d8e9df; font-size: 12.5pt; max-width: 470px; }
+  .cover-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .cover-meta div { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  .cover-meta small { display: block; font-size: 7.5pt; letter-spacing: 1.2px; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+  .cover-meta strong { font-family: 'Fraunces', serif; font-size: 12pt; }
+  /* Blocks */
+  .note { border-left: 4px solid var(--accent); background: #fff8ea; border-radius: 0 12px 12px 0; padding: 10px 14px; margin: 10px 0 12px; page-break-inside: avoid; }
+  .note.green { border-left-color: var(--primary); background: var(--mint); }
+  .note.red { border-left-color: #b42318; background: #fdecea; }
+  .note strong { display: block; margin-bottom: 2px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 9.6pt; page-break-inside: auto; }
+  th { text-align: left; font-size: 7.6pt; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); background: #f3f7f2; padding: 7px 9px; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr { page-break-inside: avoid; }
+  code { font-family: Consolas, monospace; font-size: 9pt; background: #f1f5f0; padding: 1px 5px; border-radius: 5px; }
+  /* Flow */
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; margin: 10px 0 14px; page-break-inside: avoid; }
+  .step { flex: 1 1 0; min-width: 92px; border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; background: #fff; position: relative; }
+  .step b { display: block; font-family: 'Fraunces', serif; color: var(--deep); font-size: 10.5pt; }
+  .step span { font-size: 8.3pt; color: var(--muted); line-height: 1.35; display: block; margin-top: 2px; }
+  .step .num { position: absolute; top: -8px; left: 10px; background: var(--accent); color: var(--deep); font-size: 7.5pt; font-weight: 800; border-radius: 99px; padding: 1px 7px; }
+  .arrow { align-self: center; color: var(--accent); font-weight: 800; }
+  .states { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 6px 0 12px; }
+  .state { border-radius: 99px; padding: 4px 11px; font-size: 8.6pt; font-weight: 700; background: var(--mint); color: var(--primary); }
+  .state.gold { background: #fff1d2; color: #7a4b00; }
+  .state.blue { background: #eaf2ff; color: #2f568f; }
+  .state.gray { background: #eef1ee; color: #4a5a4d; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .card { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; page-break-inside: avoid; }
+  .card h4 { font-family: 'Fraunces', serif; color: var(--deep); margin: 0 0 4px; font-size: 11pt; }
+  .card p, .card li { font-size: 9.6pt; }
+  .entity { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; page-break-inside: avoid; }
+  .entity div { border-radius: 14px; padding: 12px; text-align: center; }
+  .entity div:nth-child(1) { background: #eaf2ff; } .entity div:nth-child(2) { background: var(--mint); }
+  .entity div:nth-child(3) { background: #fff1d2; } .entity div:nth-child(4) { background: #eeeafb; }
+  .entity b { display: block; font-family: 'Fraunces', serif; font-size: 12pt; color: var(--deep); }
+  .entity span { font-size: 8.4pt; color: var(--muted); }
+  .toc { columns: 2; column-gap: 26px; margin-top: 10px; }
+  .toc li { break-inside: avoid; }
+  .who { display: inline-block; font-size: 7.6pt; font-weight: 750; background: #eef1ee; border-radius: 6px; padding: 1px 6px; color: #4a5a4d; margin-left: 4px; }
+  .checklist li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<!-- ============ PORTADA ============ -->
+<div class="cover">
+  <div class="cover-band">
+    <span class="eyebrow">Guía de funcionamiento</span>
+    <h1>Lógica de negocio de la plataforma escolar</h1>
+    <p>Cómo funciona la plataforma de punta a punta: desde el primer ingreso y la creación del ciclo escolar, hasta las inscripciones, los cobros, las tareas, las notas publicadas y la portería.</p>
+  </div>
+  <div>
+    <h3 style="margin-top:0">Contenido</h3>
+    <ol class="toc">
+      <li>Conceptos base</li>
+      <li>Primer ingreso y cuentas</li>
+      <li>Ciclo escolar, bimestres, grados y secciones</li>
+      <li>Materias, cursos y docentes</li>
+      <li>Personas, familias y menores de edad</li>
+      <li>Inscripción anual</li>
+      <li>Cobros, pagos y solvencia</li>
+      <li>Asistencia, tareas y entregas</li>
+      <li>Notas: captura, publicación y consulta</li>
+      <li>Avisos</li>
+      <li>Carnets y portería</li>
+      <li>Seguridad y auditoría</li>
+      <li>Ruta completa: de cero a notas publicadas</li>
+      <li>Decisiones pendientes del colegio</li>
+    </ol>
+  </div>
+  <div class="cover-meta">
+    <div><small>Institución</small><strong>Colegio Leadership Mixco</strong></div>
+    <div><small>Versión de la guía</small><strong>Noviembre 2026</strong></div>
+    <div><small>Alcance</small><strong>Módulos implementados</strong></div>
+  </div>
+</div>
+
+<!-- ============ 1 ============ -->
+<section class="chapter">
+  <span class="eyebrow">Capítulo 1</span>
+  <h2>Conceptos base</h2>
+  <p class="lead">La plataforma separa cuatro cosas que en sistemas anteriores solían mezclarse. Entender esta separación explica casi todas las reglas.</p>
+  <div class="entity">
+    <div><b>Cuenta</b><span>Usuario y contraseña para entrar. Puede no ser de nadie todavía.</span></div>
+    <div><b>Persona</b><span>Ficha de alguien real: estudiante, encargado o personal.</span></div>
+    <div><b>Vínculo familiar</b><span>Une encargado y estudiante, con facultades explícitas.</span></div>
+    <div><b>Inscripción</b><span>Un estudiante en un ciclo, con grado y sección fechados.</span></div>
+  </div>
+  <ul>
+    <li><strong>Una instalación por colegio.</strong> Cada colegio tiene su propio proyecto y su propia base de datos; nombre, logos, colores, teléfonos y textos salen de <code>config/institution.json</code>.</li>
+    <li><strong>Los permisos los decide el servidor.</strong> Ocultar un menú no es seguridad: cada consulta y cada cambio se verifica en la base de datos contra los permisos de la cuenta y el recurso exacto (por ejemplo, «este docente tiene asignado este curso»).</li>
+    <li><strong>Todo cambio sensible deja huella.</strong> Se registra en la auditoría quién lo hizo, cuándo y, cuando aplica, con qué motivo. Los registros no se pueden editar ni borrar.</li>
+    <li><strong>Nada se borra de forma silenciosa.</strong> Retiros, anulaciones, reversiones y correcciones conservan el historial.</li>
+  </ul>
+  <h3>Perfiles de acceso disponibles</h3>
+  <table>
+    <tr><th>Perfil</th><th>Para quién</th><th>Puede</th></tr>
+    <tr><td><strong>Cuenta básica</strong></td><td>Estudiantes, familias, docentes</td><td>Solo lo que le dan sus vínculos y asignaciones (sus cursos, sus estudiantes).</td></tr>
+    <tr><td><strong>Secretaría</strong></td><td>Registro y matrícula</td><td>Personas y familias, inscripciones, consulta académica.</td></tr>
+    <tr><td><strong>Coordinación académica</strong></td><td>Dirección académica</td><td>Ciclos, grados, secciones, materias, cursos, publicación de notas, avisos.</td></tr>
+    <tr><td><strong>Caja</strong></td><td>Cobros diarios</td><td>Estados de cuenta y registro de pagos con recibo.</td></tr>
+    <tr><td><strong>Administración financiera</strong></td><td>Contabilidad</td><td>Además: emitir cargos, ajustes y revertir pagos.</td></tr>
+    <tr><td><strong>Portería</strong></td><td>Personal de entrada</td><td>Lector de carnets y marcas manuales.</td></tr>
+    <tr><td><strong>Control de asistencia</strong></td><td>Supervisión</td><td>Portería, reportes de entradas y teléfonos lectores.</td></tr>
+    <tr><td><strong>Gestión de accesos / Auditoría</strong></td><td>TI o dirección</td><td>Cuentas y perfiles; consulta de auditoría.</td></tr>
+    <tr><td><strong>Administración institucional</strong></td><td>Dirección general</td><td>Todo lo anterior.</td></tr>
+  </table>
+  <div class="note"><strong>Importante</strong>Un docente o un padre de familia <em>no</em> se crean con un perfil especial: usan una cuenta básica, y lo que ven depende de su ficha de persona, de la asignación al curso o del vínculo con el estudiante.</div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section class="chapter">
+  <span class="eyebrow">Capítulo 2</span>
+  <h2>Primer ingreso y cuentas</h2>
+  <p class="lead">El primer administrador se prepara de forma segura desde la consola del servidor; después, todas las cuentas se crean por invitación.</p>
+  <div class="flow">
+    <div class="step"><span class="num">1</span><b>Gestor inicial</b><span>Se crea por consola. No existe contraseña predeterminada.</span></div><div class="arrow">→</div>
+    <div class="step"><span class="num">2</span><b>Ingresar</b><span>Solo ve Cuentas y Auditoría.</span></div><div class="arrow">→</div>
+    <div class="step"><span class="num">3</span><b>Asignar perfil</b><span>«Administración institucional», con motivo.</span></div><div class="arrow">→</div>
+    <div class="step"><span class="num">4</span><b>Volver a ingresar</b><span>La sesión se renueva y aparecen los módulos.</span></div>
+  </div>
+  <h3>Invitar y activar cuentas</h3>
+  <ol>
+    <li><strong>Cuentas y accesos → Invitar cuenta.</strong> Se elige el usuario, el perfil y se escribe el motivo. <span class="who">accounts.manage</span></li>
+    <li>La plataforma genera un <strong>código de activación de un solo uso</strong>, que se muestra una sola vez. Se guarda únicamente su huella (hash): nadie puede volver a leerlo.</li>
+    <li>El colegio entrega el código por un canal verificado (en persona o por un medio confiable). La plataforma <strong>no envía</strong> correos ni mensajes por su cuenta.</li>
+    <li>La persona entra a «Tengo un código de activación», escribe el código y define su contraseña.</li>
+    <li>Si olvida la contraseña, el colegio emite un <strong>código de recuperación</strong> con el mismo procedimiento.</li>
+  </ol>
+  <h3>Verificación en dos pasos (MFA)</h3>
+  <p>Cualquier cuenta puede activarla en «Mi seguridad» con una aplicación autenticadora (código de 6 dígitos) y recibe 10 códigos de respaldo. La instalación puede exigirla para permisos sensibles (por ejemplo: gestión de cuentas, auditoría y reversión de pagos); mientras no se active, esas funciones quedan bloqueadas y la pantalla de inicio lo explica.</p>
+  <h3>Vincular una cuenta con una persona</h3>
+  <p>Para que una cuenta «sea» de Ana o de su mamá, se vincula desde la ficha de la persona. Esto exige dos permisos a la vez (gestión de personas y gestión de cuentas) porque entrega acceso a información personal. Una cuenta se vincula a una sola persona y una persona tiene a lo sumo una cuenta vigente.</p>
+</section>
+
+<!-- ============ 3 ============ -->
+<section class="chapter">
+  <span class="eyebrow">Capítulo 3</span>
+  <h2>Ciclo escolar, bimestres, grados y secciones</h2>
+  <p class="lead">Todo lo académico y financiero cuelga de un ciclo escolar. Es lo primero que se configura después de las cuentas.</p>
+  <h3>3.1 Ciclo escolar <span class="who">academic.manage</span></h3>
+  <p>Se crea con nombre (por ejemplo «2026») y fechas de inicio y fin. Avanza por estados y nunca retrocede:</p>
+  <div class="states"><span class="state gray">Borrador</span>→<span class="state gold">Inscripciones abiertas</span>→<span class="state">En curso</span>→<span class="state blue">Cerrado</span></div>
+  <ul>
+    <li>En <strong>Borrador</strong> se ajustan fechas y bimestres libremente.</li>
+    <li>Con <strong>Inscripciones abiertas</strong> ya se puede matricular.</li>
+    <li><strong>En curso</strong>: se bloquea la edición de fechas y bimestres para proteger notas y cobros ya asociados.</li>
+    <li>Un ciclo se marca como <strong>predeterminado</strong>: es el que las pantallas abren primero. Aun así, cada operación indica explícitamente su ciclo.</li>
+  </ul>
+  <h3>3.2 Bimestres (períodos)</h3>
+  <p>Se agregan en orden dentro del ciclo con fecha de inicio y fin. <strong>No pueden superponerse</strong> (la plataforma lo rechaza) y solo se puede quitar el último mientras el ciclo esté en borrador. Cada bimestre es la unidad de captura y publicación de notas.</p>
+  <h3>3.3 Grados</h3>
+  <p>Catálogo permanente: código, nombre (por ejemplo «Primero primaria»), nivel y orden. Los grados no pertenecen a un ciclo; se reutilizan año con año y pueden desactivarse.</p>
+  <h3>3.4 Secciones (opcionales)</h3>
+  <p>Pertenecen a un ciclo y a un grado (por ejemplo «Primero primaria · A»), con jornada y <strong>cupo</strong> opcional. Si la sección se llena, la plataforma no permite inscribir más estudiantes en ella. Un estudiante puede inscribirse en el grado <em>sin sección</em>.</p>
+  <div class="note green"><strong>Orden recomendado</strong>Ciclo → bimestres → grados → secciones → abrir inscripciones.</div>
+</section>
+
+<!-- ============ 4 ============ -->
+<section class="chapter">
+  <span class="eyebrow">Capítulo 4</span>
+  <h2>Materias, cursos y docentes</h2>
+  <h3>4.1 Materias <span class="who">academic.manage</span></h3>
+  <p>Catálogo con código y nombre (Matemática, Lenguaje…). Se reutilizan en todos los ciclos.</p>
+  <h3>4.2 Cursos</h3>
+  <p>Un curso es <strong>una materia para un grado en un ciclo</strong>. Se crean en bloque: se elige el ciclo, el grado, el alcance y varias materias a la vez.</p>
+  <ul>
+    <li><strong>Todo el grado</strong>: todos los inscritos del grado, con o sin sección.</li>
+    <li><strong>Por sección</strong>: solo los estudiantes ubicados en esa sección.</li>
+    <li>Una materia no puede estar organizada de las dos formas en el mismo grado (los estudiantes se contarían dos veces).</li>
+    <li>La lista de estudiantes de un curso <strong>no se mantiene a mano</strong>: se calcula en cada momento a partir de las inscripciones y sus fechas. Si un estudiante cambia de sección, aparece en la lista que le corresponde desde esa fecha.</li>
+  </ul>
+  <h3>4.3 Docentes</h3>
+  <ol>
+    <li>Registrar a la persona (sin marcarla como estudiante ni encargado).</li>
+    <li>Desde su ficha: <strong>Agregar perfil de personal</strong> (por ejemplo «Docente»).</li>
+    <li>Crearle una cuenta básica y vincularla a su ficha.</li>
+    <li>En Cursos y docentes: <strong>+ Docente</strong> en cada curso, con fecha de inicio (titular o auxiliar).</li>
+  </ol>
+  <p>Desde ese momento, el docente ve en su inicio <strong>solo sus cursos</strong> con accesos a lista, asistencia, actividades y libreta. Si intenta abrir otro curso por su dirección web, la plataforma le niega el acceso. Al finalizar la asignación, deja de poder capturar en ese curso.</p>
+</section>
+
+<!-- ============ 5 ============ -->
+<section class="chapter">
+  <span class="eyebrow">Capítulo 5</span>
+  <h2>Personas, familias y menores de edad</h2>
+  <p class="lead">Una sola ficha por persona. El parentesco describe la relación; los permisos de la familia se dan con facultades explícitas.</p>
+  <h3>5.1 Registrar personas <span class="who">people.manage</span></h3>
+  <ul>
+    <li>Nombres, apellidos, nombre preferido y fecha de nacimiento opcionales; contactos (teléfono, correo, dirección).</li>
+    <li>Perfiles iniciales opcionales: <strong>estudiante</strong> (con código único) y/o <strong>encargado</strong>. El perfil de <strong>personal</strong> se agrega desde la ficha.</li>
+    <li>La plataforma avisa de posibles <strong>duplicados</strong> (mismo nombre o código) antes de crear otra ficha.</li>
+    <li>Las fichas no se borran: se <strong>archivan</strong> y se pueden restaurar.</li>
+  </ul>
+  <h3>5.2 Vincular estudiante y encargado</h3>
+  <p>Desde la ficha del estudiante: <strong>Vincular encargado</strong>, elegir el parentesco (madre, padre, abuela/o, hermana/o, otro familiar, tutela legal u otro) y marcar las <strong>facultades</strong>:</p>
+  <table>
+    <tr><th>Facultad</th><th>Qué permite en «Mi espacio»</th></tr>
+    <tr><td><strong>Información académica</strong></td><td>Ver notas publicadas (si hay solvencia), tareas y su retroalimentación, asistencia, inscripción y entradas/salidas.</td></tr>
+    <tr><td><strong>Estado de cuenta</strong></td><td>Ver cargos, pagos y recibos del estudiante, y el detalle de lo pendiente para la solvencia.</td></tr>
+    <tr><td><strong>Responsable de pago</strong></td><td>Identifica a quien responde por los cobros.</td></tr>
+    <tr><td><strong>Comunicaciones</strong></td><td>Recibir los avisos dirigidos a ese estudiante o su grado.</td></tr>
+    <tr><td><strong>Contacto de emergencia / Recoger</strong></td><td>Información para el colegio (no abren datos en la plataforma).</td></tr>
+  </table>
+  <div class="note"><strong>Ejemplo real del recorrido de prueba</strong>Marta es madre de Ana y de Bruno. Con Ana tiene información académica, estado de cuenta y comunicaciones: ve todo. Con Bruno solo tiene estado de cuenta: ve su saldo, pero ni sus notas ni sus tareas. Ser «madre» no concede nada por sí solo.</div>
+  <h3>5.3 ¿Y si el estudiante es menor de edad?</h3>
+  <ul>
+    <li>La plataforma <strong>no decide por edad</strong>. El acceso de una familia depende siempre del vínculo vigente y sus facultades, que asigna el colegio.</li>
+    <li>Un estudiante (de cualquier edad) puede tener <strong>su propia cuenta</strong>, con o sin encargado registrado. Con ella ve sus notas publicadas, tareas, entregas, asistencia y entradas/salidas.</li>
+    <li>El estudiante <strong>no ve el estado de cuenta</strong> por sí mismo: esa política (acceso financiero del estudiante) está pendiente de decisión del colegio.</li>
+    <li>Reglas de mayoría de edad, custodia o restricciones judiciales también son <strong>decisiones pendientes</strong>: hoy se manejan finalizando un vínculo o quitando facultades, con motivo y auditoría.</li>
+    <li>Un vínculo se puede <strong>finalizar</strong> (queda en el historial) y las facultades se pueden cambiar en cualquier momento.</li>
+  </ul>
+</section>
+
+<!-- ============ 6 ============ -->
+<section class="chapter">
+  <span class="eyebrow">Capítulo 6</span>
+  <h2>Inscripción anual</h2>
+  <p class="lead">La matrícula es independiente de la ficha: un estudiante tiene una inscripción por ciclo, con su ubicación fechada.</p>
+  <div class="flow">
+    <div class="step"><span class="num">1</span><b>Abrir inscripciones</b><span>El ciclo pasa a «Inscripciones abiertas».</span></div><div class="arrow">→</div>
+    <div class="step"><span class="num">2</span><b>Inscribir</b><span>Estudiante + grado + sección opcional + fecha.</span></div><div class="arrow">→</div>
+    <div class="step"><span class="num">3</span><b>Cupo</b><span>Si la sección está llena, se elige otra o sin sección.</span></div><div class="arrow">→</div>
+    <div class="step"><span class="num">4</span><b>Iniciar ciclo</b><span>Pasa a «En curso».</span></div>
+  </div>
+  <ul>
+    <li><strong>Una inscripción por estudiante y ciclo</strong>; la plataforma evita duplicados. <span class="who">enrollment.manage</span></li>
+    <li><strong>Cambiar ubicación</strong> (grado o sección) crea un nuevo tramo con fecha; el anterior se conserva. Así, notas y asistencia de cada período corresponden a la sección real en cada fecha.</li>
+    <li><strong>Retiro</strong> con fecha y motivo; el estudiante deja de aparecer en listas desde esa fecha. También existe <strong>reingreso</strong>.</li>
+    <li>Las listas de cursos, cobros masivos, carnets y reportes de portería se calculan a partir de estas inscripciones.</li>
+  </ul>
+</section>
+
+<!-- ============ 7 ============ -->
+<section class="chapter">
+  <span class="eyebrow">Capítulo 7</span>
+  <h2>Cobros, pagos y solvencia</h2>
+  <p class="lead">Los importes, fechas y reglas de cobro los define el colegio. Nada se cobra hasta confirmar una emisión, y la solvencia se calcula con pagos confirmados.</p>
+  <h3>7.1 Configuración <span class="who">finance.charges</span></h3>
+  <ol>
+    <li><strong>Conceptos de cobro</strong>: código y nombre (por ejemplo Colegiatura), si es recurrente y si <strong>cuenta para solvencia</strong>.</li>
+    <li><strong>Calendario de cuotas</strong> del ciclo: Cuota 1, Cuota 2…, cada una con su vencimiento.</li>
+    <li><strong>Cortes de solvencia</strong>: por ejemplo «Publicación Bimestre 1 = hasta la cuota 2». Se usan al publicar notas.</li>
+  </ol>
+  <h3>7.2 Emitir cargos</h3>
+  <p>Se elige concepto, cuota, importe y grados. La <strong>vista previa</strong> muestra a quién se le emitirá y a quién ya lo tiene. Al confirmar, se crean los cargos; repetir la misma emisión no duplica (0 por emitir). También se pueden emitir cargos individuales.</p>
+  <h3>7.3 Caja <span class="who">finance.collect</span></h3>
+  <ul>
+    <li>Se busca al estudiante y se registra el pago: quién paga, forma (efectivo, transferencia, depósito, tarjeta, cheque), referencia y <strong>a qué cargos se aplica</strong> (aplicación explícita).</li>
+    <li>Se genera un <strong>recibo numerado</strong> con una copia fija de los datos del colegio y su logo. Se puede imprimir o descargar en PDF. Es un comprobante interno, no una factura fiscal.</li>
+    <li>Un doble clic o reintento no crea dos pagos (protección de duplicados).</li>
+    <li><strong>Ajustes</strong> (beca, descuento, exoneración) y <strong>anulación de cargos</strong> requieren motivo. <strong>Revertir un pago</strong> requiere permiso especial y motivo; el recibo queda marcado «ANULADO» y los cargos vuelven a tener saldo.</li>
+  </ul>
+  <h3>7.4 Solvencia</h3>
+  <p>Se calcula <strong>en el momento de cada consulta</strong> (sin memoria intermedia): un estudiante es solvente para un corte si tiene pagadas todas las cuotas que el corte exige en los conceptos que cuentan para solvencia.</p>
+  <div class="states"><span class="state">Solvente</span><span class="state gold">Con saldo pendiente</span><span class="state gray">Configuración incompleta</span><span class="state blue">No inscrito</span></div>
+  <div class="note red"><strong>Regla clave</strong>Un saldo en cero porque <em>no se han emitido</em> cargos no es solvencia: aparece como «configuración incompleta». Si un pago se revierte, la solvencia se pierde de inmediato.</div>
+</section>
+
+<!-- ============ 8 ============ -->
+<section class="chapter">
+  <span class="eyebrow">Capítulo 8</span>
+  <h2>Asistencia, tareas y entregas</h2>
+  <h3>8.1 Asistencia por curso</h3>
+  <p>El docente asignado (o coordinación) abre <strong>Asistencia</strong>, elige la fecha y marca solo las excepciones: todos inician como <em>presentes</em>; se cambia a <em>ausente</em>, <em>tarde</em> o <em>justificada</em> con observación opcional, y se guarda. Botones para día anterior/siguiente y «Todos presentes». Las familias con información académica ven el resumen.</p>
+  <h3>8.2 Actividades (tareas)</h3>
+  <div class="states"><span class="state gray">Borrador</span>→<span class="state">Publicada</span>→<span class="state blue">Cerrada</span></div>
+  <ul>
+    <li>El docente crea la actividad: título, instrucciones, fecha y hora de entrega y si acepta entregas tardías.</li>
+    <li>Al <strong>publicarla</strong> (con confirmación) la reciben los estudiantes del curso entre su publicación y su entrega; quien se retiró antes no la recibe.</li>
+    <li><strong>Cerrar</strong> la actividad impide nuevas entregas.</li>
+  </ul>
+  <h3>8.3 Entregas del estudiante</h3>
+  <ol>
+    <li>El estudiante entra a «Mi espacio» → su ficha → <strong>Tareas</strong> → <strong>Entregar</strong>.</li>
+    <li>Escribe su respuesta y guarda. Luego puede <strong>adjuntar archivos</strong>: PDF, imágenes PNG/JPG, Word, Excel, PowerPoint o texto; máximo 10 MB por archivo y 5 archivos. Se verifica el tipo real del archivo y se guardan en un almacenamiento privado.</li>
+    <li>Puede actualizar la entrega mientras esté dentro de plazo (o se acepten tardías) y no haya sido revisada. Las tardías se marcan.</li>
+    <li>El docente ve las entregas, descarga los archivos y escribe la <strong>retroalimentación</strong>; la entrega queda «Revisada».</li>
+  </ol>
+  <div class="note green"><strong>Quién ve qué</strong>El estudiante ve su texto, archivos y retroalimentación. El encargado con información académica ve estado y retroalimentación, no el contenido. Las tareas <strong>no</strong> se bloquean por falta de pago.</div>
+</section>
+
+<!-- ============ 9 ============ -->
+<section class="chapter">
+  <span class="eyebrow">Capítulo 9</span>
+  <h2>Notas: captura, publicación y consulta</h2>
+  <div class="flow">
+    <div class="step"><span class="num">1</span><b>Captura</b><span>Docente asignado, por curso y bimestre.</span></div><div class="arrow">→</div>
+    <div class="step"><span class="num">2</span><b>Completitud</b><span>Todas las notas registradas.</span></div><div class="arrow">→</div>
+    <div class="step"><span class="num">3</span><b>Publicación</b><span>Coordinación, con un corte de solvencia.</span></div><div class="arrow">→</div>
+    <div class="step"><span class="num">4</span><b>Consulta</b><span>Familia/estudiante, si hay solvencia.</span></div>
+  </div>
+  <h3>9.1 Libreta del docente</h3>
+  <ul>
+    <li>Una cuadrícula con todos los estudiantes del curso en el bimestre. Cada uno: <strong>Con nota</strong> (0 a 100, hasta dos decimales), <strong>Pendiente de entregar</strong>, <strong>Exonerado</strong> o <em>Sin registrar</em>. Un cero es una nota válida.</li>
+    <li>Rápida: <strong>Enter</strong> baja al siguiente estudiante; se puede <strong>pegar una columna desde Excel</strong> (E = exonerado, P = pendiente); los cambios <strong>se guardan solos</strong>.</li>
+    <li>Cada cambio guarda una <strong>revisión</strong> (valor anterior, nuevo, quién y cuándo). Si dos personas editan a la vez, la segunda recibe aviso para recargar.</li>
+    <li>La libreta se puede descargar en PDF.</li>
+  </ul>
+  <h3>9.2 Publicación <span class="who">academic.manage</span></h3>
+  <ul>
+    <li>«Publicación de notas» muestra el avance de cada bimestre (por ejemplo 6 de 6). Solo se publica cuando <strong>todas</strong> las notas están registradas.</li>
+    <li>Al publicar se elige el <strong>corte de solvencia</strong> que se exigirá para ver ese bimestre.</li>
+    <li>Después de publicar, el docente ya no puede modificar. Las correcciones las hace coordinación <strong>con motivo obligatorio</strong> y quedan en el historial.</li>
+    <li>Se pueden imprimir <strong>informes por grado o sección</strong>: los estudiantes sin solvencia aparecen con el informe <strong>retenido</strong>, sin notas.</li>
+  </ul>
+  <h3>9.3 Consulta de familias y estudiantes</h3>
+  <p>En cada consulta la plataforma verifica: (1) que la persona sea el propio estudiante o tenga la facultad de información académica, y (2) que el estudiante cumpla el corte de solvencia de ese bimestre. Si no cumple, ve «Resultados no disponibles» y —si tiene la facultad de estado de cuenta— qué falta pagar. Al registrarse el pago, las notas aparecen al instante; si el pago se revierte, se vuelven a ocultar.</p>
+  <div class="note"><strong>Política pendiente</strong>No se calculan promedios anuales ni redondeos: se muestran solo los resultados de cada bimestre publicado, hasta que el colegio apruebe sus reglas.</div>
+</section>
+
+<!-- ============ 10-11 ============ -->
+<section class="chapter">
+  <span class="eyebrow">Capítulos 10 y 11</span>
+  <h2>Avisos, carnets y portería</h2>
+  <h3>10. Avisos</h3>
+  <p>Mensajes dentro de la plataforma (no se envían por correo ni SMS). Coordinación publica para todo el colegio o un grado; un docente, para sus cursos. Se eligen destinatarios (estudiantes, encargados con la facultad de comunicaciones, personal). Estados: borrador → publicado (con confirmación) → archivado. Se registra quién lo leyó.</p>
+  <h3>11.1 Carnets <span class="who">people.manage</span></h3>
+  <ul>
+    <li>Desde la ficha del estudiante o en bloque desde Inscripciones (por grado/sección): PDF en tamaño tarjeta o en hoja carta.</li>
+    <li>El carnet lleva un <strong>código aleatorio</strong> (QR y código de barras), no el código del estudiante. Si se pierde, <strong>Reemplazar carnet</strong> (con motivo) invalida el anterior al instante.</li>
+    <li>Foto opcional y privada (JPG o PNG, máximo 2 MB).</li>
+  </ul>
+  <h3>11.2 Lector de entrada <span class="who">attendance.gate</span></h3>
+  <ul>
+    <li>Un lector USB o de cámara escribe el código y la plataforma muestra una tarjeta grande: <span class="state">Entrada</span> <span class="state blue">Salida</span> <span class="state gold">Lectura repetida</span> o rojo si el carnet no se reconoce, fue reemplazado o el estudiante no está inscrito.</li>
+    <li><strong>Doble lectura:</strong> una segunda lectura del mismo carnet no marca dos veces. En modo automático, la salida solo se registra después de una estancia mínima (30 minutos por defecto).</li>
+    <li>Modos: solo entrada, solo salida o automático. Marca <strong>manual</strong> con motivo para quien olvidó su carnet. Las marcas se pueden <strong>anular</strong> con motivo; el historial se conserva.</li>
+    <li>Reporte diario (dentro, salieron, sin marcas), historial por estudiante y exportación a Excel (CSV). Las familias con información académica ven entradas y salidas de los últimos 45 días.</li>
+    <li>Teléfonos lectores: se registran con un QR de emparejamiento de un solo uso y se pueden revocar en cualquier momento.</li>
+  </ul>
+  <h3>12. Seguridad y auditoría</h3>
+  <p>Contraseñas con requisitos de seguridad, bloqueo por intentos, verificación en dos pasos, sesiones que se invalidan al cambiar permisos y auditoría inmodificable de todos los cambios (filtrable por área: cuentas, personas, académico, finanzas, avisos, carnets y portería).</p>
+</section>
+
+<!-- ============ 13 ============ -->
+<section class="chapter">
+  <span class="eyebrow">Capítulo 13</span>
+  <h2>Ruta completa: de cero a notas publicadas</h2>
+  <p class="lead">Lista de verificación en el orden en que se hace, con el permiso necesario.</p>
+  <ol class="checklist">
+    <li>Preparar el gestor inicial por consola e ingresar. Asignarse «Administración institucional» y volver a ingresar. Activar verificación en dos pasos.</li>
+    <li>Crear el <strong>ciclo escolar</strong> (borrador) y sus <strong>bimestres</strong>. <span class="who">academic.manage</span></li>
+    <li>Crear <strong>grados</strong> y, si se usan, <strong>secciones</strong> con cupo.</li>
+    <li>Crear <strong>materias</strong> y luego los <strong>cursos</strong> por grado (todo el grado o por sección).</li>
+    <li>Registrar al <strong>personal docente</strong>, agregarle perfil de personal, crear y vincular su cuenta, y <strong>asignarlo</strong> a sus cursos.</li>
+    <li>Registrar <strong>estudiantes</strong> (con código) y <strong>encargados</strong>; crear los <strong>vínculos</strong> con sus facultades. <span class="who">people.manage</span></li>
+    <li>Crear y entregar <strong>cuentas</strong> a familias y estudiantes; vincularlas a sus fichas. <span class="who">accounts.manage</span></li>
+    <li><strong>Abrir inscripciones</strong> e <strong>inscribir</strong> a cada estudiante en su grado/sección. <span class="who">enrollment.manage</span></li>
+    <li>Configurar <strong>conceptos, cuotas y cortes</strong>; <strong>emitir cargos</strong> con vista previa. <span class="who">finance.charges</span></li>
+    <li><strong>Iniciar el ciclo</strong> («En curso»).</li>
+    <li>Imprimir <strong>carnets</strong> y comenzar a usar el <strong>lector de entrada</strong>.</li>
+    <li>Docentes: tomar <strong>asistencia</strong>, publicar <strong>actividades</strong>, revisar <strong>entregas</strong> y capturar la <strong>libreta</strong> del bimestre.</li>
+    <li>Caja: registrar <strong>pagos</strong> y entregar recibos. <span class="who">finance.collect</span></li>
+    <li>Coordinación: cuando la libreta esté completa, <strong>publicar el bimestre</strong> con su corte de solvencia e imprimir informes.</li>
+    <li>Familias y estudiantes consultan en «Mi espacio»: notas (si hay solvencia), tareas, asistencia, entradas, estado de cuenta (encargados) y avisos.</li>
+  </ol>
+</section>
+
+<!-- ============ 14 ============ -->
+<section class="chapter">
+  <span class="eyebrow">Capítulo 14</span>
+  <h2>Decisiones pendientes del colegio</h2>
+  <p class="lead">La plataforma no inventa políticas. Estas reglas deben aprobarse antes de activarlas.</p>
+  <div class="two">
+    <div class="card"><h4>Notas</h4><ul><li>Promedios anuales y su fórmula.</li><li>Redondeo y nota mínima de aprobación.</li><li>Recuperaciones y boleta oficial.</li></ul></div>
+    <div class="card"><h4>Cobros</h4><ul><li>Planes de pago, prorrateos y saldos a favor.</li><li>Moras o recargos.</li><li>Facturación fiscal.</li></ul></div>
+    <div class="card"><h4>Familias</h4><ul><li>Acceso del estudiante a su estado de cuenta.</li><li>Mayoría de edad y custodia.</li><li>Notificaciones externas (correo, SMS, WhatsApp) con consentimiento.</li></ul></div>
+    <div class="card"><h4>Portería</h4><ul><li>Hora de tardanza institucional.</li><li>Procedimiento de salida y quién puede recoger.</li><li>Tiempos de lectura repetida y estancia mínima.</li></ul></div>
+  </div>
+  <div class="note green" style="margin-top:16px"><strong>Para mantener esta guía al día</strong>El detalle técnico de cada módulo está en la carpeta <code>docs/</code> del proyecto (por ejemplo <code>ENROLLMENT.md</code>, <code>BILLING_AND_CLEARANCE.md</code>, <code>LEARNING.md</code>, <code>GATE.md</code>). Esta guía se genera desde <code>docs/manual/logica-de-negocio.html</code>.</div>
+</section>
+
+</body>
+</html>

@@ -7,8 +7,24 @@
     "LegalName": "",
     "Tagline": "¡Piensa en grande!",
     "WelcomeMessage": "Tu espacio para aprender, conectar y crecer.",
-    "Contact": { "Phone": "", "Email": "", "Address": "", "Website": "" },
-    "Documents": { "TaxId": "", "ReceiptFooter": "", "ReportCardFooter": "", "CardRules": [], "CardNotice": "" },
+    "Contact": {
+      "Phone": "5129-4403",
+      "Email": "colegioleadership12@gmail.com",
+      "Address": "7a. avenida 10-72, zona 1, Mixco, Guatemala",
+      "Website": "",
+      "DialPrefix": "+502",
+      "Phones": [],
+      "WhatsApp": "",
+      "OfficeHours": [],
+      "MapQuery": "Colegio Leadership, 7a avenida 10-72 zona 1, Mixco",
+      "Social": { "Facebook": "", "Instagram": "", "YouTube": "", "TikTok": "" }
+    },
+    "Documents": { "TaxId": "", "ReceiptFooter": "", "ReportCardFooter": "", "CardRules": [
+        "Uso personal e intransferible dentro de las instalaciones del colegio.",
+        "Debe presentarse cuando administración o seguridad lo solicite.",
+        "En caso de extravío, reportar inmediatamente para reposición."
+      ],
+      "CardNotice": "Este carnet acredita al estudiante inscrito durante el ciclo escolar indicado." },
     "Assets": {
       "MainLogo": "/branding/main.png",
       "LoginLogo": "/branding/main.png",
@@ -19,6 +35,7 @@
     },
     "Theme": { "Deep": "#073B25", "Primary": "#0B5835", "Accent": "#ECA42E", "Surface": "#F7F9F5" },
     "Locale": { "Culture": "es-GT", "TimeZone": "America/Guatemala", "Currency": "GTQ" },
+    "Public": { "About": "", "Highlights": [], "Programs": [], "AdmissionsMessage": "" },
     "Terms": { "StudentPlural": "Estudiantes", "GuardianPlural": "Encargados", "Tuition": "Colegiatura", "Period": "Bimestre" }
   }
 }

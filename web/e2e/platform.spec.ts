@@ -19,7 +19,8 @@ test('welcome loads configured branding and opens the real login form', async ({
       .violations,
   ).toEqual([]);
   await page.screenshot({ path: testInfo.outputPath('welcome.png'), fullPage: true });
-  await page.getByRole('link', { name: 'Ingresar a mi espacio' }).click();
+  await expect(page.locator('#contacto')).toContainText('Cómo llegar');
+  await page.getByRole('link', { name: 'Ingresar a mi espacio' }).first().click();
   await expect(page.getByLabel('Usuario', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Contraseña', { exact: true })).toBeVisible();
   expect(

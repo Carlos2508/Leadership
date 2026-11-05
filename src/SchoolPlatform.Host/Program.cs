@@ -177,7 +177,7 @@ app.Use(async (context, next) =>
 {
     context.Response.Headers.XContentTypeOptions = "nosniff";
     context.Response.Headers["Referrer-Policy"] = "no-referrer";
-    context.Response.Headers.ContentSecurityPolicy = "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+    context.Response.Headers.ContentSecurityPolicy = "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; connect-src 'self'; frame-src https://www.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
     if (context.Request.Path.StartsWithSegments("/api") || context.Request.Path.StartsWithSegments("/Identity"))
         context.Response.Headers.CacheControl = "no-store";
     await next();
@@ -227,7 +227,7 @@ app.MapGet("/api/v1/bootstrap", (IOptions<InstitutionOptions> options, IWebHostE
     {
         institution.DisplayName, institution.ShortName, institution.CampusLabel, institution.Tagline,
         institution.WelcomeMessage, institution.Contact, institution.Assets, institution.Theme,
-        institution.Locale, institution.Terms, previewEnabled = env.IsDevelopment()
+        institution.Locale, institution.Terms, institution.Public, previewEnabled = env.IsDevelopment()
     });
 }).AllowAnonymous();
 app.MapGet("/api/v1/session", async (ClaimsPrincipal user, IOptions<InstitutionOptions> options, IdentityDbContext db,

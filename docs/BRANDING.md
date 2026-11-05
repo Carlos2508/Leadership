@@ -7,7 +7,8 @@ La fuente de verdad es `config/institution.json`. El host lee y valida `Institut
 | Grupo | Configurable |
 | --- | --- |
 | Identidad | Nombre público/corto, denominación legal, sede, lema, bienvenida e identificador estable de la institución |
-| Contacto | Teléfono, correo, dirección y sitio HTTPS |
+| Contacto | Teléfono, correo, dirección y sitio HTTPS; `DialPrefix` (+502) para llamar con un toque, `Phones` adicionales con etiqueta, `WhatsApp` (solo dígitos con código de país), `OfficeHours`, `MapQuery` (texto que se busca en Google Maps) y `Social` (URLs HTTPS) |
+| Página pública | `Public.About`, `Public.Highlights`, `Public.Programs`, `Public.AdmissionsMessage`; las secciones vacías no se muestran |
 | Recursos | Logo principal, de acceso, de comprobantes, de boletas y favicon, con rutas independientes |
 | Documentos | NIT y pies para comprobantes/boletas, reservados al servidor |
 | Tema | Color profundo/lateral, primario, acento y superficie en formato `#RRGGBB` |
@@ -45,3 +46,9 @@ Precedencia: appsettings → `institution.json` → `institution.local.json` →
 El host falla si falta un nombre obligatorio, recurso o color válido. `/api/v1/bootstrap` expone una proyección explícita de marca, contacto y preferencias públicas; no devuelve configuración completa, conexión ni campos tributarios/documentales. Los JSON están fuera de `wwwroot`.
 
 Un color hexadecimal válido no garantiza contraste: después de cambiar colores se revisan escritorio/móvil y las pruebas de accesibilidad. El escudo actual procede del kit conceptual del diseñador; conservar la atribución y sus límites de fidelidad.
+
+## Página pública (`/`)
+
+Presentación, «Mi espacio en línea», contacto y ubicación, y acceso «Ingresar a mi espacio». Todo texto institucional sale de la configuración; en Development el pie lista los campos aún vacíos. El mapa de Google se carga **solo al pulsar «Mostrar mapa»** (CSP `frame-src https://www.google.com`); antes no hay conexión con terceros. «Cómo llegar» abre Google Maps con `MapQuery`.
+
+Datos actuales tomados de los carnets que el propio colegio imprimía en el sistema anterior (teléfono 5129-4403, correo y dirección, normas del reverso). **Confirmar con el colegio** que siguen vigentes y completar horario, WhatsApp, redes, presentación y niveles. `MapQuery` incluye el nombre del colegio porque solo con la dirección Google ubicaba la zona 1 de la capital.

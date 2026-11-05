@@ -178,3 +178,7 @@ Ver `docs/QA_DESDE_CERO_2026-11-05.md`. La base `SchoolPlatform_Development` se 
 ## Identidad visual y alertas (2026-11-05)
 
 Ver `docs/DESIGN.md`. Tipografías Fraunces/Figtree autoalojadas (`wwwroot/fonts`, OFL), capa `web/src/styles/_identity.scss`, SweetAlert2 11.26.25 vía `core/alerts.ts` (toasts de éxito, errores de acciones, confirmaciones de acciones sensibles, «Pago registrado → Ver recibo»). Saludo según la hora del colegio en el inicio. Los E2E esperan avisos en `.sp-toast`/`.sp-alert`.
+
+## Página pública y guía de negocio (2026-11-05)
+
+`/` es ahora una página pública profesional (ver `docs/BRANDING.md`): contacto con llamada directa, correo, «Cómo llegar», mapa bajo demanda y accesos «Ingresar a mi espacio». Nuevas opciones `Institution:Contact` y `Institution:Public`. Guía de lógica de negocio en PDF: `docs/manual/Logica_de_negocio.pdf`, generada desde `docs/manual/logica-de-negocio.html` con `node scripts/Build-Manual.mjs` (usar el Node de `.tools`).

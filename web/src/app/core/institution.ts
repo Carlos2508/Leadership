@@ -9,7 +9,24 @@ export interface Institution {
   campusLabel: string;
   tagline: string;
   welcomeMessage: string;
-  contact: { phone: string; email: string; address: string; website: string };
+  contact: {
+    phone: string;
+    email: string;
+    address: string;
+    website: string;
+    dialPrefix: string;
+    phones: { label: string; number: string }[];
+    whatsApp: string;
+    officeHours: string[];
+    mapQuery: string;
+    social: { facebook: string; instagram: string; youTube: string; tikTok: string };
+  };
+  public: {
+    about: string;
+    highlights: { title: string; text: string }[];
+    programs: { title: string; text: string }[];
+    admissionsMessage: string;
+  };
   assets: {
     mainLogo: string;
     loginLogo: string;

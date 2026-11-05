@@ -19,6 +19,8 @@ public sealed class InstitutionOptions
     public ThemeOptions Theme { get; set; } = new();
     public LocaleOptions Locale { get; set; } = new();
     public TermOptions Terms { get; set; } = new();
+    /// <summary>Content of the public home page (optional; empty sections are not shown).</summary>
+    public PublicSiteOptions Public { get; set; } = new();
 }
 
 public sealed class ContactOptions
@@ -27,6 +29,44 @@ public sealed class ContactOptions
     public string Email { get; set; } = "";
     public string Address { get; set; } = "";
     public string Website { get; set; } = "";
+    /// <summary>International prefix for click-to-call links (e.g. +502). Numbers are shown as written.</summary>
+    public string DialPrefix { get; set; } = "";
+    /// <summary>Additional numbers with a label (e.g. Secretaría, Dirección).</summary>
+    public LabeledPhone[] Phones { get; set; } = [];
+    /// <summary>WhatsApp number in international format, digits only (optional).</summary>
+    public string WhatsApp { get; set; } = "";
+    public string[] OfficeHours { get; set; } = [];
+    /// <summary>Text searched in Google Maps for the location (defaults to Address).</summary>
+    public string MapQuery { get; set; } = "";
+    public SocialOptions Social { get; set; } = new();
+}
+
+public sealed class LabeledPhone
+{
+    public string Label { get; set; } = "";
+    public string Number { get; set; } = "";
+}
+
+public sealed class SocialOptions
+{
+    public string Facebook { get; set; } = "";
+    public string Instagram { get; set; } = "";
+    public string YouTube { get; set; } = "";
+    public string TikTok { get; set; } = "";
+}
+
+public sealed class PublicSiteOptions
+{
+    public string About { get; set; } = "";
+    public PublicItem[] Highlights { get; set; } = [];
+    public PublicItem[] Programs { get; set; } = [];
+    public string AdmissionsMessage { get; set; } = "";
+}
+
+public sealed class PublicItem
+{
+    public string Title { get; set; } = "";
+    public string Text { get; set; } = "";
 }
 
 public sealed class DocumentOptions
@@ -101,6 +141,16 @@ public sealed class InstitutionValidator(IWebHostEnvironment environment) : IVal
         if (options.Contact.Website.Length > 0 &&
             (!Uri.TryCreate(options.Contact.Website, UriKind.Absolute, out var uri) || uri.Scheme != "https"))
             errors.Add("El sitio institucional debe ser una URL HTTPS.");
+        foreach (var url in new[] { options.Contact.Social.Facebook, options.Contact.Social.Instagram, options.Contact.Social.YouTube,
+                     options.Contact.Social.TikTok })
+            if (url.Length > 0 && (!Uri.TryCreate(url, UriKind.Absolute, out var social) || social.Scheme != "https"))
+                errors.Add("Las redes sociales deben ser URLs HTTPS.");
+        if (options.Contact.WhatsApp.Length > 0 && !Regex.IsMatch(options.Contact.WhatsApp, "^[0-9]{8,15}$"))
+            errors.Add("WhatsApp debe tener solo dígitos con código de país (8 a 15).");
+        if (options.Contact.DialPrefix.Length > 0 && !Regex.IsMatch(options.Contact.DialPrefix, @"^\+[0-9]{1,4}$"))
+            errors.Add("DialPrefix debe tener la forma +502.");
+        if (options.Contact.Phones.Any(x => string.IsNullOrWhiteSpace(x.Number) || x.Number.Length > 40 || x.Label.Length > 40))
+            errors.Add("Cada teléfono adicional necesita número (y etiqueta corta).");
         return errors.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(errors);
     }
 }

@@ -64,6 +64,9 @@ h2 {
   padding: 14px;
   background: white;
 }
+.skip-link:not(:focus) {
+  clip-path: inset(50%);
+}
 .skip-link:focus {
   top: 16px;
 }

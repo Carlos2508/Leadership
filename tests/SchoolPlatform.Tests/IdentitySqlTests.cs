@@ -20,8 +20,7 @@ public sealed class IdentitySqlTests : IAsyncLifetime
         var connection = new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable("SCHOOLPLATFORM_TEST_SQL") ??
             "Server=localhost;Integrated Security=true;Encrypt=true;TrustServerCertificate=true") { InitialCatalog = databaseName };
         app = new TestApplication(configuration: new() { ["ConnectionStrings:SchoolDatabase"] = connection.ConnectionString });
-        using var scope = app.Services.CreateScope();
-        await scope.ServiceProvider.GetRequiredService<IdentityDbContext>().Database.MigrateAsync();
+        await app.MigrateOwnedDatabaseAsync(databaseName);
     }
 
     public async Task DisposeAsync()

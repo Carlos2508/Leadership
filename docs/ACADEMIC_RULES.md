@@ -1,6 +1,6 @@
 # Reglas académicas
 
-La biblioteca `src/Modules/Assessment` contiene un cálculo puro por materia. No tiene endpoints, persistencia, autorización ni publicación de notas.
+La biblioteca `src/Modules/Assessment` contiene un cálculo puro por materia, todavía interno. Desde el séptimo incremento existen la captura de notas de período, sus revisiones y la publicación por período con corte de solvencia (ver ADR-007); **no se publican promedios anuales ni redondeos**.
 
 Con exactamente cuatro bimestres numéricos válidos (0 a 100), la ordinaria es su suma dividida entre cuatro. Se compara con 60 por materia. Un cero es una nota; un bimestre `null` mantiene el resultado pendiente, sin convertirlo a cero. Las notas inválidas y los arreglos de tres/cinco bimestres se rechazan.
 

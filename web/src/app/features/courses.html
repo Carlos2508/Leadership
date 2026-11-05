@@ -1,0 +1,257 @@
+<app-shell title="Cursos y docentes">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">ORGANIZACIÓN ACADÉMICA</span>
+      <h1>Cursos y docentes</h1>
+      <p>Cada curso es una materia del ciclo para un grado o una sección. Su lista sigue las inscripciones vigentes.</p>
+    </div>
+    @if (canManage() && years().length) {
+      <button class="button" (click)="openCreate()" [disabled]="busy()"><app-icon name="book" />Crear cursos</button>
+    }
+  </div>
+  @if (notice()) {
+    <p class="feedback success-feedback" role="status" tabindex="-1" #noticeRef>{{ notice() }}</p>
+  }
+  @if (error()) {
+    <p class="feedback error-feedback" role="alert">{{ error() }}</p>
+  }
+  @if (!loading() && !years().length) {
+    <section class="card empty-state">
+      <app-icon name="calendar" />
+      <h2>No hay ciclos escolares</h2>
+      <p>Crea un ciclo y sus grados antes de organizar cursos.</p>
+      <a class="button" routerLink="/workspace/academic">Ir a ciclos y grados</a>
+    </section>
+  } @else {
+    <section class="card directory-card">
+      <div class="filters">
+        <label class="select-field"
+          ><span>Ciclo</span
+          ><select name="year" [(ngModel)]="yearId" (ngModelChange)="changeYear()">
+            @for (item of years(); track item.id) {
+              <option [value]="item.id">{{ item.label }} · {{ yearLabels[item.status] }}</option>
+            }
+          </select></label
+        ><label class="select-field"
+          ><span>Grado</span
+          ><select name="grade" [(ngModel)]="gradeFilter" (ngModelChange)="load()">
+            <option value="">Todos</option>
+            @for (grade of grades(); track grade.id) {
+              <option [value]="grade.id">{{ grade.name }}</option>
+            }
+          </select></label
+        >
+      </div>
+    </section>
+    <div class="detail-grid academic-grid">
+      <div class="detail-main">
+        @for (group of groups(); track group.grade) {
+          <section class="card detail-card" [attr.aria-label]="'Cursos de ' + group.grade">
+            <h2>{{ group.grade }}</h2>
+            <div class="course-list">
+              @for (course of group.courses; track course.id) {
+                <article class="course-item">
+                  <div class="course-heading">
+                    <span class="icon-tile mint small-tile"><app-icon name="book" /></span>
+                    <span class="person-copy"
+                      ><strong>{{ course.subject }}</strong
+                      ><small>{{ course.section ? 'Sección ' + course.section : 'Todo el grado' }} · {{ course.students }}
+                        {{ course.students === 1 ? 'estudiante' : 'estudiantes' }}</small></span
+                    >
+                    <a class="text-button" [routerLink]="['/workspace/courses', course.id]"
+                      >Lista <span class="sr-only">de {{ course.subject }}</span></a
+                    >
+                  </div>
+                  <div class="faculty-chips">
+                    @for (teacher of course.teachers; track teacher.assignmentId) {
+                      <span class="chip teacher-chip"
+                        >{{ teacher.name }}{{ teacher.role === 'Assistant' ? ' · Auxiliar' : '' }}
+                        @if (canManage()) {
+                          <button
+                            class="chip-action"
+                            (click)="openUnassign(course, teacher)"
+                            [attr.aria-label]="'Finalizar asignación de ' + teacher.name + ' en ' + course.subject"
+                          >
+                            <app-icon name="close" />
+                          </button>
+                        }
+                      </span>
+                    } @empty {
+                      <span class="chip empty-chip">Sin docente</span>
+                    }
+                    @if (canManage()) {
+                      <button class="text-button" (click)="openAssign(course)">
+                        + Docente <span class="sr-only">para {{ course.subject }}</span>
+                      </button>
+                    }
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
+        } @empty {
+          <section class="card empty-state">
+            <app-icon name="book" />
+            <h2>Sin cursos en este ciclo</h2>
+            <p>{{ canManage() ? 'Usa «Crear cursos» para elegir materias por grado o sección.' : 'Aún no se han organizado cursos.' }}</p>
+          </section>
+        }
+      </div>
+      <aside class="detail-side">
+        <section class="card detail-card" aria-labelledby="subjects-title">
+          <div class="section-heading">
+            <h2 id="subjects-title">Materias</h2>
+            @if (canManage()) {
+              <button class="text-button" (click)="openSubject()">+ Nueva</button>
+            }
+          </div>
+          <ul class="profile-list">
+            @for (subject of subjects(); track subject.id) {
+              <li>
+                <span class="grade-copy"
+                  ><strong>{{ subject.name }}</strong><small>{{ subject.code }}{{ subject.isActive ? '' : ' · Inactiva' }}</small></span
+                >
+                @if (canManage()) {
+                  <button class="text-button" (click)="openSubject(subject)">Editar <span class="sr-only">{{ subject.name }}</span></button>
+                }
+              </li>
+            } @empty {
+              <li><span class="muted-copy">Aún no hay materias.</span></li>
+            }
+          </ul>
+        </section>
+      </aside>
+    </div>
+  }
+
+  <dialog #courseDialog class="account-dialog wide-dialog" (cancel)="onCancel($event)" aria-labelledby="course-dialog-title">
+    <div class="dialog-heading">
+      <h2 id="course-dialog-title">{{ title() }}</h2>
+      <button class="icon-button" (click)="closeDialog()" aria-label="Cerrar ventana" [disabled]="busy()">
+        <app-icon name="close" />
+      </button>
+    </div>
+    <form class="access-form" (ngSubmit)="submit()">
+      @switch (mode()) {
+        @case ('subject') {
+          <div class="form-grid">
+            <label class="form-field"
+              ><span>Código</span><input name="subjectCode" [(ngModel)]="subjectForm.code" required maxlength="20" autocomplete="off"
+            /></label>
+            <label class="form-field"
+              ><span>Nombre</span><input name="subjectName" [(ngModel)]="subjectForm.name" required maxlength="80" autocomplete="off"
+            /></label>
+          </div>
+          @if (editingSubject()) {
+            <label class="checkbox-field"
+              ><input type="checkbox" name="subjectActive" [(ngModel)]="subjectForm.isActive" /><span>Materia activa</span></label
+            >
+          }
+        }
+        @case ('create') {
+          <div class="form-grid">
+            <label class="form-field"
+              ><span>Grado</span
+              ><select name="createGrade" [(ngModel)]="createForm.gradeLevelId" (ngModelChange)="createForm.sectionId = ''">
+                <option value="" disabled>Selecciona</option>
+                @for (grade of grades(); track grade.id) {
+                  @if (grade.isActive) {
+                    <option [value]="grade.id">{{ grade.name }}</option>
+                  }
+                }
+              </select></label
+            >
+            <label class="form-field"
+              ><span>Alcance</span
+              ><select name="createSection" [(ngModel)]="createForm.sectionId" [disabled]="!createForm.gradeLevelId">
+                <option value="">Todo el grado</option>
+                @for (section of sectionsFor(createForm.gradeLevelId); track section.id) {
+                  <option [value]="section.id">Sección {{ section.name }}</option>
+                }
+              </select></label
+            >
+          </div>
+          <fieldset class="choice-group">
+            <legend>Materias</legend>
+            <div class="checkbox-grid">
+              @for (subject of subjects(); track subject.id) {
+                @if (subject.isActive) {
+                  <label class="checkbox-field"
+                    ><input type="checkbox" [name]="'subject-' + subject.id" [(ngModel)]="createForm.subjects[subject.id]" /><span>{{
+                      subject.name
+                    }}</span></label
+                  >
+                }
+              } @empty {
+                <p class="muted-copy">Registra primero las materias.</p>
+              }
+            </div>
+          </fieldset>
+        }
+        @case ('assign') {
+          <p class="managed-user">
+            {{ selectedCourse()?.subject }}
+            <span class="muted-copy">· {{ selectedCourse()?.grade }} {{ selectedCourse()?.section ? '· Sección ' + selectedCourse()?.section : '' }}</span>
+          </p>
+          <div class="candidate-search">
+            <label class="form-field"
+              ><span>Buscar personal</span
+              ><input
+                name="staffSearch"
+                type="search"
+                [(ngModel)]="assignForm.search"
+                maxlength="100"
+                autocomplete="off"
+                (keydown.enter)="$event.preventDefault(); searchStaff()"
+            /></label>
+            <button type="button" class="button outline" (click)="searchStaff()">Buscar</button>
+          </div>
+          @if (staff().length) {
+            <fieldset class="choice-group candidate-list">
+              <legend>Personal con perfil docente o administrativo</legend>
+              @for (person of staff(); track person.id) {
+                <label class="radio-option"
+                  ><input type="radio" name="staff" [value]="person.id" [(ngModel)]="assignForm.staffId" /><span
+                    >{{ person.name }} <small>· {{ person.position }}</small></span
+                  ></label
+                >
+              }
+            </fieldset>
+          } @else {
+            <p class="muted-copy">Solo aparecen personas con perfil de personal. Agrégalo desde su ficha en Personas y familias.</p>
+          }
+          <div class="form-grid">
+            <label class="form-field"
+              ><span>Función</span
+              ><select name="role" [(ngModel)]="assignForm.role">
+                <option value="Lead">Docente titular</option>
+                <option value="Assistant">Docente auxiliar</option>
+              </select></label
+            >
+            <label class="form-field"
+              ><span>Desde <small>(opcional)</small></span><input name="startsOn" type="date" [(ngModel)]="assignForm.startsOn"
+            /></label>
+          </div>
+        }
+        @case ('unassign') {
+          <p class="action-explanation">
+            {{ selectedTeacher()?.name }} dejará de ver la lista y las actividades de {{ selectedCourse()?.subject }} desde hoy.
+            La asignación se conserva en el historial.
+          </p>
+        }
+      }
+      @if (mode() === 'assign' || mode() === 'unassign') {
+        <label class="form-field"
+          ><span>Motivo</span><textarea name="reason" [(ngModel)]="reason" required minlength="8" maxlength="500" rows="3"></textarea
+        ></label>
+      }
+      @if (dialogError()) {
+        <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
+      }
+      <div class="dialog-actions">
+        <button class="button outline" type="button" (click)="closeDialog()" [disabled]="busy()">Cancelar</button
+        ><button class="button" type="submit" [disabled]="busy()">{{ busy() ? 'Guardando…' : 'Guardar' }}</button>
+      </div>
+    </form>
+  </dialog>
+</app-shell>

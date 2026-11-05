@@ -1,0 +1,288 @@
+<app-shell title="Caja">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">FINANZAS</span>
+      <h1>Caja y estados de cuenta</h1>
+      <p>Busca al estudiante, revisa sus cargos y registra pagos con su recibo.</p>
+    </div>
+    <div class="inline-actions">
+      <a class="button outline" routerLink="/workspace/finance/setup">Configuración y cargos</a>
+      <a class="button outline" routerLink="/workspace/finance/clearance">Solvencia</a>
+    </div>
+  </div>
+  @if (notice()) {
+    <div class="feedback success-feedback" role="status" tabindex="-1" #noticeRef>
+      {{ notice() }}
+      @if (lastReceipt(); as receipt) {
+        <a class="text-button" [routerLink]="['/workspace/finance/receipts', receipt.paymentId]">Ver e imprimir recibo</a>
+      }
+    </div>
+  }
+  @if (error()) {
+    <p class="feedback error-feedback" role="alert">{{ error() }}</p>
+  }
+  <section class="card directory-card">
+    <form class="filters" (ngSubmit)="find()">
+      <label class="search-field"
+        ><span>Buscar estudiante</span>
+        <div>
+          <app-icon name="search" /><input
+            type="search"
+            name="search"
+            placeholder="Nombre, apellido o código"
+            maxlength="100"
+            [(ngModel)]="search"
+          /></div></label
+      ><button class="button outline" type="submit" [disabled]="searching()">Buscar</button>
+    </form>
+    @if (results().length) {
+      <ul class="result-list" aria-label="Resultados de la búsqueda">
+        @for (person of results(); track person.id) {
+          <li>
+            <button class="result-item" (click)="choose(person)">
+              <span class="avatar small" aria-hidden="true">{{ person.givenNames.slice(0, 1) }}</span>
+              <span class="person-copy"
+                ><strong>{{ person.displayName }}</strong><small>{{ person.studentCode }}</small></span
+              >
+              <app-icon name="arrow" />
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  @if (loading() && !statement()) {
+    <p class="loading-state card" role="status">Cargando estado de cuenta…</p>
+  } @else if (statement(); as s) {
+    <section class="card detail-card statement-card" aria-labelledby="statement-title">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">ESTADO DE CUENTA</span>
+          <h2 id="statement-title">{{ s.studentName }} <small class="muted-copy">· {{ s.studentCode }}</small></h2>
+        </div>
+        <div class="balance-box" [class.zero]="s.totalBalance === 0">
+          <small>Saldo pendiente</small><strong>{{ money(s.totalBalance) }}</strong>
+        </div>
+      </div>
+      <div class="inline-actions">
+        @if (canCollect() && openCharges().length) {
+          <button class="button" (click)="openPay()"><app-icon name="check" />Registrar pago</button>
+        }
+        <a class="text-button" [routerLink]="['/workspace/people', s.studentId]">Ver ficha</a>
+      </div>
+      @if (s.charges.length) {
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Cargos del estudiante">
+          <table class="stack-table">
+            <caption class="sr-only">Cargos, ajustes, pagos y saldo</caption>
+            <thead>
+              <tr>
+                <th scope="col">Concepto</th>
+                <th scope="col">Vence</th>
+                <th scope="col">Importe</th>
+                <th scope="col">Ajustes</th>
+                <th scope="col">Pagado</th>
+                <th scope="col">Saldo</th>
+                <th scope="col">Estado</th>
+                @if (canCharge()) {
+                  <th scope="col">Acciones</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (charge of s.charges; track charge.id) {
+                <tr [class.muted-row]="charge.status === 'Voided'">
+                  <td>
+                    <span class="person-copy"
+                      ><strong>{{ charge.description }}</strong
+                      ><small
+                        >Ciclo {{ charge.year }}{{ charge.countsForClearance ? ' · cuenta para solvencia' : '' }}</small
+                      ></span
+                    >
+                  </td>
+                  <td data-label="Vence">{{ date(charge.dueOn) }}</td>
+                  <td data-label="Importe" class="numeric">{{ money(charge.amount) }}</td>
+                  <td data-label="Ajustes" class="numeric">{{ charge.adjustments ? '−' + money(charge.adjustments) : '—' }}</td>
+                  <td data-label="Pagado" class="numeric">{{ charge.paid ? money(charge.paid) : '—' }}</td>
+                  <td data-label="Saldo" class="numeric"><strong>{{ money(charge.balance) }}</strong></td>
+                  <td data-label="Estado">
+                    <span
+                      class="pill"
+                      [class.mint]="charge.status === 'Paid' || charge.status === 'Waived'"
+                      [class.gold]="charge.status === 'Partial'"
+                      [class.suspended]="charge.status === 'Pending'"
+                      >{{ statusLabels[charge.status] }}</span
+                    >
+                  </td>
+                  @if (canCharge()) {
+                    <td class="row-actions">
+                      @if (charge.balance > 0) {
+                        <button class="text-button" (click)="openAdjust(charge)">
+                          Ajustar <span class="sr-only">{{ charge.description }}</span></button
+                        >@if (charge.paid === 0) {
+                          <button class="text-button danger-text" (click)="openVoid(charge)">
+                            Anular <span class="sr-only">{{ charge.description }}</span>
+                          </button>
+                        }
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="empty-inline">Este estudiante no tiene cargos emitidos.</p>
+      }
+
+      <h3 class="subheading">Pagos</h3>
+      @if (s.payments.length) {
+        <ul class="payment-list">
+          @for (payment of s.payments; track payment.id) {
+            <li [class.reversed]="payment.reversed">
+              <span class="person-copy"
+                ><strong>Recibo No. {{ payment.receiptNumber }} · {{ money(payment.amount) }}</strong
+                ><small
+                  >{{ date(payment.receivedOn) }} · {{ methodLabels[payment.method] }} · {{ payment.payerName }}
+                  {{ payment.reversed ? '· Revertido' : '' }}</small
+                ></span
+              >
+              <a class="text-button" [routerLink]="['/workspace/finance/receipts', payment.id]"
+                >Recibo <span class="sr-only">{{ payment.receiptNumber }}</span></a
+              >
+              @if (canReverse() && !payment.reversed) {
+                <button class="text-button danger-text" (click)="openReverse(payment)">
+                  Revertir <span class="sr-only">recibo {{ payment.receiptNumber }}</span>
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="empty-inline">Sin pagos registrados.</p>
+      }
+    </section>
+  } @else {
+    <section class="card empty-state">
+      <app-icon name="search" />
+      <h2>Selecciona un estudiante</h2>
+      <p>Busca por nombre o código para ver su estado de cuenta.</p>
+    </section>
+  }
+
+  <dialog #cashDialog class="account-dialog wide-dialog" (cancel)="onCancel($event)" aria-labelledby="cash-dialog-title">
+    <div class="dialog-heading">
+      <h2 id="cash-dialog-title">{{ title() }}</h2>
+      <button class="icon-button" (click)="closeDialog()" aria-label="Cerrar ventana" [disabled]="busy()">
+        <app-icon name="close" />
+      </button>
+    </div>
+    <form class="access-form" (ngSubmit)="submit()">
+      @switch (mode()) {
+        @case ('pay') {
+          <fieldset class="choice-group">
+            <legend>Aplicación del pago</legend>
+            <p class="muted-copy">Se propone el cargo más antiguo. Ajusta los montos según lo que se recibe.</p>
+            @for (charge of openCharges(); track charge.id) {
+              <div class="allocation-row">
+                <span class="person-copy"
+                  ><strong>{{ charge.description }}</strong
+                  ><small>Saldo {{ money(charge.balance) }} · vence {{ date(charge.dueOn) }}</small></span
+                >
+                <label class="form-field compact-field"
+                  ><span class="sr-only">Monto para {{ charge.description }}</span
+                  ><input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    [max]="charge.balance"
+                    [name]="'amount-' + charge.id"
+                    [(ngModel)]="amounts[charge.id]"
+                    inputmode="decimal"
+                /></label>
+                <button type="button" class="text-button" (click)="fill(charge)">
+                  {{ amounts[charge.id] ? 'Quitar' : 'Saldo' }}
+                  <span class="sr-only">{{ charge.description }}</span>
+                </button>
+              </div>
+            }
+            <p class="allocation-total">Total recibido: <strong>{{ money(allocated()) }}</strong></p>
+          </fieldset>
+          <div class="form-grid">
+            <label class="form-field"
+              ><span>Nombre de quien paga</span
+              ><input name="payer" [(ngModel)]="pay.payer" required maxlength="120" autocomplete="off"
+            /></label>
+            <label class="form-field"
+              ><span>Medio de pago</span
+              ><select name="method" [(ngModel)]="pay.method">
+                @for (method of methods; track method[0]) {
+                  <option [value]="method[0]">{{ method[1] }}</option>
+                }
+              </select></label
+            >
+            <label class="form-field"
+              ><span>Fecha de pago</span><input name="date" type="date" [(ngModel)]="pay.date" required
+            /></label>
+            <label class="form-field"
+              ><span>Referencia <small>(opcional)</small></span
+              ><input name="reference" [(ngModel)]="pay.reference" maxlength="80" autocomplete="off"
+            /></label>
+          </div>
+          <label class="form-field"
+            ><span>Observación <small>(opcional)</small></span
+            ><input name="note" [(ngModel)]="pay.note" maxlength="300" autocomplete="off"
+          /></label>
+        }
+        @case ('adjust') {
+          <p class="managed-user">
+            {{ selectedCharge()?.description }}
+            <span class="muted-copy">· saldo {{ money(selectedCharge()?.balance ?? 0) }}</span>
+          </p>
+          <div class="form-grid">
+            <label class="form-field"
+              ><span>Tipo</span
+              ><select name="kind" [(ngModel)]="adjust.kind">
+                @for (kind of adjustmentKinds; track kind[0]) {
+                  <option [value]="kind[0]">{{ kind[1] }}</option>
+                }
+              </select></label
+            >
+            <label class="form-field"
+              ><span>Monto</span
+              ><input name="adjustAmount" type="number" min="0.01" step="0.01" [(ngModel)]="adjust.amount" required
+            /></label>
+          </div>
+        }
+        @case ('void') {
+          <p class="action-explanation">
+            El cargo «{{ selectedCharge()?.description }}» dejará de contar como obligación. Se conserva en el
+            historial y puede emitirse de nuevo si fue un error.
+          </p>
+        }
+        @case ('reverse') {
+          <p class="action-explanation">
+            El recibo No. {{ selectedPayment()?.receiptNumber }} se conserva marcado como revertido y los cargos
+            que cubría vuelven a tener saldo. Esto puede afectar la solvencia del estudiante.
+          </p>
+        }
+      }
+      @if (mode() !== 'pay') {
+        <label class="form-field"
+          ><span>Motivo y autorización</span
+          ><textarea name="reason" [(ngModel)]="reason" required minlength="8" maxlength="500" rows="3"></textarea
+        ></label>
+      }
+      @if (dialogError()) {
+        <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
+      }
+      <div class="dialog-actions">
+        <button class="button outline" type="button" (click)="closeDialog()" [disabled]="busy()">Cancelar</button
+        ><button class="button" type="submit" [disabled]="busy()">
+          {{ busy() ? 'Guardando…' : mode() === 'pay' ? 'Confirmar pago' : 'Guardar' }}
+        </button>
+      </div>
+    </form>
+  </dialog>
+</app-shell>

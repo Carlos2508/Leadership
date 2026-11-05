@@ -10,8 +10,16 @@ Segundo incremento: funciones persistentes de cuentas en la base de **un solo co
 | Gestión de accesos | `accounts.manage`: invitar y administrar las cuentas de esta instalación |
 | Consulta de auditoría | `audit.read`: consultar eventos de acceso |
 | Gestión de accesos y auditoría | Ambos permisos; perfil del primer gestor |
+| Consulta de personas y familias | `people.read` |
+| Secretaría: personas, familias e inscripciones | `people.read`, `people.manage`, `academic.read`, `enrollment.manage` |
+| Coordinación académica | `people.read`, `academic.read`, `academic.manage` |
+| Caja: cobros y recibos | `people.read`, `academic.read`, `finance.read`, `finance.collect` |
+| Administración financiera | `people.read`, `academic.read`, `finance.read`, `finance.charges`, `finance.collect`, `finance.reverse` |
+| Administración institucional | Todos los anteriores |
 
-Estos perfiles no conceden facultades académicas, financieras ni acceso a expedientes. No representan los futuros roles de docente, familia o estudiante. Esas facultades deben autorizarse por recurso/vínculo cuando existan los módulos.
+Un conjunto de permisos que no coincide con ningún perfil (por ejemplo, después de ampliar un perfil) se muestra como «Permisos personalizados». El primer gestor recibe solo accesos y auditoría; puede asignarse «Administración institucional» desde la plataforma. Vincular una cuenta a una persona está descrito en `PEOPLE_AND_FAMILIES.md`.
+
+Los perfiles de cuentas no conceden facultades familiares. Las facultades sobre un estudiante se conceden por vínculo en el módulo de personas. No representan los futuros roles de docente, familia o estudiante. Esas facultades deben autorizarse por recurso/vínculo cuando existan los módulos.
 
 `AccountPermissions` guarda concesiones explícitas por usuario. Las políticas comprueban autenticación, cuenta activa y permiso en SQL. No se concede acceso por ocultar/mostrar menús ni por un permiso antiguo contenido en la cookie. El servicio de escritura vuelve a comprobar al actor dentro de la transacción.
 

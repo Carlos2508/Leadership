@@ -27,5 +27,7 @@ export class Icon {
     close: 'm6 6 12 12M6 18 18 6',
     logout: 'M9 3H4v18h5m5-15 6 6-6 6m-6-6h12',
     info: 'M12 11v6m0-10h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
+    wallet: 'M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 7l12-4v4M16 13.5h2',
+    receipt: 'M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h4',
   };
 }

@@ -1,0 +1,369 @@
+<app-shell title="Ciclos y grados">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">ORGANIZACIÓN ACADÉMICA</span>
+      <h1>Ciclos y grados</h1>
+      <p>Define cada ciclo escolar, sus {{ school.terms.period.toLowerCase() }}s y las secciones de cada grado.</p>
+    </div>
+    @if (canManage()) {
+      <button class="button" (click)="openYear()" [disabled]="busy()">
+        <app-icon name="calendar" />Nuevo ciclo
+      </button>
+    }
+  </div>
+  @if (notice()) {
+    <p class="feedback success-feedback" role="status" tabindex="-1" #noticeRef>{{ notice() }}</p>
+  }
+  @if (error()) {
+    <div class="feedback error-feedback" role="alert">
+      {{ error() }} <button class="text-button" (click)="load()">Reintentar</button>
+    </div>
+  }
+  @if (loading() && !years().length) {
+    <p class="loading-state card" role="status">Cargando organización académica…</p>
+  } @else {
+    <section class="card detail-card" aria-labelledby="years-title">
+      <h2 id="years-title">Ciclos escolares</h2>
+      @if (years().length) {
+        <div class="year-list" role="list">
+          @for (item of years(); track item.id) {
+            <button
+              class="year-item"
+              role="listitem"
+              [class.selected]="detail()?.year?.id === item.id"
+              [attr.aria-current]="detail()?.year?.id === item.id ? 'true' : null"
+              (click)="select(item)"
+            >
+              <strong>{{ item.label }}</strong>
+              <span class="muted-copy">{{ date(item.startsOn) }} – {{ date(item.endsOn) }}</span>
+              <span class="role-list">
+                <span
+                  class="pill"
+                  [class.gold]="item.status === 'Draft'"
+                  [class.blue]="item.status === 'EnrollmentOpen'"
+                  [class.mint]="item.status === 'Active'"
+                  [class.suspended]="item.status === 'Closed'"
+                  >{{ statusLabels[item.status] }}</span
+                >
+                @if (item.isDefault) {
+                  <span class="pill purple">Predeterminado</span>
+                }
+              </span>
+            </button>
+          }
+        </div>
+      } @else {
+        <div class="empty-state">
+          <app-icon name="calendar" />
+          <h2>Aún no hay ciclos</h2>
+          <p>Crea el primer ciclo escolar para preparar grados, secciones e inscripciones.</p>
+        </div>
+      }
+    </section>
+
+    @if (detail(); as d) {
+      <div class="detail-grid academic-grid">
+        <div class="detail-main">
+          <section class="card detail-card" aria-labelledby="year-detail-title">
+            <div class="section-heading">
+              <h2 id="year-detail-title">Ciclo {{ d.year.label }}</h2>
+              <span class="role-list">
+                <span class="pill">{{ statusLabels[d.year.status] }}</span>
+              </span>
+            </div>
+            <p class="muted-copy">
+              {{ date(d.year.startsOn) }} – {{ date(d.year.endsOn) }} · {{ d.year.enrollments }}
+              {{ d.year.enrollments === 1 ? 'inscripción' : 'inscripciones' }}
+            </p>
+            <div class="inline-actions">
+              <a
+                class="button outline compact-button"
+                routerLink="/workspace/enrollment"
+                [queryParams]="{ year: d.year.id }"
+                >Ver inscripciones</a
+              >
+              @if (canManage()) {
+                @if (nextAction[d.year.status]) {
+                  <button class="button compact-button" (click)="openStatus()">
+                    {{ nextAction[d.year.status] }}
+                  </button>
+                }
+                @if (d.year.status === 'Draft' || d.year.status === 'EnrollmentOpen') {
+                  <button class="button outline compact-button" (click)="openYear(true)">
+                    Editar fechas
+                  </button>
+                }
+                @if (!d.year.isDefault) {
+                  <button
+                    class="text-button"
+                    (click)="quick('default')"
+                    [disabled]="busy()"
+                  >
+                    Usar como predeterminado
+                  </button>
+                }
+              }
+            </div>
+
+            <div class="section-heading spaced">
+              <h3 class="subheading">{{ school.terms.period }}s</h3>
+              @if (canManage() && (d.year.status === 'Draft' || d.year.status === 'EnrollmentOpen')) {
+                <button class="text-button" (click)="openPeriod()">+ Agregar</button>
+              }
+            </div>
+            @if (d.periods.length) {
+              <ol class="period-list">
+                @for (period of d.periods; track period.id) {
+                  <li>
+                    <span class="period-number">{{ period.sequence }}</span>
+                    <span class="period-copy"
+                      ><strong>{{ period.name }}</strong
+                      ><small>{{ date(period.startsOn) }} – {{ date(period.endsOn) }}</small></span
+                    >
+                    @if (canManage() && (d.year.status === 'Draft' || d.year.status === 'EnrollmentOpen')) {
+                      <button class="text-button" (click)="openPeriod(period)">
+                        Editar <span class="sr-only">{{ period.name }}</span>
+                      </button>
+                    }
+                  </li>
+                }
+              </ol>
+              @if (canManage() && d.year.status === 'Draft') {
+                <button class="text-button danger-text" (click)="quick('remove-period')" [disabled]="busy()">
+                  Quitar el último {{ school.terms.period.toLowerCase() }}
+                </button>
+              }
+            } @else {
+              <p class="empty-inline">
+                Sin {{ school.terms.period.toLowerCase() }}s. Son necesarios para iniciar el ciclo.
+              </p>
+            }
+          </section>
+
+          <section class="card detail-card" aria-labelledby="sections-title">
+            <h2 id="sections-title">Secciones del ciclo {{ d.year.label }}</h2>
+            <p class="muted-copy">
+              Las secciones son opcionales: un estudiante puede inscribirse en el grado sin sección.
+            </p>
+            @for (group of sectionsByGrade(); track group.grade.id) {
+              <div class="grade-sections">
+                <div class="grade-sections-heading">
+                  <strong>{{ group.grade.name }}</strong>
+                  @if (canManage() && d.year.status !== 'Closed' && group.grade.isActive) {
+                    <button class="text-button" (click)="openSection(group.grade.id)">
+                      + Sección <span class="sr-only">para {{ group.grade.name }}</span>
+                    </button>
+                  }
+                </div>
+                <div class="section-chips">
+                  @for (section of group.sections; track section.id) {
+                    <span class="section-chip">
+                      <strong>{{ section.name }}</strong>
+                      <small
+                        >{{ section.current }}{{ section.capacity ? ' / ' + section.capacity : '' }}
+                        {{ section.shift ? '· ' + section.shift : '' }}</small
+                      >
+                      @if (canManage() && d.year.status !== 'Closed') {
+                        <button
+                          class="chip-action"
+                          (click)="openSection(group.grade.id, section)"
+                          [attr.aria-label]="'Editar sección ' + section.name + ' de ' + group.grade.name"
+                        >
+                          <app-icon name="menu" />
+                        </button>
+                        @if (section.current === 0) {
+                          <button
+                            class="chip-action"
+                            (click)="quick('remove-section', section)"
+                            [disabled]="busy()"
+                            [attr.aria-label]="'Eliminar sección ' + section.name + ' de ' + group.grade.name"
+                          >
+                            <app-icon name="close" />
+                          </button>
+                        }
+                      }
+                    </span>
+                  } @empty {
+                    <span class="muted-copy">Sin secciones</span>
+                  }
+                </div>
+              </div>
+            } @empty {
+              <p class="empty-inline">Primero registra los grados del colegio.</p>
+            }
+          </section>
+        </div>
+
+        <aside class="detail-side">
+          <section class="card detail-card" aria-labelledby="grades-title">
+            <div class="section-heading">
+              <h2 id="grades-title">Grados</h2>
+              @if (canManage()) {
+                <button class="text-button" (click)="openGrade()">+ Nuevo</button>
+              }
+            </div>
+            <ul class="profile-list">
+              @for (grade of grades(); track grade.id) {
+                <li>
+                  <span class="grade-copy"
+                    ><strong>{{ grade.name }}</strong
+                    ><small
+                      >{{ grade.code }}{{ grade.stage ? ' · ' + grade.stage : '' }}
+                      {{ grade.isActive ? '' : '· Inactivo' }}</small
+                    ></span
+                  >
+                  @if (canManage()) {
+                    <button class="text-button" (click)="openGrade(grade)">
+                      Editar <span class="sr-only">{{ grade.name }}</span>
+                    </button>
+                  }
+                </li>
+              } @empty {
+                <li><span class="muted-copy">Aún no hay grados.</span></li>
+              }
+            </ul>
+          </section>
+        </aside>
+      </div>
+    } @else if (years().length === 0 && canManage()) {
+      <section class="card detail-card" aria-labelledby="grades-empty-title">
+        <div class="section-heading">
+          <h2 id="grades-empty-title">Grados</h2>
+          <button class="text-button" (click)="openGrade()">+ Nuevo</button>
+        </div>
+        <ul class="profile-list">
+          @for (grade of grades(); track grade.id) {
+            <li>
+              <span>{{ grade.name }}</span
+              ><button class="text-button" (click)="openGrade(grade)">Editar</button>
+            </li>
+          } @empty {
+            <li><span class="muted-copy">Aún no hay grados.</span></li>
+          }
+        </ul>
+      </section>
+    }
+  }
+
+  <dialog
+    #academicDialog
+    class="account-dialog"
+    (cancel)="onCancel($event)"
+    aria-labelledby="academic-dialog-title"
+  >
+    <div class="dialog-heading">
+      <h2 id="academic-dialog-title">{{ title() }}</h2>
+      <button class="icon-button" (click)="closeDialog()" aria-label="Cerrar ventana" [disabled]="busy()">
+        <app-icon name="close" />
+      </button>
+    </div>
+    <form class="access-form" (ngSubmit)="submit()">
+      @switch (mode()) {
+        @case ('year') {
+          <label class="form-field"
+            ><span>Nombre del ciclo</span
+            ><input name="label" [(ngModel)]="yearForm.label" required maxlength="40" placeholder="Ej. 2027" autocomplete="off"
+          /></label>
+          <div class="form-grid">
+            <label class="form-field"
+              ><span>Inicio</span><input name="startsOn" type="date" [(ngModel)]="yearForm.startsOn" required
+            /></label>
+            <label class="form-field"
+              ><span>Fin</span><input name="endsOn" type="date" [(ngModel)]="yearForm.endsOn" required
+            /></label>
+          </div>
+        }
+        @case ('status') {
+          <p class="action-explanation">
+            @switch (detail()?.year?.status) {
+              @case ('Draft') {
+                Se podrán registrar inscripciones en este ciclo.
+              }
+              @case ('EnrollmentOpen') {
+                El ciclo inicia. Sus fechas y {{ school.terms.period.toLowerCase() }}s quedarán fijos.
+              }
+              @case ('Active') {
+                El ciclo se cerrará: no admitirá inscripciones ni cambios de ubicación. Esta acción no se
+                revierte desde aquí.
+              }
+            }
+          </p>
+          <label class="form-field"
+            ><span>Motivo del cambio</span
+            ><textarea name="reason" [(ngModel)]="reason" required minlength="8" maxlength="500" rows="3"></textarea
+          ></label>
+        }
+        @case ('period') {
+          <label class="form-field"
+            ><span>Nombre <small>(opcional)</small></span
+            ><input
+              name="periodName"
+              [(ngModel)]="periodForm.name"
+              maxlength="60"
+              [placeholder]="school.terms.period + ' ' + ((detail()?.periods?.length ?? 0) + 1)"
+              autocomplete="off"
+          /></label>
+          <div class="form-grid">
+            <label class="form-field"
+              ><span>Inicio</span><input name="periodStart" type="date" [(ngModel)]="periodForm.startsOn" required
+            /></label>
+            <label class="form-field"
+              ><span>Fin</span><input name="periodEnd" type="date" [(ngModel)]="periodForm.endsOn" required
+            /></label>
+          </div>
+        }
+        @case ('grade') {
+          <div class="form-grid">
+            <label class="form-field"
+              ><span>Código</span
+              ><input name="code" [(ngModel)]="gradeForm.code" required maxlength="20" autocomplete="off" pattern="[A-Za-z0-9][A-Za-z0-9\-]*"
+            /></label>
+            <label class="form-field"
+              ><span>Orden</span><input name="sequence" type="number" min="0" max="999" [(ngModel)]="gradeForm.sequence" required
+            /></label>
+          </div>
+          <label class="form-field"
+            ><span>Nombre</span><input name="gradeName" [(ngModel)]="gradeForm.name" required maxlength="80" autocomplete="off"
+          /></label>
+          <label class="form-field"
+            ><span>Nivel <small>(opcional)</small></span
+            ><input name="stage" [(ngModel)]="gradeForm.stage" maxlength="60" placeholder="Preprimaria, primaria…" autocomplete="off"
+          /></label>
+          @if (editingId()) {
+            <label class="checkbox-field"
+              ><input type="checkbox" name="isActive" [(ngModel)]="gradeForm.isActive" /><span
+                >Grado activo<small>Un grado inactivo no recibe nuevas inscripciones ni secciones.</small></span
+              ></label
+            >
+          }
+        }
+        @case ('section') {
+          <p class="managed-user">{{ gradeName(sectionForm.gradeLevelId) }}</p>
+          <div class="form-grid">
+            <label class="form-field"
+              ><span>Nombre</span
+              ><input name="sectionName" [(ngModel)]="sectionForm.name" required maxlength="20" placeholder="A" autocomplete="off"
+            /></label>
+            <label class="form-field"
+              ><span>Cupo <small>(opcional)</small></span
+              ><input name="capacity" type="number" min="1" max="500" [(ngModel)]="sectionForm.capacity"
+            /></label>
+          </div>
+          <label class="form-field"
+            ><span>Jornada <small>(opcional)</small></span
+            ><input name="shift" [(ngModel)]="sectionForm.shift" maxlength="40" placeholder="Matutina" autocomplete="off"
+          /></label>
+        }
+      }
+      @if (dialogError()) {
+        <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
+      }
+      <div class="dialog-actions">
+        <button class="button outline" type="button" (click)="closeDialog()" [disabled]="busy()">Cancelar</button
+        ><button class="button" type="submit" [disabled]="busy()">
+          {{ busy() ? 'Guardando…' : mode() === 'status' ? title() : 'Guardar' }}
+        </button>
+      </div>
+    </form>
+  </dialog>
+</app-shell>

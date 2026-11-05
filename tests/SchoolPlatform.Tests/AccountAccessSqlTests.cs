@@ -29,8 +29,8 @@ public sealed class AccountAccessSqlTests : IAsyncLifetime
             "Server=localhost;Integrated Security=true;Encrypt=true;TrustServerCertificate=true") { InitialCatalog = database };
         app = new TestApplication(configuration: new() { ["ConnectionStrings:SchoolDatabase"] = connection.ConnectionString },
             configureServices: services => services.Replace(ServiceDescriptor.Singleton<TimeProvider>(clock)));
+        await app.MigrateOwnedDatabaseAsync(database);
         using var scope = app.Services.CreateScope();
-        await scope.ServiceProvider.GetRequiredService<IdentityDbContext>().Database.MigrateAsync();
         owner = await Use(x => x.ProvisionOwnerAsync(OwnerName, Password));
     }
 

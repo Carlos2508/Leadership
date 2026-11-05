@@ -64,6 +64,7 @@ export class AccessManagement {
     ];
   }
   profileLabel(key: string): string {
+    if (key === 'custom') return 'Permisos personalizados';
     return this.profiles().find((x) => x.key === key)?.label ?? 'Cuenta básica';
   }
   openInvite(): void {

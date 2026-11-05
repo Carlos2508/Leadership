@@ -325,6 +325,11 @@ namespace SchoolPlatform.Host.IdentityAccess.Migrations
                     b.Property<Guid?>("TargetId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("TargetType")
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
                     b.Property<string>("TraceId")
                         .IsRequired()
                         .HasMaxLength(100)

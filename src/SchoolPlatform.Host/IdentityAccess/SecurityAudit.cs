@@ -6,6 +6,8 @@ public sealed class SecurityAuditEvent
     public DateTimeOffset OccurredAt { get; set; }
     public Guid? ActorId { get; set; }
     public Guid? TargetId { get; set; }
+    /// <summary>Null for account targets (historical rows); otherwise the kind of school record affected.</summary>
+    public string? TargetType { get; set; }
     public string Action { get; set; } = "";
     public string Reason { get; set; } = "";
     public string Detail { get; set; } = "";

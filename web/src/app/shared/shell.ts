@@ -37,6 +37,37 @@ import { SessionService } from '../core/session';
               ><app-icon name="people" />{{ school.terms.studentPlural }}</a
             >
           }
+          @if (!preview() && (session.can('people.read') || session.can('academic.read'))) {
+            <span class="nav-group" aria-hidden="true">Comunidad y académico</span>
+          }
+          @if (!preview() && session.can('people.read')) {
+            <a routerLink="/workspace/people" routerLinkActive="active" ariaCurrentWhenActive="page"
+              ><app-icon name="people" />Personas y familias</a
+            >
+          }
+          @if (!preview() && session.can('academic.read')) {
+            <a routerLink="/workspace/enrollment" routerLinkActive="active" ariaCurrentWhenActive="page"
+              ><app-icon name="school" />Inscripciones</a
+            >
+            <a routerLink="/workspace/courses" routerLinkActive="active" ariaCurrentWhenActive="page"
+              ><app-icon name="book" />Cursos y docentes</a
+            >
+            <a routerLink="/workspace/grades" routerLinkActive="active" ariaCurrentWhenActive="page"
+              ><app-icon name="star" />Publicación de notas</a
+            >
+            <a routerLink="/workspace/academic" routerLinkActive="active" ariaCurrentWhenActive="page"
+              ><app-icon name="calendar" />Ciclos y grados</a
+            >
+          }
+          @if (!preview() && session.can('finance.read')) {
+            <span class="nav-group" aria-hidden="true">Finanzas</span>
+            <a routerLink="/workspace/finance" routerLinkActive="active" ariaCurrentWhenActive="page"
+              ><app-icon name="wallet" />Caja y finanzas</a
+            >
+          }
+          @if (!preview() && (session.can('accounts.manage') || session.can('audit.read'))) {
+            <span class="nav-group" aria-hidden="true">Administración</span>
+          }
           @if (!preview() && session.can('accounts.manage')) {
             <a routerLink="/workspace/access" routerLinkActive="active" ariaCurrentWhenActive="page"
               ><app-icon name="shield" />Cuentas y accesos</a
@@ -87,7 +118,9 @@ import { SessionService } from '../core/session';
             @if (preview()) {
               <span class="pill gold">Ciclo de muestra 2026</span>
             }
-            <span class="avatar">{{ preview() ? 'D' : school.shortName.slice(0, 1) }}</span>
+            <span class="avatar" [attr.title]="session.username() || null">{{
+              preview() ? 'D' : (session.username() || school.shortName).slice(0, 1).toUpperCase()
+            }}</span>
           </div>
         </header>
         @if (preview()) {

@@ -2,6 +2,7 @@ import { Component, ElementRef, ViewChild, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms';
 import { Shell } from '../shared/shell';
 import { AccessApi } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { SessionService } from '../core/session';
 import { InstitutionService } from '../core/institution';
 import { DailyReport, DailyRow, GateEvent, directionLabel, gateStates } from '../core/gate-api';
@@ -46,7 +47,8 @@ import { DailyReport, DailyRow, GateEvent, directionLabel, gateStates } from '..
     </app-shell>`,
 })
 export class GateReport {
-  readonly api = inject(AccessApi); readonly session = inject(SessionService);
+  readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts); readonly session = inject(SessionService);
   @ViewChild('historyDialog') dialog?: ElementRef<HTMLDialogElement>;
   readonly report = signal<DailyReport | null>(null); readonly busy = signal(false); readonly error = signal(''); readonly notice = signal('');
   readonly selected = signal<DailyRow | null>(null); readonly events = signal<GateEvent[]>([]); readonly historyError = signal(''); readonly voidId = signal('');
@@ -92,7 +94,7 @@ export class GateReport {
   async voidMark(): Promise<void> {
     if (this.busy() || !this.voidId()) return;
     this.busy.set(true); this.historyError.set('');
-    try { await this.api.post('/api/v1/gate/events/' + this.voidId() + '/void', { reason: this.reason }); this.voidId.set(''); this.reason = ''; this.notice.set('La marca se anuló; su historial se conserva.'); }
+    try { await this.api.post('/api/v1/gate/events/' + this.voidId() + '/void', { reason: this.reason }); this.voidId.set(''); this.reason = ''; this.alerts.success('La marca se anuló; su historial se conserva.'); }
     catch (e) { this.historyError.set(this.api.message(e)); }
     finally { this.busy.set(false); }
     await this.loadEvents(); await this.load();

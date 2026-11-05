@@ -174,3 +174,7 @@ Ver `docs/QA_DESDE_CERO_2026-11-05.md`. La base `SchoolPlatform_Development` se 
 ## Ronda UI/UX (2026-11-05, posterior al recorrido QA)
 
 15 mejoras documentadas en `docs/QA_DESDE_CERO_2026-11-05.md` (UX-01…UX-15). Nuevo `GET /api/v1/dashboard` (`Common/DashboardEndpoints.cs`): cifras del día por permiso de lectura, sin caché. `/api/v1/session` devuelve `displayName` de la persona vinculada. Auditoría: áreas `changes` (predeterminada en la UI) y `gate`. Pendiente sugerido: búsqueda global de personas desde la barra superior, notificaciones externas (requieren proveedor y consentimiento), modo kiosco a pantalla completa para la portería.
+
+## Identidad visual y alertas (2026-11-05)
+
+Ver `docs/DESIGN.md`. Tipografías Fraunces/Figtree autoalojadas (`wwwroot/fonts`, OFL), capa `web/src/styles/_identity.scss`, SweetAlert2 11.26.25 vía `core/alerts.ts` (toasts de éxito, errores de acciones, confirmaciones de acciones sensibles, «Pago registrado → Ver recibo»). Saludo según la hora del colegio en el inicio. Los E2E esperan avisos en `.sp-toast`/`.sp-alert`.

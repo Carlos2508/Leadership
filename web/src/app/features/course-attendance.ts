@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { InstitutionService } from '../core/institution';
 import { formatDateOnly } from '../core/people-api';
 import { CourseView } from './courses';
@@ -117,6 +118,7 @@ interface Sheet {
 export class CourseAttendance {
   readonly id = input.required<string>();
   readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts);
   readonly school = inject(InstitutionService).current;
   @ViewChild('noticeRef') private noticeRef?: ElementRef<HTMLElement>;
   readonly sheet = signal<Sheet | null>(null);
@@ -191,11 +193,11 @@ export class CourseAttendance {
           version: x.version,
         })),
       });
-      this.notice.set(result.changed ? `Asistencia guardada (${plural(result.changed, 'cambio', 'cambios')}).` : 'No había cambios.');
+      if (result.changed) this.alerts.success(`Asistencia guardada (${plural(result.changed, 'cambio', 'cambios')}).`);
+      else this.alerts.info('No había cambios.');
       await this.load();
-      requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
     } catch (error) {
-      this.error.set(this.api.message(error));
+      void this.alerts.error('No se pudo completar la acción', this.api.message(error));
     } finally {
       this.busy.set(false);
     }

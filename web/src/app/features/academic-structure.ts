@@ -2,6 +2,7 @@ import { Component, ElementRef, ViewChild, computed, inject, input, signal } fro
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AccessApi } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { SessionService } from '../core/session';
 import { InstitutionService } from '../core/institution';
 import { formatDateOnly } from '../core/people-api';
@@ -28,6 +29,7 @@ type Mode = 'year' | 'status' | 'period' | 'grade' | 'section';
 export class AcademicStructure {
   readonly year = input<string | undefined>();
   readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts);
   readonly session = inject(SessionService);
   readonly school = inject(InstitutionService).current;
   private readonly router = inject(Router);
@@ -246,10 +248,9 @@ export class AcademicStructure {
       }
       this.busy.set(false);
       this.dialog.nativeElement.close();
-      this.notice.set(message);
+      this.alerts.success(message);
       if (goTo) await this.router.navigate([], { queryParams: { year: goTo } });
       await this.load();
-      requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
     } catch (error) {
       this.dialogError.set(this.api.message(error));
     } finally {
@@ -260,6 +261,14 @@ export class AcademicStructure {
   async quick(action: 'default' | 'remove-period' | 'remove-section', section?: SectionView) {
     const year = this.detail()?.year;
     if (!year || this.busy()) return;
+    const ok = await this.alerts.confirm(
+      action === 'default'
+        ? { title: `¿Usar ${year.label} como ciclo predeterminado?`, text: 'Las pantallas abrirán este ciclo primero.', confirmText: 'Sí, usarlo' }
+        : action === 'remove-period'
+          ? { title: 'Quitar el último período', text: 'Solo es posible mientras el ciclo esté en borrador.', confirmText: 'Quitar período', danger: true }
+          : { title: `Quitar la sección ${section?.name ?? ''}`, text: 'Solo se puede quitar si no tiene estudiantes ni cursos.', confirmText: 'Quitar sección', danger: true },
+    );
+    if (!ok) return;
     this.busy.set(true);
     this.error.set('');
     try {
@@ -275,10 +284,10 @@ export class AcademicStructure {
         await this.api.post(`/api/v1/academic/years/${year.id}/sections/${section.id}/remove`, {
           version: section.version,
         });
-      this.notice.set('El cambio se guardó.');
+      this.alerts.success('El cambio se guardó.');
       await this.load();
     } catch (error) {
-      this.error.set(this.api.message(error));
+      void this.alerts.error('No se pudo completar la acción', this.api.message(error));
     } finally {
       this.busy.set(false);
     }

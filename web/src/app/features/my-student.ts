@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { InstitutionService } from '../core/institution';
 import { facultyLabels, formatDateOnly, relationshipLabels } from '../core/people-api';
 import { Statement, chargeStatusLabels, methodLabels, money } from '../core/finance-api';
@@ -346,6 +347,7 @@ export class MyStudent {
   }
   readonly id = input.required<string>();
   readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts);
   readonly school = inject(InstitutionService).current;
   readonly view = signal<StudentAccessView | null>(null);
   readonly statement = signal<Statement | null>(null);
@@ -427,10 +429,12 @@ export class MyStudent {
   async removeFile(fileId: string): Promise<void> {
     const task = this.selectedTask();
     if (!task || this.busy()) return;
+    if (!(await this.alerts.confirm({ title: '¿Quitar este archivo de tu entrega?', confirmText: 'Quitar archivo', danger: true }))) return;
     this.busy.set(true);
     try {
       await this.api.post(`/api/v1/me/assignments/${task.id}/files/${fileId}/remove`, {});
       await this.loadFiles(task.id);
+      this.alerts.success('Archivo quitado de la entrega.');
     } catch (error) {
       this.submitError.set(this.api.message(error));
     } finally {

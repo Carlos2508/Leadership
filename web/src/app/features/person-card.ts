@@ -1,6 +1,7 @@
 import { Component, ElementRef, ViewChild, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AccessApi } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { SessionService } from '../core/session';
 
 @Component({
@@ -30,7 +31,8 @@ import { SessionService } from '../core/session';
 })
 export class PersonCard {
   readonly personId = input.required<string>(); readonly student = input(false);
-  readonly api = inject(AccessApi); readonly session = inject(SessionService);
+  readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts); readonly session = inject(SessionService);
   @ViewChild('replaceDialog') dialog?: ElementRef<HTMLDialogElement>;
   readonly busy = signal(false); readonly error = signal(''); readonly replaceError = signal(''); readonly notice = signal(''); readonly photoUrl = signal('');
   reason = '';
@@ -46,7 +48,7 @@ export class PersonCard {
   async replace(): Promise<void> {
     if (this.busy()) return;
     this.busy.set(true); this.replaceError.set('');
-    try { await this.api.post('/api/v1/students/' + this.personId() + '/card/reissue', { reason: this.reason }); this.notice.set('Carnet reemplazado. Descarga la nueva impresión.'); this.dialog?.nativeElement.close(); }
+    try { await this.api.post('/api/v1/students/' + this.personId() + '/card/reissue', { reason: this.reason }); this.alerts.success('Carnet reemplazado. Descarga la nueva impresión.'); this.dialog?.nativeElement.close(); }
     catch (e) { this.replaceError.set(this.api.message(e)); }
     finally { this.busy.set(false); }
   }
@@ -56,15 +58,16 @@ export class PersonCard {
     this.error.set(''); this.notice.set('');
     if (file.size > 2 * 1024 * 1024) { this.error.set('La foto debe pesar como máximo 2 MB.'); input.value = ''; return; }
     this.busy.set(true);
-    try { const data = new FormData(); data.append('file', file); await this.api.upload('/api/v1/people/' + this.personId() + '/photo', data); this.photoUrl.set('/api/v1/people/' + this.personId() + '/photo?v=' + Date.now()); this.notice.set('La foto privada se guardó.'); }
-    catch (e) { this.error.set(this.api.message(e)); }
+    try { const data = new FormData(); data.append('file', file); await this.api.upload('/api/v1/people/' + this.personId() + '/photo', data); this.photoUrl.set('/api/v1/people/' + this.personId() + '/photo?v=' + Date.now()); this.alerts.success('La foto privada se guardó.'); }
+    catch (e) { void this.alerts.error('No se pudo completar la acción', this.api.message(e)); }
     finally { this.busy.set(false); input.value = ''; }
   }
   async remove(): Promise<void> {
     if (this.busy()) return;
+    if (!(await this.alerts.confirm({ title: '¿Eliminar la fotografía?', text: 'El carnet volverá a mostrar las iniciales.', confirmText: 'Eliminar foto', danger: true }))) return;
     this.busy.set(true); this.error.set('');
-    try { await this.api.post('/api/v1/people/' + this.personId() + '/photo/remove', {}); this.photoUrl.set(''); this.notice.set('La foto se eliminó.'); }
-    catch (e) { this.error.set(this.api.message(e)); }
+    try { await this.api.post('/api/v1/people/' + this.personId() + '/photo/remove', {}); this.photoUrl.set(''); this.alerts.success('La foto se eliminó.'); }
+    catch (e) { void this.alerts.error('No se pudo completar la acción', this.api.message(e)); }
     finally { this.busy.set(false); }
   }
 }

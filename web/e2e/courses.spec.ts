@@ -9,7 +9,7 @@ async function login(page: Page, username: string, password: string): Promise<vo
   await page.getByLabel('Usuario', { exact: true }).fill(username);
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(page.getByRole('heading', { name: /bienvenida/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
 }
 
 async function post(page: Page, path: string, data: object) {
@@ -76,14 +76,14 @@ test('organize courses by section, assign a teacher and show the teacher only th
   await page.getByRole('dialog').getByLabel('Código').fill('M' + suffix);
   await page.getByRole('dialog').getByLabel('Nombre').fill(subject);
   await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click();
-  await expect(page.locator('p.success-feedback')).toContainText('La materia se guardó');
+  await expect(page.locator('.sp-toast')).toContainText('La materia se guardó');
 
   await page.getByRole('button', { name: 'Crear cursos' }).click();
   await page.getByRole('dialog').getByRole('combobox', { name: 'Grado' }).selectOption({ label: gradeName });
   await page.getByRole('dialog').getByRole('combobox', { name: 'Alcance' }).selectOption({ label: 'Sección A' });
   await page.getByRole('dialog').getByRole('checkbox', { name: subject }).check();
   await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click();
-  await expect(page.locator('p.success-feedback')).toContainText('Se creó 1 curso');
+  await expect(page.locator('.sp-toast')).toContainText('Se creó 1 curso');
 
   await page.getByRole('button', { name: `+ Docente para ${subject}` }).click();
   await page.getByRole('dialog').getByLabel('Buscar personal').fill('Docente ' + suffix);

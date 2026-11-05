@@ -128,7 +128,7 @@
                   <tr>
                     <td>
                       <a class="person-link" [routerLink]="['/workspace/people', row.studentId]"
-                        ><span class="avatar small" aria-hidden="true">{{ row.studentName.slice(0, 1) }}</span
+                        ><span class="avatar small" aria-hidden="true" [attr.data-tone]="(row.studentName.charCodeAt(0) + row.studentName.length) % 5">{{ row.studentName.slice(0, 1) }}{{ (row.studentName.split(' ')[1] ?? '').slice(0, 1) }}</span
                         ><span class="person-copy"
                           ><strong>{{ row.studentName }}</strong
                           ><small>{{ row.studentCode }}</small></span

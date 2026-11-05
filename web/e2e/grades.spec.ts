@@ -9,7 +9,7 @@ async function login(page: Page, username: string, password: string): Promise<vo
   await page.getByLabel('Usuario', { exact: true }).fill(username);
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(page.getByRole('heading', { name: /bienvenida/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
 }
 
 async function post(page: Page, path: string, data: object) {
@@ -122,7 +122,7 @@ test('teacher captures, coordination publishes and the family sees grades only o
   await expect(page.locator('.publication-list')).toContainText('2 de 2 notas');
   await page.getByRole('button', { name: /Publicar Bimestre 1/ }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Publicar' }).click();
-  await expect(page.locator('p.success-feedback')).toContainText('quedó publicado');
+  await expect(page.locator('.sp-toast')).toContainText('quedó publicado');
   await expectAccessible(page);
   await page.screenshot({ path: testInfo.outputPath('publications.png'), fullPage: true });
 

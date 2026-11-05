@@ -9,7 +9,7 @@ async function signIn(page: Page, username: string, password: string): Promise<v
   await page.getByLabel('Usuario', { exact: true }).fill(username);
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(page.getByRole('heading', { name: /bienvenida/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
 }
 
 async function post(page: Page, path: string, data: object) {
@@ -97,7 +97,7 @@ test('register a family, grant explicit faculties and show linked students to th
   await expectAccessible(page);
   await page.screenshot({ path: testInfo.outputPath('relationship-dialog.png'), fullPage: true });
   await page.getByRole('button', { name: 'Guardar', exact: true }).click();
-  await expect(page.locator('p.success-feedback')).toContainText('El vínculo quedó registrado');
+  await expect(page.locator('.sp-toast')).toContainText('El vínculo quedó registrado');
   const row = page.locator('.relationship-row').filter({ hasText: 'Valeria ' + family });
   await expect(row).toContainText('Madre');
   await expect(row).toContainText('Información académica');
@@ -126,7 +126,7 @@ test('register a family, grant explicit faculties and show linked students to th
   await page.getByRole('radio', { name: new RegExp(guardianUser) }).check();
   await page.getByLabel('Motivo del cambio').fill(reason);
   await page.getByRole('button', { name: 'Guardar', exact: true }).click();
-  await expect(page.locator('p.success-feedback')).toContainText('La cuenta quedó vinculada');
+  await expect(page.locator('.sp-toast')).toContainText('La cuenta quedó vinculada');
   await expectAccessible(page);
   await page.screenshot({ path: testInfo.outputPath('person-detail.png'), fullPage: true });
 

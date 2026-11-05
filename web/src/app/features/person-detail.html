@@ -18,7 +18,7 @@
   } @else if (person(); as p) {
     <div class="page-heading person-heading">
       <div class="person-title">
-        <span class="avatar large" aria-hidden="true">{{ p.givenNames.slice(0, 1) }}</span>
+        <span class="avatar large" aria-hidden="true" [attr.data-tone]="(p.givenNames.charCodeAt(0) + p.familyNames.length) % 5">{{ p.givenNames.slice(0, 1) }}{{ p.familyNames.slice(0, 1) }}</span>
         <div>
           <span class="eyebrow">FICHA PERSONAL</span>
           <h1>{{ p.displayName }}</h1>

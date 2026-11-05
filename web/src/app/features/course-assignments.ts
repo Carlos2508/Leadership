@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
 import { PluralPipe } from '../shared/plural.pipe';
@@ -181,6 +182,7 @@ const statusLabels = { Draft: 'Borrador', Published: 'Publicada', Closed: 'Cerra
 export class CourseAssignments {
   readonly id = input.required<string>();
   readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts);
   @ViewChild('assignmentDialog') private dialog!: ElementRef<HTMLDialogElement>;
   @ViewChild('noticeRef') private noticeRef?: ElementRef<HTMLElement>;
   readonly items = signal<AssignmentView[]>([]);
@@ -257,8 +259,7 @@ export class CourseAssignments {
     else this.close();
   }
   private done(message: string): void {
-    this.notice.set(message);
-    requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
+    this.alerts.success(message);
   }
   async submit(): Promise<void> {
     if (this.busy()) return;
@@ -289,6 +290,12 @@ export class CourseAssignments {
   }
   async advance(item: AssignmentView, action: 'publish' | 'close'): Promise<void> {
     if (this.busy()) return;
+    const ok = await this.alerts.confirm(
+      action === 'publish'
+        ? { title: `¿Publicar «${item.title}»?`, text: 'Los estudiantes del curso la verán y podrán entregar.', confirmText: 'Publicar actividad' }
+        : { title: `¿Cerrar «${item.title}»?`, text: 'Ya no se recibirán entregas nuevas ni cambios.', confirmText: 'Cerrar actividad', danger: true },
+    );
+    if (!ok) return;
     this.busy.set(true);
     this.error.set('');
     try {
@@ -296,7 +303,7 @@ export class CourseAssignments {
       await this.load();
       this.done(action === 'publish' ? 'La actividad se publicó.' : 'La actividad se cerró.');
     } catch (error) {
-      this.error.set(this.api.message(error));
+      void this.alerts.error('No se pudo completar la acción', this.api.message(error));
     } finally {
       this.busy.set(false);
     }

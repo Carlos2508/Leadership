@@ -4,6 +4,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi, PageResult } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { SessionService } from '../core/session';
 import { InstitutionService } from '../core/institution';
 import {
@@ -43,6 +44,7 @@ type DialogMode =
 export class PersonDetail {
   readonly id = input.required<string>();
   readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts);
   readonly session = inject(SessionService);
   readonly school = inject(InstitutionService).current;
   @ViewChild('detailDialog') private dialog!: ElementRef<HTMLDialogElement>;
@@ -381,7 +383,7 @@ export class PersonDetail {
       }
       this.busy.set(false);
       this.closeDialog();
-      this.notice.set(message);
+      this.alerts.success(message);
       await this.load();
       this.focusNotice();
     } catch (error) {
@@ -393,7 +395,6 @@ export class PersonDetail {
 
   /** The control that opened a dialog may disappear after the change; keep focus on the confirmation. */
   private focusNotice(): void {
-    requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
   }
 
   async addGuardianRole(): Promise<void> {
@@ -403,11 +404,11 @@ export class PersonDetail {
     this.error.set('');
     try {
       await this.api.post(`/api/v1/people/${p.id}/roles`, { version: p.version, role: 'guardian' });
-      this.notice.set('Se agregó el perfil de encargado.');
+      this.alerts.success('Se agregó el perfil de encargado.');
       await this.load();
       this.focusNotice();
     } catch (error) {
-      this.error.set(this.api.message(error));
+      void this.alerts.error('No se pudo completar la acción', this.api.message(error));
     } finally {
       this.busy.set(false);
     }

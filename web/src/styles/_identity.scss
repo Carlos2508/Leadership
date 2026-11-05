@@ -1,0 +1,425 @@
+/*
+ * Visual identity of the platform (loaded last). Institutional colors still come only from config/institution.json
+ * (--deep, --primary, --accent, --surface); this layer defines typography, texture, depth and motion so the product
+ * reads as a crafted school campus rather than a generic dashboard. See docs/DESIGN.md.
+ *
+ * Fonts are self-hosted (CSP font-src 'self'), SIL Open Font License: wwwroot/fonts/OFL-*.txt.
+ */
+@font-face {
+  font-family: 'Fraunces';
+  src: url('/fonts/fraunces.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Figtree';
+  src: url('/fonts/figtree.woff2') format('woff2');
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'Figtree', 'Segoe UI', system-ui, sans-serif;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --shadow-soft: 0 1px 2px #0f2e1f0a, 0 6px 22px -8px #0f2e1f1f;
+  --shadow-lift: 0 2px 4px #0f2e1f0d, 0 16px 34px -14px #0f2e1f38;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  font-family: var(--font-body);
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+/* ---------- Typography: an editorial serif for titles, a friendly grotesque for reading */
+
+h1,
+h2,
+.page-heading h1,
+.sp-alert-title,
+.welcome-title,
+.gate-result-name,
+.kpi-copy strong,
+.receipt-institution {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
+h1 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variation-settings: 'opsz' 96;
+}
+h2 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variation-settings: 'opsz' 36;
+}
+.kpi-copy strong {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.person-copy strong,
+.button,
+.nav-label,
+.eyebrow {
+  font-family: var(--font-body);
+}
+
+/* Eyebrows get a short accent rule: a small, recognizable signature on every page. */
+.page-heading .eyebrow,
+.card-heading .eyebrow,
+.quick-card .eyebrow,
+.contact-card .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--primary);
+}
+.page-heading .eyebrow::before,
+.card-heading .eyebrow::before,
+.quick-card .eyebrow::before,
+.contact-card .eyebrow::before {
+  content: '';
+  width: 22px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+.page-heading {
+  position: relative;
+}
+.page-heading h1 {
+  color: var(--deep);
+}
+
+/* ---------- Surfaces */
+
+body {
+  background:
+    radial-gradient(1200px 380px at 85% -120px, color-mix(in srgb, var(--accent) 9%, transparent), transparent 70%),
+    radial-gradient(900px 340px at 0% -160px, color-mix(in srgb, var(--primary) 8%, transparent), transparent 70%),
+    var(--surface, #f7f9f5);
+  background-attachment: fixed;
+}
+.card {
+  border-radius: var(--radius-lg);
+  border-color: color-mix(in srgb, var(--primary) 9%, #e9eee7);
+  box-shadow: var(--shadow-soft);
+}
+.quick-tile,
+.kpi-card {
+  border-color: color-mix(in srgb, var(--primary) 9%, #e9eee7);
+  box-shadow: 0 1px 2px #0f2e1f08;
+  transition:
+    transform 0.2s var(--ease),
+    box-shadow 0.2s var(--ease),
+    border-color 0.2s var(--ease);
+}
+.quick-tile:hover,
+.quick-tile:focus-visible,
+.kpi-card:hover,
+.kpi-card:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+  border-color: color-mix(in srgb, var(--primary) 30%, #fff);
+}
+.quick-tile .icon-tile,
+.kpi-card .icon-tile {
+  transition: transform 0.25s var(--ease);
+}
+.quick-tile:hover .icon-tile,
+.kpi-card:hover .icon-tile {
+  transform: rotate(-6deg) scale(1.06);
+}
+
+/* ---------- Sidebar: deep institutional color with a quiet woven texture and an accent rail */
+
+.sidebar {
+  background-color: var(--deep);
+  background-image:
+    radial-gradient(420px 260px at 110% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+    radial-gradient(360px 300px at -20% 100%, #ffffff12, transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath d='M0 14h28M14 0v28' stroke='%23ffffff' stroke-opacity='.035' stroke-width='1'/%3E%3C/svg%3E");
+}
+.sidebar nav a {
+  position: relative;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+.sidebar nav a.active::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--accent);
+}
+.sidebar .brand span {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.sidebar .brand small {
+  font-family: var(--font-body);
+  letter-spacing: 1.4px;
+}
+
+/* ---------- Controls */
+
+.button {
+  border-radius: 12px;
+  font-weight: 650;
+  letter-spacing: 0.1px;
+  background-image: linear-gradient(180deg, #ffffff1f, #ffffff00 55%);
+  box-shadow:
+    inset 0 1px 0 #ffffff26,
+    0 1px 2px #0f2e1f29;
+  transition:
+    filter 0.15s,
+    transform 0.08s,
+    box-shadow 0.15s;
+}
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 0 #ffffff14;
+}
+.button.outline {
+  background-image: none;
+  box-shadow: 0 1px 2px #0f2e1f0d;
+}
+.button.outline:hover {
+  filter: none;
+  background: color-mix(in srgb, var(--primary) 5%, #fff);
+  border-color: color-mix(in srgb, var(--primary) 28%, #fff);
+}
+.button.danger {
+  background-color: #b42318;
+}
+input:not([type='checkbox']):not([type='radio']):not([type='file']),
+select,
+textarea {
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+input:not([type='checkbox']):not([type='radio']):not([type='file']):focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+/* ---------- Tables and lists */
+
+th {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+}
+tbody tr {
+  transition: background 0.12s;
+}
+tbody tr:hover {
+  background: color-mix(in srgb, var(--primary) 3%, #fff);
+}
+.pill {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* ---------- Empty states: icon in a soft organic blob instead of a bare glyph */
+
+.empty-state > app-icon {
+  width: 64px;
+  height: 64px;
+  padding: 18px;
+  border-radius: 42% 58% 55% 45% / 48% 42% 58% 52%;
+  background: color-mix(in srgb, var(--primary) 9%, #fff);
+  color: var(--primary);
+}
+.empty-state h2 {
+  margin-top: 6px;
+}
+
+/* ---------- SweetAlert2: same buttons, fonts and colors as the platform */
+
+.sp-alert-container {
+  font-family: var(--font-body);
+}
+.sp-alert-container.swal2-backdrop-show:not(.sp-toast-container) {
+  background: color-mix(in srgb, var(--deep) 42%, transparent);
+  backdrop-filter: blur(3px);
+}
+/* Toasts never dim or blur the page and let clicks through around them. */
+.sp-toast-container.swal2-container {
+  background: transparent !important;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+.sp-toast-container .swal2-popup {
+  pointer-events: auto;
+}
+.sp-alert {
+  border-radius: 24px;
+  padding: 28px 26px 24px;
+  color: var(--ink);
+  box-shadow: 0 30px 70px -20px #0f2e1f66;
+}
+.sp-alert-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--deep);
+  letter-spacing: -0.01em;
+  padding: 6px 8px 0;
+}
+.sp-alert-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.sp-alert-actions {
+  gap: 10px;
+  margin-top: 22px;
+}
+.sp-alert-actions .button {
+  min-width: 132px;
+}
+.sp-alert-input {
+  border: 1px solid #ccd9ce;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 14px;
+  min-height: 110px;
+}
+.sp-alert-label {
+  font-weight: 650;
+  font-size: 13px;
+  color: var(--ink);
+}
+.sp-alert-validation {
+  background: #fdecea;
+  color: #b42318;
+  font-size: 13px;
+}
+.sp-alert .swal2-icon.swal2-success {
+  border-color: color-mix(in srgb, var(--primary) 45%, #fff);
+  color: var(--primary);
+}
+.sp-alert .swal2-icon.swal2-success [class^='swal2-success-line'] {
+  background-color: var(--primary);
+}
+.sp-alert .swal2-icon.swal2-success .swal2-success-ring {
+  border-color: color-mix(in srgb, var(--primary) 30%, #fff);
+}
+.sp-alert .swal2-icon.swal2-question {
+  border-color: color-mix(in srgb, var(--primary) 45%, #fff);
+  color: var(--primary);
+}
+.sp-alert .swal2-icon.swal2-warning {
+  border-color: #f2c26b;
+  color: #b7791f;
+}
+/* Toasts: compact, with an accent rail in the institution color. */
+.sp-toast.swal2-popup.swal2-toast {
+  border-radius: 16px;
+  padding: 12px 14px 12px 18px;
+  border-left: 5px solid var(--primary);
+  box-shadow: 0 18px 40px -16px #0f2e1f59;
+  min-width: 300px;
+}
+.sp-toast .swal2-title {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.sp-toast .swal2-html-container {
+  font-size: 13px;
+}
+.sp-toast .swal2-timer-progress-bar {
+  background: color-mix(in srgb, var(--primary) 45%, #fff);
+}
+.sp-toast-container {
+  padding: 18px;
+}
+.sp-alert-in {
+  animation: sp-alert-in 0.24s var(--ease);
+}
+.sp-alert-out {
+  animation: sp-alert-out 0.15s ease-in forwards;
+}
+@keyframes sp-alert-in {
+  from {
+    transform: translateY(10px) scale(0.97);
+  }
+}
+@keyframes sp-alert-out {
+  to {
+    transform: translateY(6px) scale(0.98);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .sidebar nav a.active::before {
+    left: -16px;
+  }
+  .sp-alert {
+    padding: 22px 18px 18px;
+  }
+  .sp-alert-title {
+    font-size: 21px;
+  }
+  .sp-alert-actions {
+    flex-direction: column-reverse;
+    width: 100%;
+  }
+  .sp-alert-actions .button {
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp-alert-in,
+  .sp-alert-out {
+    animation: none;
+  }
+  .quick-tile,
+  .kpi-card,
+  .quick-tile .icon-tile,
+  .kpi-card .icon-tile {
+    transition: none;
+  }
+}
+
+/* Person avatars: two initials on one of five quiet tones derived from the name (stable per person). */
+.avatar[data-tone] {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.avatar[data-tone='0'] {
+  background: #e6f5ec;
+  color: #0b5835;
+}
+.avatar[data-tone='1'] {
+  background: #eaf2ff;
+  color: #2f568f;
+}
+.avatar[data-tone='2'] {
+  background: #fff1d2;
+  color: #7a4b00;
+}
+.avatar[data-tone='3'] {
+  background: #eeeafb;
+  color: #5b45a0;
+}
+.avatar[data-tone='4'] {
+  background: #fdeee8;
+  color: #9a3b1b;
+}

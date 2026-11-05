@@ -10,7 +10,7 @@ async function signIn(page: Page): Promise<void> {
     await page.getByLabel('Usuario', { exact: true }).fill(process.env['SCHOOLPLATFORM_E2E_USERNAME']!);
     await page.getByLabel('Contraseña', { exact: true }).fill(process.env['SCHOOLPLATFORM_E2E_PASSWORD']!);
     await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-    await expect(page.getByRole('heading', { name: /bienvenida/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
   };
   await login();
   const session = await (await page.request.get('/api/v1/session')).json();
@@ -61,7 +61,7 @@ test('prepare a school year, enroll without inventing a section and keep placeme
   await page.getByLabel('Código').fill('G' + suffix);
   await page.getByLabel('Nombre', { exact: true }).fill(gradeName);
   await page.getByRole('button', { name: 'Guardar', exact: true }).click();
-  await expect(page.locator('p.success-feedback')).toContainText('El grado se guardó');
+  await expect(page.locator('.sp-toast')).toContainText('El grado se guardó');
 
   // Year in draft with one period and one section
   await page.getByRole('button', { name: 'Nuevo ciclo' }).click();
@@ -81,11 +81,11 @@ test('prepare a school year, enroll without inventing a section and keep placeme
   await page.getByLabel('Nombre', { exact: true }).fill('A');
   await page.getByLabel(/^Cupo/).fill('30');
   await page.getByRole('button', { name: 'Guardar', exact: true }).click();
-  await expect(page.locator('p.success-feedback')).toContainText('La sección se guardó');
+  await expect(page.locator('.sp-toast')).toContainText('La sección se guardó');
   await page.getByRole('button', { name: 'Abrir inscripciones' }).click();
   await page.getByLabel('Motivo del cambio').fill(reason);
   await page.getByRole('dialog').getByRole('button', { name: 'Abrir inscripciones' }).click();
-  await expect(page.locator('p.success-feedback')).toContainText('El estado del ciclo cambió');
+  await expect(page.locator('.sp-toast')).toContainText('El estado del ciclo cambió');
   await expectAccessible(page);
   await page.screenshot({ path: testInfo.outputPath('academic-structure.png'), fullPage: true });
 
@@ -101,7 +101,7 @@ test('prepare a school year, enroll without inventing a section and keep placeme
   await expectAccessible(page);
   await page.screenshot({ path: testInfo.outputPath('enroll-dialog.png'), fullPage: true });
   await page.getByRole('button', { name: 'Guardar', exact: true }).click();
-  await expect(page.locator('p.success-feedback')).toContainText('La inscripción quedó registrada');
+  await expect(page.locator('.sp-toast')).toContainText('La inscripción quedó registrada');
   const row = page.locator('tbody tr').filter({ hasText: studentCode });
   await expect(row).toContainText(gradeName);
   await expect(row).toContainText('A');
@@ -111,9 +111,8 @@ test('prepare a school year, enroll without inventing a section and keep placeme
   await page.getByLabel('Vigente desde').fill(`${calendarYear}-02-10`);
   await page.getByLabel('Motivo del cambio').fill(reason);
   await page.getByRole('button', { name: 'Guardar', exact: true }).click();
-  await expect(page.locator('p.success-feedback')).toContainText('la anterior se conserva');
+  await expect(page.locator('.sp-toast')).toContainText('la anterior se conserva');
   await expect(row).toContainText('Sin sección');
-  await expect(page.locator('p.success-feedback')).toBeFocused();
   await expectAccessible(page);
   await page.screenshot({ path: testInfo.outputPath('enrollment-roster.png'), fullPage: true });
 

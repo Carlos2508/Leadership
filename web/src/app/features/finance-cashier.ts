@@ -2,6 +2,7 @@ import { Component, ElementRef, ViewChild, computed, inject, input, signal } fro
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AccessApi, PageResult } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { SessionService } from '../core/session';
 import { InstitutionService } from '../core/institution';
 import { PersonSummary, formatDateOnly } from '../core/people-api';
@@ -30,6 +31,7 @@ type Mode = 'pay' | 'adjust' | 'void' | 'reverse';
 export class FinanceCashier {
   readonly student = input<string | undefined>();
   readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts);
   readonly session = inject(SessionService);
   readonly school = inject(InstitutionService).current;
   private readonly router = inject(Router);
@@ -246,10 +248,14 @@ export class FinanceCashier {
       }
       this.busy.set(false);
       this.dialog.nativeElement.close();
-      this.notice.set(message);
       await this.loadStatement(statement.studentId);
       void this.loadToday();
-      requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
+      const receipt = this.mode() === 'pay' ? this.lastReceipt() : null;
+      if (receipt) {
+        // The cashier usually prints right away: offer the receipt in the same confirmation.
+        if (await this.alerts.done('Pago registrado', `Recibo No. ${receipt.receipt.number} · ${this.money(receipt.receipt.amount)}`, 'Ver e imprimir recibo'))
+          await this.router.navigate(['/workspace/finance/receipts', receipt.paymentId]);
+      } else this.alerts.success(message);
     } catch (error) {
       this.dialogError.set(this.api.message(error));
     } finally {

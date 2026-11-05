@@ -17,7 +17,7 @@ test('manage an invitation, activate without email, recover access and inspect d
     .getByLabel('Contraseña', { exact: true })
     .fill(process.env['SCHOOLPLATFORM_E2E_PASSWORD']!);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(page.getByRole('heading', { name: /bienvenida/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
   await page.getByRole('link', { name: 'Administrar cuentas' }).click();
   await expect(page.getByRole('heading', { name: 'Cuentas y accesos' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Invitar cuenta' })).toBeEnabled();
@@ -58,7 +58,7 @@ test('manage an invitation, activate without email, recover access and inspect d
   await student.getByLabel('Usuario', { exact: true }).fill(username);
   await student.getByLabel('Contraseña', { exact: true }).fill(password);
   await student.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(student.getByRole('heading', { name: /bienvenida/i })).toBeVisible();
+  await expect(student.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
   await expect(student.getByRole('link', { name: 'Administrar cuentas' })).toHaveCount(0);
   expect((await student.request.get('/api/v1/access/accounts')).status()).toBe(403);
   expect((await student.request.get('/api/v1/audit')).status()).toBe(403);

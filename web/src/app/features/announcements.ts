@@ -1,6 +1,7 @@
 import { Component, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AccessApi } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { InstitutionService } from '../core/institution';
 import { GradeView, YearSummary } from '../core/academic-api';
 import { CourseView } from './courses';
@@ -210,6 +211,7 @@ interface Options {
 })
 export class Announcements {
   readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts);
   readonly school = inject(InstitutionService).current;
   @ViewChild('editDialog') private dialog!: ElementRef<HTMLDialogElement>;
   @ViewChild('noticeRef') private noticeRef?: ElementRef<HTMLElement>;
@@ -314,6 +316,12 @@ export class Announcements {
   }
   async advance(item: AnnouncementView, action: 'publish' | 'archive'): Promise<void> {
     if (this.busy()) return;
+    const ok = await this.alerts.confirm(
+      action === 'publish'
+        ? { title: `¿Publicar «${item.title}»?`, text: 'Lo verán sus destinatarios dentro de la plataforma y ya no se podrá editar.', confirmText: 'Publicar aviso' }
+        : { title: `¿Archivar «${item.title}»?`, text: 'Dejará de mostrarse a sus destinatarios.', confirmText: 'Archivar', danger: true },
+    );
+    if (!ok) return;
     this.busy.set(true);
     this.error.set('');
     try {
@@ -321,13 +329,12 @@ export class Announcements {
       await this.load();
       this.done(action === 'publish' ? 'El aviso se publicó.' : 'El aviso se archivó.');
     } catch (error) {
-      this.error.set(this.api.message(error));
+      void this.alerts.error('No se pudo completar la acción', this.api.message(error));
     } finally {
       this.busy.set(false);
     }
   }
   private done(message: string): void {
-    this.notice.set(message);
-    requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
+    this.alerts.success(message);
   }
 }

@@ -2,6 +2,7 @@ import { Component, ElementRef, ViewChild, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { AccessApi } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { SessionService } from '../core/session';
 import { InstitutionService } from '../core/institution';
 import { Shell } from '../shared/shell';
@@ -137,6 +138,7 @@ const permissionLabels: Record<string, string> = {
 })
 export class SecuritySettings {
   readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts);
   readonly session = inject(SessionService);
   readonly school = inject(InstitutionService).current;
   private readonly sanitizer = inject(DomSanitizer);
@@ -170,10 +172,9 @@ export class SecuritySettings {
     try {
       await action();
       this.code = '';
-      this.notice.set(message);
+      this.alerts.success(message);
       await this.load();
       await this.session.load(window.location.pathname, true);
-      requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
     } catch (error) {
       this.error.set(this.api.message(error));
     } finally {
@@ -200,7 +201,14 @@ export class SecuritySettings {
       this.codes.set((await this.api.post<{ codes: string[] }>('/api/v1/me/mfa/recovery-codes', { code: this.code })).codes);
     }, 'Se generaron nuevos códigos de respaldo; los anteriores ya no sirven.');
   }
-  disable(): Promise<void> {
+  async disable(): Promise<void> {
+    const ok = await this.alerts.confirm({
+      title: '¿Desactivar la verificación en dos pasos?',
+      text: 'Tu cuenta quedará protegida solo con la contraseña y las funciones que la exigen dejarán de estar disponibles.',
+      confirmText: 'Desactivar',
+      danger: true,
+    });
+    if (!ok) return;
     return this.run(async () => {
       await this.api.post('/api/v1/me/mfa/disable', { code: this.code });
     }, 'La verificación en dos pasos se desactivó.');
@@ -208,9 +216,9 @@ export class SecuritySettings {
   async copy(): Promise<void> {
     try {
       await navigator.clipboard.writeText(this.codes().join('\n'));
-      this.notice.set('Códigos copiados. Guárdalos fuera de este equipo.');
+      this.alerts.success('Códigos copiados. Guárdalos fuera de este equipo.');
     } catch {
-      this.notice.set('Selecciona los códigos para copiarlos manualmente.');
+      this.alerts.success('Selecciona los códigos para copiarlos manualmente.');
     }
   }
 }

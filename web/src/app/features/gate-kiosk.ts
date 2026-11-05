@@ -2,6 +2,7 @@ import { Component, ElementRef, OnDestroy, ViewChild, inject, signal } from '@an
 import { FormsModule } from '@angular/forms';
 import { Shell } from '../shared/shell';
 import { AccessApi } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { GateEvent, GateStudent, ScanResult, directionLabel } from '../core/gate-api';
 
 @Component({
@@ -71,6 +72,7 @@ import { GateEvent, GateStudent, ScanResult, directionLabel } from '../core/gate
 })
 export class GateKiosk implements OnDestroy {
   readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts);
   @ViewChild('reader') reader?: ElementRef<HTMLInputElement>;
   @ViewChild('manualDialog') dialog?: ElementRef<HTMLDialogElement>;
   readonly busy = signal(false); readonly error = signal(''); readonly manualError = signal('');
@@ -93,7 +95,7 @@ export class GateKiosk implements OnDestroy {
       const result = await this.api.post<ScanResult>('/api/v1/gate/scan', { code: this.code, mode: this.mode });
       this.result.set(result); this.code = ''; this.beep(result.outcome); await this.refresh();
     }
-    catch (e) { this.error.set(this.api.message(e)); }
+    catch (e) { void this.alerts.error('No se pudo completar la acción', this.api.message(e)); }
     finally { this.busy.set(false); this.focus(); }
   }
   badge(r: ScanResult): string {

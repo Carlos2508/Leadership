@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { InstitutionService } from '../core/institution';
 import { formatDateOnly } from '../core/people-api';
 import { CourseView } from './courses';
@@ -211,6 +212,7 @@ export class CourseGrades implements OnDestroy {
   readonly id = input.required<string>();
   readonly period = input<string | undefined>();
   readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts);
   readonly school = inject(InstitutionService).current;
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   @ViewChild('noticeRef') private noticeRef?: ElementRef<HTMLElement>;
@@ -389,9 +391,8 @@ export class CourseGrades implements OnDestroy {
         this.saveState.set(`Guardado a las ${time} · ${result.changed === 1 ? '1 nota' : `${result.changed} notas`}.`);
       } else {
         this.saveState.set('');
-        this.notice.set(result.changed === 1 ? 'Se guardó 1 nota.' : `Se guardaron ${result.changed} notas.`);
+        this.alerts.success(result.changed === 1 ? 'Se guardó 1 nota.' : `Se guardaron ${result.changed} notas.`);
         if (sheet.requiresReason) this.reason = '';
-        requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
       }
     } catch (error) {
       this.saveState.set('');

@@ -2,6 +2,7 @@ import { Component, ElementRef, ViewChild, computed, inject, input, signal } fro
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AccessApi } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { SessionService } from '../core/session';
 import { InstitutionService } from '../core/institution';
 import { formatDateOnly } from '../core/people-api';
@@ -26,6 +27,7 @@ type Mode = 'concept' | 'period' | 'cutoff';
 export class FinanceSetup {
   readonly year = input<string | undefined>();
   readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts);
   readonly session = inject(SessionService);
   readonly school = inject(InstitutionService).current;
   private readonly router = inject(Router);
@@ -162,9 +164,8 @@ export class FinanceSetup {
       else await this.api.post(`/api/v1/finance/years/${this.yearId}/cutoffs`, this.cutoffForm);
       this.busy.set(false);
       this.dialog.nativeElement.close();
-      this.notice.set('El cambio se guardó.');
+      this.alerts.success('El cambio se guardó.');
       await this.load();
-      requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
     } catch (error) {
       this.dialogError.set(this.api.message(error));
     } finally {
@@ -224,11 +225,10 @@ export class FinanceSetup {
       );
       this.preview.set(null);
       this.generation.excluded = {};
-      this.notice.set(
+      this.alerts.success(
         `Cargos emitidos: ${result.created}. Ya existían: ${result.existing}. Excluidos: ${result.excluded}.`,
       );
       await this.load();
-      requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
     } catch (error) {
       this.generationError.set(this.api.message(error));
     } finally {

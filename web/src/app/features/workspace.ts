@@ -22,8 +22,8 @@ interface Dashboard {
     <app-shell title="Mi espacio">
       <div class="page-heading">
         <div>
-          <span class="eyebrow">MI COMUNIDAD EDUCATIVA</span>
-          <h1>Te damos la bienvenida{{ greetingName() ? ', ' + greetingName() : '' }}.</h1>
+          <span class="eyebrow">{{ today }}</span>
+          <h1>{{ greeting }}{{ greetingName() ? ', ' + greetingName() : '' }}.</h1>
           <p>Tu punto de encuentro con {{ school.displayName }}.</p>
         </div>
       </div>
@@ -324,6 +324,14 @@ export class Workspace {
   readonly facultyLabels = facultyLabels;
   readonly relationshipLabels = relationshipLabels;
   readonly stats = signal<Dashboard | null>(null);
+  /** Greeting and long date in the school's time zone (e.g. "Buenas tardes" · "jueves, 5 de noviembre"). */
+  readonly greeting = (() => {
+    const hour = Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: this.school.locale.timeZone }).format(new Date()));
+    return hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
+  })();
+  readonly today = new Intl.DateTimeFormat(this.school.locale.culture, { weekday: 'long', day: 'numeric', month: 'long', timeZone: this.school.locale.timeZone })
+    .format(new Date())
+    .toUpperCase();
   constructor() {
     void this.loadProfile();
   }

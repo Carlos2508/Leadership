@@ -9,7 +9,7 @@ async function login(page: Page, username: string, password: string): Promise<vo
   await page.getByLabel('Usuario', { exact: true }).fill(username);
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(page.getByRole('heading', { name: /bienvenida/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
 }
 
 async function post(page: Page, path: string, data: object) {
@@ -83,7 +83,8 @@ test('teacher publishes an activity, the student submits and receives feedback',
   await teacherPage.getByRole('dialog').getByLabel('Fecha y hora de entrega').fill(new Date(due.getTime() - due.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
   await teacherPage.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click();
   await teacherPage.getByRole('button', { name: `Publicar ${title}` }).click();
-  await expect(teacherPage.locator('p.success-feedback')).toContainText('se publicó');
+  await teacherPage.locator('.sp-alert').getByRole('button', { name: /^Publicar/ }).click();
+  await expect(teacherPage.locator('.sp-toast')).toContainText('se publicó');
   await expectAccessible(teacherPage);
 
   const studentPage = await activate(browser, origin, studentInvite.code, 'stu-' + s.toLowerCase(), password);
@@ -124,7 +125,7 @@ test('teacher publishes an activity, the student submits and receives feedback',
   await teacherPage.getByRole('group', { name: `Asistencia de Iris Sintética ${s}` }).getByRole('radio', { name: 'Tarde' }).check();
   await teacherPage.getByLabel(`Observación de Iris Sintética ${s}`).fill('Llegó 10 minutos tarde');
   await teacherPage.getByRole('button', { name: 'Guardar asistencia' }).click();
-  await expect(teacherPage.locator('p.success-feedback')).toContainText('Asistencia guardada');
+  await expect(teacherPage.locator('.sp-toast')).toContainText('Asistencia guardada');
   await expectAccessible(teacherPage);
   await teacherPage.screenshot({ path: test.info().outputPath('attendance.png'), fullPage: true });
   await studentPage.reload();

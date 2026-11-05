@@ -9,7 +9,7 @@ async function login(page: Page, username: string, password: string): Promise<vo
   await page.getByLabel('Usuario', { exact: true }).fill(username);
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(page.getByRole('heading', { name: /bienvenida/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
 }
 
 async function post(page: Page, path: string, data: object) {
@@ -64,7 +64,7 @@ test('charge tuition by preview, collect with a receipt and show clearance and t
   await page.getByRole('dialog').getByLabel('Código').fill('C' + suffix);
   await page.getByRole('dialog').getByLabel('Nombre').fill(conceptName);
   await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click();
-  await expect(page.locator('p.success-feedback')).toBeVisible();
+  await expect(page.locator('.sp-toast')).toBeVisible();
   await page.getByRole('button', { name: '+ Agregar' }).click();
   await page.getByRole('dialog').getByLabel('Nombre de la cuota').fill('Cuota 1');
   await page.getByRole('dialog').getByLabel('Vencimiento').fill(`${calendarYear}-02-05`);
@@ -84,7 +84,7 @@ test('charge tuition by preview, collect with a receipt and show clearance and t
   await expectAccessible(page);
   await page.screenshot({ path: testInfo.outputPath('finance-setup.png'), fullPage: true });
   await page.getByRole('button', { name: /Confirmar emisión de 1 cargo/ }).click();
-  await expect(page.locator('p.success-feedback')).toContainText('Cargos emitidos: 1');
+  await expect(page.locator('.sp-toast')).toContainText('Cargos emitidos: 1');
 
   // Clearance before payment
   await page.goto(`/workspace/finance/clearance?year=${year}`);
@@ -104,11 +104,13 @@ test('charge tuition by preview, collect with a receipt and show clearance and t
   await expectAccessible(page);
   await page.screenshot({ path: testInfo.outputPath('payment-dialog.png'), fullPage: true });
   await page.getByRole('button', { name: 'Confirmar pago' }).click();
-  await expect(page.locator('.success-feedback')).toContainText('Pago registrado');
+  await expect(page.locator('.sp-alert')).toContainText('Pago registrado');
+  await expectAccessible(page);
+  await page.getByRole('button', { name: 'Listo' }).click();
   await expect(page.locator('.balance-box')).toContainText('0.00');
   await expectAccessible(page);
   await page.screenshot({ path: testInfo.outputPath('statement.png'), fullPage: true });
-  await page.getByRole('link', { name: 'Ver e imprimir recibo' }).click();
+  await page.getByRole('link', { name: /^Recibo \d+$/ }).first().click();
   await expect(page.getByRole('heading', { name: 'Recibo de pago' })).toBeVisible();
   await expect(page.locator('.receipt-lines')).toContainText('Elisa Sintética ' + suffix);
   await expect(page.locator('.receipt-header img')).toHaveJSProperty('complete', true);

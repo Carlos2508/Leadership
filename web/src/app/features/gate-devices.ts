@@ -2,6 +2,7 @@ import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Shell } from '../shared/shell';
 import { AccessApi } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { GateDevice } from '../core/gate-api';
 
 @Component({
@@ -28,7 +29,8 @@ import { GateDevice } from '../core/gate-api';
     </app-shell>`,
 })
 export class GateDevices implements OnDestroy {
-  readonly api = inject(AccessApi); readonly devices = signal<GateDevice[]>([]); readonly pairing = signal('');
+  readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts); readonly devices = signal<GateDevice[]>([]); readonly pairing = signal('');
   readonly busy = signal(false); readonly error = signal(''); readonly notice = signal(''); readonly selected = signal<GateDevice | null>(null);
   name = ''; reason = '';
   constructor() { queueMicrotask(() => void this.load()); }
@@ -42,14 +44,14 @@ export class GateDevices implements OnDestroy {
     try {
       const result = await this.api.post<{ pairingSvg: string }>('/api/v1/gate/devices', { name: this.name });
       this.pairing.set(URL.createObjectURL(new Blob([result.pairingSvg], { type: 'image/svg+xml' }))); this.name = ''; await this.load();
-    } catch (e) { this.error.set(this.api.message(e)); }
+    } catch (e) { void this.alerts.error('No se pudo completar la acción', this.api.message(e)); }
     finally { this.busy.set(false); }
   }
   async revoke(): Promise<void> {
     if (this.busy() || !this.selected()) return;
     this.busy.set(true); this.error.set('');
-    try { await this.api.post('/api/v1/gate/devices/' + this.selected()!.id + '/revoke', { reason: this.reason }); this.clearPairing(); this.selected.set(null); this.notice.set('El teléfono ya no puede registrar marcas.'); await this.load(); }
-    catch (e) { this.error.set(this.api.message(e)); }
+    try { await this.api.post('/api/v1/gate/devices/' + this.selected()!.id + '/revoke', { reason: this.reason }); this.clearPairing(); this.selected.set(null); this.alerts.success('El teléfono ya no puede registrar marcas.'); await this.load(); }
+    catch (e) { void this.alerts.error('No se pudo completar la acción', this.api.message(e)); }
     finally { this.busy.set(false); }
   }
 }

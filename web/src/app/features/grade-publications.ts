@@ -2,6 +2,7 @@ import { Component, ElementRef, ViewChild, computed, inject, input, signal } fro
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AccessApi } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { SessionService } from '../core/session';
 import { InstitutionService } from '../core/institution';
 import { formatDateOnly } from '../core/people-api';
@@ -172,6 +173,7 @@ interface PublicationView {
 export class GradePublications {
   readonly year = input<string | undefined>();
   readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts);
   readonly session = inject(SessionService);
   readonly school = inject(InstitutionService).current;
   private readonly router = inject(Router);
@@ -275,9 +277,8 @@ export class GradePublications {
       });
       this.busy.set(false);
       this.dialog.nativeElement.close();
-      this.notice.set(`${item.name} quedó publicado.`);
+      this.alerts.success(`${item.name} quedó publicado.`);
       await this.load();
-      requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
     } catch (error) {
       this.dialogError.set(this.api.message(error));
     } finally {

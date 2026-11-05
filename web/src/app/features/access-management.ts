@@ -7,6 +7,7 @@ import {
   AccountSummary,
   PageResult,
 } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { SessionService } from '../core/session';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
@@ -17,6 +18,7 @@ import { Icon } from '../shared/icon';
 })
 export class AccessManagement {
   readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts);
   readonly session = inject(SessionService);
   @ViewChild('accountDialog') private dialog!: ElementRef<HTMLDialogElement>;
   readonly data = signal<PageResult<AccountSummary> | null>(null);
@@ -169,7 +171,7 @@ export class AccessManagement {
         });
         this.busy.set(false);
         this.closeDialog();
-        this.notice.set('El cambio se guardó y quedó registrado.');
+        this.alerts.success('El cambio se guardó y quedó registrado.');
         if (account.id === this.session.userId() && this.operation !== 'cancel') {
           await this.session.load('/workspace/access', true);
           return;

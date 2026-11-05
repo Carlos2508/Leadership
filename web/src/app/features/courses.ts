@@ -2,6 +2,7 @@ import { Component, ElementRef, ViewChild, computed, inject, input, signal } fro
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AccessApi } from '../core/access-api';
+import { Alerts } from '../core/alerts';
 import { SessionService } from '../core/session';
 import { InstitutionService } from '../core/institution';
 import { GradeView, YearDetail, YearSummary, todayIn, yearStatusLabels } from '../core/academic-api';
@@ -50,6 +51,7 @@ type Mode = 'subject' | 'create' | 'assign' | 'unassign';
 export class Courses {
   readonly year = input<string | undefined>();
   readonly api = inject(AccessApi);
+  readonly alerts = inject(Alerts);
   readonly session = inject(SessionService);
   readonly school = inject(InstitutionService).current;
   private readonly router = inject(Router);
@@ -246,9 +248,8 @@ export class Courses {
       }
       this.busy.set(false);
       this.dialog.nativeElement.close();
-      this.notice.set(message);
+      this.alerts.success(message);
       await this.load();
-      requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
     } catch (error) {
       this.dialogError.set(this.api.message(error));
     } finally {

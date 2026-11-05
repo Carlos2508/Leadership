@@ -1,0 +1,650 @@
+<app-shell [title]="person()?.displayName ?? 'Ficha de persona'">
+  <a class="back-link" routerLink="/workspace/people"
+    ><app-icon name="arrow" />Volver a personas y familias</a
+  >
+  @if (loading() && !person()) {
+    <p class="loading-state card" role="status">Cargando ficha…</p>
+  } @else if (notFound()) {
+    <section class="card empty-state" role="alert">
+      <app-icon name="search" />
+      <h2>No encontramos esta persona</h2>
+      <p>Es posible que el enlace sea incorrecto. Vuelve al directorio para buscarla.</p>
+      <a class="button" routerLink="/workspace/people">Ir al directorio</a>
+    </section>
+  } @else if (error() && !person()) {
+    <div class="feedback error-feedback" role="alert">
+      {{ error() }} <button class="text-button" (click)="load()">Reintentar</button>
+    </div>
+  } @else if (person(); as p) {
+    <div class="page-heading person-heading">
+      <div class="person-title">
+        <span class="avatar large" aria-hidden="true">{{ p.givenNames.slice(0, 1) }}</span>
+        <div>
+          <span class="eyebrow">FICHA PERSONAL</span>
+          <h1>{{ p.displayName }}</h1>
+          <p class="role-list">
+            @if (p.studentCode) {
+              <span class="pill blue">Estudiante · {{ p.studentCode }}</span>
+            }
+            @if (p.isGuardian) {
+              <span class="pill purple">Encargado</span>
+            }
+            @if (p.staffPosition) {
+              <span class="pill gold">{{ p.staffPosition }}</span>
+            }
+            @if (p.status === 'Archived') {
+              <span class="pill suspended">Archivada</span>
+            }
+          </p>
+        </div>
+      </div>
+      @if (canManage() && active()) {
+        <button class="button outline" (click)="openEdit()" [disabled]="busy()">
+          Editar datos
+        </button>
+      }
+    </div>
+    @if (notice()) {
+      <p class="feedback success-feedback" role="status" tabindex="-1" #noticeRef>{{ notice() }}</p>
+    }
+    @if (error()) {
+      <p class="feedback error-feedback" role="alert">{{ error() }}</p>
+    }
+    <div class="detail-grid">
+      <div class="detail-main">
+        <section class="card detail-card" aria-labelledby="personal-title">
+          <h2 id="personal-title">Datos personales</h2>
+          <dl class="data-list">
+            <div>
+              <dt>Nombres</dt>
+              <dd>{{ p.givenNames }}</dd>
+            </div>
+            <div>
+              <dt>Apellidos</dt>
+              <dd>{{ p.familyNames }}</dd>
+            </div>
+            <div>
+              <dt>Nombre preferido</dt>
+              <dd>{{ p.preferredName ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>Fecha de nacimiento</dt>
+              <dd>{{ date(p.birthDate) }}</dd>
+            </div>
+          </dl>
+          <h3 class="subheading">Contacto</h3>
+          @if (p.contacts.length) {
+            <ul class="contact-list">
+              @for (contact of p.contacts; track contact.id) {
+                <li>
+                  <span class="contact-kind">{{ contactLabels[contact.kind] }}</span>
+                  <span class="contact-value">{{ contact.value }}</span>
+                  @if (contact.label) {
+                    <span class="muted-copy">{{ contact.label }}</span>
+                  }
+                  @if (contact.isPrimary) {
+                    <span class="pill mint">Principal</span>
+                  }
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="muted-copy">Sin datos de contacto registrados.</p>
+          }
+        </section>
+
+        @if (p.studentCode) {
+          <section class="card detail-card" aria-labelledby="guardians-title">
+            <div class="section-heading">
+              <h2 id="guardians-title">{{ school.terms.guardianPlural }}</h2>
+              @if (canManage() && active()) {
+                <button class="button outline compact-button" (click)="openLink('guardian')">
+                  Vincular encargado
+                </button>
+              }
+            </div>
+            <p class="muted-copy">
+              El parentesco describe la relación. Solo las facultades marcadas permiten consultar
+              o actuar en nombre del estudiante.
+            </p>
+            @for (item of activeRelationships(p.guardians); track item.id) {
+              <ng-container
+                *ngTemplateOutlet="relationshipRow; context: { $implicit: item }"
+              ></ng-container>
+            } @empty {
+              <p class="empty-inline">Sin encargados vinculados.</p>
+            }
+            @if (endedRelationships(p.guardians).length) {
+              <details class="history">
+                <summary>
+                  Vínculos finalizados ({{ endedRelationships(p.guardians).length }})
+                </summary>
+                @for (item of endedRelationships(p.guardians); track item.id) {
+                  <ng-container
+                    *ngTemplateOutlet="relationshipRow; context: { $implicit: item }"
+                  ></ng-container>
+                }
+              </details>
+            }
+          </section>
+        }
+
+        @if (p.studentCode && session.can('academic.read')) {
+          <section class="card detail-card" aria-labelledby="enrollments-title">
+            <div class="section-heading">
+              <h2 id="enrollments-title">Inscripciones</h2>
+              <a class="text-button" routerLink="/workspace/enrollment">Ir a inscripciones</a>
+            </div>
+            @for (item of enrollments(); track item.id) {
+              <div class="enrollment-block">
+                <div class="section-heading">
+                  <strong>Ciclo {{ item.year }}</strong>
+                  <span
+                    class="pill"
+                    [class.mint]="item.status === 'Active'"
+                    [class.suspended]="item.status === 'Withdrawn'"
+                    >{{ enrollmentLabels[item.status] }}</span
+                  >
+                </div>
+                <span class="muted-copy">Ingreso: {{ date(item.enrolledOn) }}</span>
+                <ol class="placement-timeline" [attr.aria-label]="'Ubicaciones en el ciclo ' + item.year">
+                  @for (placement of item.placements; track placement.id) {
+                    <li [class.closed]="placement.endsOn">
+                      <strong>{{ placement.grade }}</strong>
+                      {{ placement.section ? '· Sección ' + placement.section : '· Sin sección' }}
+                      <span class="muted-copy"
+                        >· {{ date(placement.startsOn) }}
+                        {{ placement.endsOn ? '– ' + date(placement.endsOn) : 'en adelante' }}</span
+                      >
+                    </li>
+                  }
+                </ol>
+              </div>
+            } @empty {
+              <p class="empty-inline">Sin inscripciones registradas.</p>
+            }
+          </section>
+        }
+
+        @if (p.isGuardian) {
+          <section class="card detail-card" aria-labelledby="students-title">
+            <div class="section-heading">
+              <h2 id="students-title">{{ school.terms.studentPlural }} a su cargo</h2>
+              @if (canManage() && active()) {
+                <button class="button outline compact-button" (click)="openLink('student')">
+                  Vincular estudiante
+                </button>
+              }
+            </div>
+            @for (item of activeRelationships(p.students); track item.id) {
+              <ng-container
+                *ngTemplateOutlet="relationshipRow; context: { $implicit: item }"
+              ></ng-container>
+            } @empty {
+              <p class="empty-inline">Sin estudiantes vinculados.</p>
+            }
+            @if (endedRelationships(p.students).length) {
+              <details class="history">
+                <summary>
+                  Vínculos finalizados ({{ endedRelationships(p.students).length }})
+                </summary>
+                @for (item of endedRelationships(p.students); track item.id) {
+                  <ng-container
+                    *ngTemplateOutlet="relationshipRow; context: { $implicit: item }"
+                  ></ng-container>
+                }
+              </details>
+            }
+          </section>
+        }
+      </div>
+
+      <aside class="detail-side">
+        <section class="card detail-card" aria-labelledby="roles-title">
+          <h2 id="roles-title">Perfiles escolares</h2>
+          <ul class="profile-list">
+            <li>
+              <span>Estudiante</span>
+              @if (p.studentCode) {
+                <strong>Código {{ p.studentCode }}</strong>
+              } @else if (canManage() && active()) {
+                <button class="text-button" (click)="openStudentRole()">Agregar</button>
+              } @else {
+                <span class="muted-copy">No</span>
+              }
+            </li>
+            <li>
+              <span>Personal del colegio</span>
+              @if (p.staffPosition) {
+                <strong>{{ p.staffPosition }}</strong>
+              } @else if (canManage() && active()) {
+                <button class="text-button" (click)="openStaffRole()">Agregar</button>
+              } @else {
+                <span class="muted-copy">No</span>
+              }
+            </li>
+            <li>
+              <span>Encargado</span>
+              @if (p.isGuardian) {
+                <strong>Sí</strong>
+              } @else if (canManage() && active()) {
+                <button class="text-button" (click)="addGuardianRole()" [disabled]="busy()">
+                  Agregar
+                </button>
+              } @else {
+                <span class="muted-copy">No</span>
+              }
+            </li>
+          </ul>
+        </section>
+
+        <section class="card detail-card" aria-labelledby="account-title">
+          <h2 id="account-title">Cuenta de acceso</h2>
+          @if (p.account; as account) {
+            <p class="account-line">
+              <app-icon name="shield" /><span
+                ><strong>{{ account.username }}</strong
+                ><small>{{ accountStatusLabels[account.status] }}</small></span
+              >
+            </p>
+            <p class="muted-copy">
+              Esta cuenta ve la información de esta persona según sus perfiles y vínculos.
+            </p>
+            @if (canLink()) {
+              <button class="button outline compact-button" (click)="openUnlink()">
+                Desvincular cuenta
+              </button>
+            }
+          } @else {
+            <p class="muted-copy">
+              Sin cuenta vinculada. Una cuenta propia no depende de un encargado.
+            </p>
+            @if (canLink() && active()) {
+              <button class="button outline compact-button" (click)="openAccount()">
+                Vincular cuenta
+              </button>
+            }
+          }
+        </section>
+
+        @if (canManage()) {
+          <section class="card detail-card" aria-labelledby="status-title">
+            <h2 id="status-title">Estado de la ficha</h2>
+            <p class="muted-copy">
+              {{
+                p.status === 'Active'
+                  ? 'Archivar oculta la ficha del directorio activo sin borrar su historial.'
+                  : 'La ficha está archivada. Restáurala para volver a modificarla.'
+              }}
+            </p>
+            <button class="button outline compact-button" (click)="openStatus()">
+              {{ p.status === 'Active' ? 'Archivar' : 'Restaurar' }}
+            </button>
+          </section>
+        }
+      </aside>
+    </div>
+  }
+
+  <ng-template #relationshipRow let-item>
+    <article class="relationship-row" [class.ended]="item.endedAt">
+      <div class="relationship-main">
+        <a [routerLink]="['/workspace/people', item.personId]">{{ item.displayName }}</a>
+        <span class="muted-copy"
+          >{{ relationshipLabels[item.kind] }}
+          @if (item.studentCode) {
+            · {{ item.studentCode }}
+          }
+          · desde {{ date(item.startsOn) }}
+          @if (item.endedAt) {
+            · finalizó {{ api.date(item.endedAt) }}
+          }</span
+        >
+        <div class="faculty-chips" [attr.aria-label]="'Facultades de ' + item.displayName">
+          @for (faculty of item.faculties; track faculty) {
+            <span class="chip">{{ facultyLabels[faculty] }}</span>
+          } @empty {
+            @if (!item.endedAt) {
+              <span class="chip empty-chip">Sin facultades</span>
+            }
+          }
+        </div>
+        @if (item.endReason) {
+          <span class="muted-copy">Motivo: {{ item.endReason }}</span>
+        }
+      </div>
+      @if (canManage() && !item.endedAt) {
+        <div class="relationship-actions">
+          <button class="button outline compact-button" (click)="openRelationship(item)">
+            Facultades <span class="sr-only">de {{ item.displayName }}</span></button
+          ><button class="text-button danger-text" (click)="openEnd(item)">
+            Finalizar <span class="sr-only">vínculo con {{ item.displayName }}</span>
+          </button>
+        </div>
+      }
+    </article>
+  </ng-template>
+
+  <dialog
+    #detailDialog
+    class="account-dialog wide-dialog"
+    (cancel)="onCancel($event)"
+    aria-labelledby="detail-dialog-title"
+  >
+    <div class="dialog-heading">
+      <h2 id="detail-dialog-title">{{ dialogTitle() }}</h2>
+      <button
+        class="icon-button"
+        (click)="closeDialog()"
+        aria-label="Cerrar ventana"
+        [disabled]="busy()"
+      >
+        <app-icon name="close" />
+      </button>
+    </div>
+    <form (ngSubmit)="submit()" class="access-form">
+      @switch (mode()) {
+        @case ('edit') {
+          <div class="form-grid">
+            <label class="form-field"
+              ><span>Nombres</span
+              ><input
+                name="givenNames"
+                [(ngModel)]="edit.givenNames"
+                required
+                maxlength="100"
+                autocomplete="off"
+            /></label>
+            <label class="form-field"
+              ><span>Apellidos</span
+              ><input
+                name="familyNames"
+                [(ngModel)]="edit.familyNames"
+                required
+                maxlength="100"
+                autocomplete="off"
+            /></label>
+            <label class="form-field"
+              ><span>Nombre preferido <small>(opcional)</small></span
+              ><input
+                name="preferredName"
+                [(ngModel)]="edit.preferredName"
+                maxlength="60"
+                autocomplete="off"
+            /></label>
+            <label class="form-field"
+              ><span>Fecha de nacimiento <small>(opcional)</small></span
+              ><input name="birthDate" type="date" [(ngModel)]="edit.birthDate"
+            /></label>
+          </div>
+          <fieldset class="choice-group">
+            <legend>Datos de contacto</legend>
+            @for (contact of edit.contacts; track $index; let i = $index) {
+              <div class="contact-editor">
+                <label class="form-field"
+                  ><span>{{ contactLabels[contact.kind] }}</span
+                  ><input
+                    [name]="'contact-value-' + i"
+                    [(ngModel)]="contact.value"
+                    maxlength="200"
+                    autocomplete="off"
+                    [type]="
+                      contact.kind === 'Email' ? 'email' : contact.kind === 'Phone' ? 'tel' : 'text'
+                    "
+                /></label>
+                <label class="form-field"
+                  ><span>Etiqueta <small>(opcional)</small></span
+                  ><input
+                    [name]="'contact-label-' + i"
+                    [(ngModel)]="contact.label"
+                    maxlength="60"
+                    placeholder="Casa, trabajo…"
+                    autocomplete="off"
+                /></label>
+                <label class="checkbox-field"
+                  ><input
+                    type="checkbox"
+                    [name]="'contact-primary-' + i"
+                    [(ngModel)]="contact.isPrimary"
+                  /><span>Principal</span></label
+                >
+                <button
+                  type="button"
+                  class="text-button danger-text"
+                  (click)="removeContact(i)"
+                >
+                  Quitar <span class="sr-only">{{ contactLabels[contact.kind] }}</span>
+                </button>
+              </div>
+            } @empty {
+              <p class="muted-copy">Sin datos de contacto.</p>
+            }
+            <div class="inline-actions">
+              <button type="button" class="text-button" (click)="addContact('Phone')">
+                + Teléfono</button
+              ><button type="button" class="text-button" (click)="addContact('Email')">
+                + Correo</button
+              ><button type="button" class="text-button" (click)="addContact('Address')">
+                + Dirección
+              </button>
+            </div>
+          </fieldset>
+        }
+        @case ('staff-role') {
+          <label class="form-field"
+            ><span>Cargo o puesto</span
+            ><input name="position" [(ngModel)]="position" required maxlength="80" placeholder="Docente" autocomplete="off"
+            /><small>Los cursos que puede ver dependen de sus asignaciones docentes; los permisos, de su cuenta.</small></label
+          >
+        }
+        @case ('student-role') {
+          <label class="form-field"
+            ><span>Código de estudiante</span
+            ><input
+              name="studentCode"
+              [(ngModel)]="studentCode"
+              required
+              maxlength="30"
+              autocomplete="off"
+              pattern="[A-Za-z0-9][A-Za-z0-9.\-]*"
+            /><small>Letras, números, punto o guion. Debe ser único en el colegio.</small></label
+          >
+        }
+        @case ('link') {
+          <div class="candidate-search">
+            <label class="form-field"
+              ><span>{{
+                linkSide === 'guardian' ? 'Buscar encargado' : 'Buscar estudiante'
+              }}</span
+              ><input
+                name="candidateSearch"
+                type="search"
+                [(ngModel)]="candidateSearch"
+                maxlength="100"
+                placeholder="Nombre, apellido o código"
+                autocomplete="off"
+                (keydown.enter)="$event.preventDefault(); searchCandidates()"
+            /></label>
+            <button
+              type="button"
+              class="button outline"
+              (click)="searchCandidates()"
+              [disabled]="searching()"
+            >
+              Buscar
+            </button>
+          </div>
+          @if (candidates().length) {
+            <fieldset class="choice-group candidate-list">
+              <legend>Selecciona una persona</legend>
+              @for (candidate of candidates(); track candidate.id) {
+                <label class="radio-option"
+                  ><input
+                    type="radio"
+                    name="candidate"
+                    [value]="candidate.id"
+                    [(ngModel)]="candidateId"
+                  /><span
+                    >{{ candidate.displayName }}
+                    @if (candidate.studentCode) {
+                      <small>· {{ candidate.studentCode }}</small>
+                    }</span
+                  ></label
+                >
+              }
+            </fieldset>
+          } @else {
+            <p class="muted-copy">
+              Solo aparecen personas activas con perfil de
+              {{ linkSide === 'guardian' ? 'encargado' : 'estudiante' }}. Si no existe,
+              regístrala primero en el directorio.
+            </p>
+          }
+          <div class="form-grid">
+            <label class="form-field"
+              ><span>Parentesco o vínculo</span
+              ><select name="kind" [(ngModel)]="kind" required>
+                @for (option of catalog()?.relationshipKinds ?? []; track option) {
+                  <option [value]="option">{{ relationshipLabels[option] }}</option>
+                }
+              </select></label
+            >
+            <label class="form-field"
+              ><span>Vigente desde <small>(opcional)</small></span
+              ><input name="startsOn" type="date" [(ngModel)]="startsOn"
+            /></label>
+          </div>
+          <ng-container *ngTemplateOutlet="facultyFields"></ng-container>
+        }
+        @case ('relationship') {
+          <p class="managed-user">{{ selectedRelationship()?.displayName }}</p>
+          <label class="form-field"
+            ><span>Parentesco o vínculo</span
+            ><select name="kind" [(ngModel)]="kind" required>
+              @for (option of catalog()?.relationshipKinds ?? []; track option) {
+                <option [value]="option">{{ relationshipLabels[option] }}</option>
+              }
+            </select></label
+          >
+          <ng-container *ngTemplateOutlet="facultyFields"></ng-container>
+        }
+        @case ('end') {
+          <p class="action-explanation">
+            Se retirarán todas las facultades de este vínculo con
+            <strong>{{ selectedRelationship()?.displayName }}</strong>. El historial se conserva y
+            puede registrarse un vínculo nuevo más adelante.
+          </p>
+        }
+        @case ('account') {
+          <div class="candidate-search">
+            <label class="form-field"
+              ><span>Buscar cuenta</span
+              ><input
+                name="accountSearch"
+                type="search"
+                [(ngModel)]="accountSearch"
+                maxlength="100"
+                placeholder="Nombre de usuario"
+                autocomplete="off"
+                (keydown.enter)="$event.preventDefault(); searchAccounts()"
+            /></label>
+            <button
+              type="button"
+              class="button outline"
+              (click)="searchAccounts()"
+              [disabled]="searching()"
+            >
+              Buscar
+            </button>
+          </div>
+          @if (accounts().length) {
+            <fieldset class="choice-group candidate-list">
+              <legend>Cuentas sin persona vinculada</legend>
+              @for (account of accounts(); track account.id) {
+                <label class="radio-option"
+                  ><input
+                    type="radio"
+                    name="account"
+                    [value]="account.id"
+                    [(ngModel)]="accountId"
+                  /><span
+                    >{{ account.username }}
+                    <small>· {{ accountStatusLabels[account.status] }}</small></span
+                  ></label
+                >
+              }
+            </fieldset>
+          } @else if (!searching()) {
+            <p class="muted-copy">
+              No hay cuentas disponibles con ese nombre. Invítala primero desde Cuentas y accesos.
+            </p>
+          }
+          <p class="action-explanation">
+            La cuenta podrá ver la información de esta persona y, si es encargado, la de los
+            estudiantes vinculados según sus facultades. Confirma que pertenece al titular.
+          </p>
+        }
+        @case ('unlink') {
+          <p class="action-explanation">
+            La cuenta dejará de ver la información de esta persona desde su siguiente consulta. La
+            cuenta no se elimina ni se suspende.
+          </p>
+        }
+        @case ('status') {
+          <p class="action-explanation">
+            {{
+              person()?.status === 'Active'
+                ? 'Para archivar, primero finaliza sus vínculos vigentes y desvincula su cuenta. Su historial se conserva.'
+                : 'La ficha volverá al directorio activo.'
+            }}
+          </p>
+        }
+      }
+      @if (mode() !== 'edit' && mode() !== 'student-role' && mode() !== 'staff-role') {
+        <label class="form-field"
+          ><span>Motivo del cambio</span
+          ><textarea
+            name="reason"
+            [(ngModel)]="reason"
+            required
+            minlength="8"
+            maxlength="500"
+            rows="3"
+          ></textarea
+          ><small>Queda en la auditoría. Evita copiar datos de documentos.</small></label
+        >
+      }
+      @if (dialogError()) {
+        <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
+      }
+      <div class="dialog-actions">
+        <button class="button outline" type="button" (click)="closeDialog()" [disabled]="busy()">
+          Cancelar</button
+        ><button class="button" type="submit" [disabled]="busy()">
+          {{ busy() ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <ng-template #facultyFields>
+    <fieldset class="choice-group">
+      <legend>Facultades</legend>
+      <p class="muted-copy">
+        Ninguna se concede automáticamente. Marca solo las autorizadas por el colegio.
+      </p>
+      @for (faculty of catalog()?.faculties ?? []; track faculty.key) {
+        <label class="checkbox-field"
+          ><input
+            type="checkbox"
+            [name]="'faculty-' + faculty.key"
+            [(ngModel)]="faculties[faculty.key]"
+          /><span
+            ><strong>{{ faculty.label }}</strong
+            ><small>{{ faculty.description }}</small></span
+          ></label
+        >
+      }
+    </fieldset>
+  </ng-template>
+</app-shell>

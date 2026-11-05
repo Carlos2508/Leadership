@@ -19,15 +19,16 @@ Lee primero `docs/PROGRESS.md`, `docs/HANDOFF.md`, `docs/PROJECT_DEFINITION.md` 
 - Toda API de negocio exige `ActiveAccount` más autorización por recurso/permiso; ocultar menús no es autorización. No agregar endpoints académicos bajo `AllowAnonymous`.
 - Las muestras sintéticas solo existen en `Development`, bajo `/api/v1/preview`. Nunca reutilizarlas como repositorio de producción ni como valores predeterminados ante errores.
 - Conservar resultados ordinarios y revisiones. No publicar una política pendiente como si la hubiera aprobado el colegio.
-- No habilitar notas familiares/estudiantiles hasta disponer de solvencia verificada en backend.
+- Notas familiares/estudiantiles: solo vía `GradeService.MyGradesAsync`, que exige facultad `AcademicRecords` (o ser el estudiante) y evalúa `ClearanceService` contra el corte de cada publicación en cada lectura. No publicar promedios anuales ni redondeos sin política aprobada.
 
 ## Trabajo y validación
 
 - .NET 10; SDK estable fijado en `global.json`. Angular/Node y paquetes fijados con archivos lock.
 - SQL Server real para integración; no sustituirlo por SQLite/InMemory para validar restricciones de SQL.
+- Las conexiones EF se resuelven desde la configuración final (lambda con `IServiceProvider`), nunca capturadas antes de `Build()`: los fixtures sustituyen la conexión después. `TestApplication.MigrateOwnedDatabaseAsync` comprueba el catálogo antes de migrar.
 - `dotnet test` requiere SQL local o `SCHOOLPLATFORM_TEST_SQL`. Solo se eliminan bases con nombre aleatorio `SchoolPlatform_Test_*` creadas por el fixture.
 - Playwright usa su propia base `SchoolPlatform_E2E_<uuid>` y credenciales sintéticas en memoria. `SchoolPlatform.TestHarness` prepara y retira exclusivamente esa base. `SCHOOLPLATFORM_E2E_SQL` permite otra instancia; nunca usar/copiar la base escolar para E2E.
-- Permisos actuales: `accounts.manage` y `audit.read`, comprobados en SQL. El gestor inicial se prepara por consola, sin contraseña predeterminada; no sembrar gestores al arrancar. Los perfiles de acceso actuales no son roles docentes/familiares.
+- Permisos actuales: `accounts.manage`, `audit.read`, `people.read`, `people.manage`, `academic.read`, `academic.manage`, `enrollment.manage`, `finance.read`, `finance.charges`, `finance.collect` y `finance.reverse`, comprobados en SQL. Dinero: solo pagos confirmados con aplicación explícita; solvencia calculada por `ClearanceService` sin caché; un saldo vacío no es solvencia. El ciclo va siempre explícito en URL/comando; nunca en sesión. Vincular cuenta↔persona exige `people.manage` + `accounts.manage`. El acceso de autoservicio a un estudiante se calcula por vínculo vigente y facultad (`PeopleService.StudentAccessAsync`), nunca por parentesco. El gestor inicial se prepara por consola, sin contraseña predeterminada; no sembrar gestores al arrancar. Los perfiles de acceso actuales no son roles docentes/familiares.
 - Mantener cambios IAM y auditoría en la misma transacción. Códigos de activación/recuperación solo como hash durable; no ponerlos en URLs, logs, auditoría ni listados. Entrega manual por canal verificado; no enviar mensajes sin instrucción explícita.
 - Frontend en Windows: `./scripts/Invoke-Web.ps1 ci`, `./scripts/Invoke-Web.ps1 run build`, `./scripts/Invoke-Web.ps1 test`. El wrapper prepara Node dentro de `.tools`, sin cambiar el Node global.
 - Capturas de QA en `web/test-results/` (ignoradas). Revisar escritorio y móvil si cambia la presentación.

@@ -1,0 +1,299 @@
+<app-shell title="Configuración financiera">
+  <a class="back-link" routerLink="/workspace/finance"><app-icon name="arrow" />Volver a caja</a>
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">FINANZAS</span>
+      <h1>Conceptos, cuotas y cargos</h1>
+      <p>Los importes y fechas los define el colegio. Nada se cobra hasta confirmar una emisión.</p>
+    </div>
+  </div>
+  @if (notice()) {
+    <p class="feedback success-feedback" role="status" tabindex="-1" #noticeRef>{{ notice() }}</p>
+  }
+  @if (error()) {
+    <p class="feedback error-feedback" role="alert">{{ error() }}</p>
+  }
+  @if (!loading() && !years().length) {
+    <section class="card empty-state">
+      <app-icon name="calendar" />
+      <h2>No hay ciclos escolares</h2>
+      <p>Crea primero un ciclo en Ciclos y grados.</p>
+    </section>
+  } @else if (setup(); as s) {
+    <section class="card directory-card">
+      <div class="filters">
+        <label class="select-field"
+          ><span>Ciclo</span
+          ><select name="year" [(ngModel)]="yearId" (ngModelChange)="changeYear()">
+            @for (item of years(); track item.id) {
+              <option [value]="item.id">{{ item.label }} · {{ yearLabels[item.status] }}</option>
+            }
+          </select></label
+        >
+      </div>
+    </section>
+
+    <div class="detail-grid academic-grid">
+      <div class="detail-main">
+        <section class="card detail-card" aria-labelledby="generate-title">
+          <h2 id="generate-title">Emitir cargos</h2>
+          <p class="muted-copy">
+            Elige concepto, cuota y destinatarios. La vista previa muestra quién recibirá el cargo y quién ya lo tiene;
+            una obligación nunca se emite dos veces.
+          </p>
+          @if (canEdit()) {
+            <form class="access-form" (ngSubmit)="runPreview()">
+              <div class="form-grid">
+                <label class="form-field"
+                  ><span>Concepto</span
+                  ><select name="concept" [(ngModel)]="generation.conceptId" (ngModelChange)="preview.set(null)">
+                    <option value="" disabled>Selecciona</option>
+                    @for (concept of s.concepts; track concept.id) {
+                      @if (concept.isActive) {
+                        <option [value]="concept.id">{{ concept.name }}</option>
+                      }
+                    }
+                  </select></label
+                >
+                @if (selectedConcept()?.isRecurring) {
+                  <label class="form-field"
+                    ><span>Cuota</span
+                    ><select name="period" [(ngModel)]="generation.billingPeriodId" (ngModelChange)="preview.set(null)">
+                      <option value="" disabled>Selecciona</option>
+                      @for (period of s.periods; track period.id) {
+                        <option [value]="period.id">{{ period.label }} · vence {{ date(period.dueOn) }}</option>
+                      }
+                    </select></label
+                  >
+                }
+                <label class="form-field"
+                  ><span>Importe ({{ s.currency }})</span
+                  ><input name="amount" type="number" min="0.01" step="0.01" [(ngModel)]="generation.amount" (ngModelChange)="preview.set(null)" inputmode="decimal"
+                /></label>
+                <label class="form-field"
+                  ><span>Vencimiento {{ selectedConcept()?.isRecurring ? '(opcional)' : '' }}</span
+                  ><input name="dueOn" type="date" [(ngModel)]="generation.dueOn" (ngModelChange)="preview.set(null)"
+                /></label>
+              </div>
+              <fieldset class="choice-group">
+                <legend>Grados <small class="muted-copy">(ninguno = todos con inscripción activa)</small></legend>
+                <div class="checkbox-grid">
+                  @for (grade of grades(); track grade.id) {
+                    <label class="checkbox-field"
+                      ><input type="checkbox" [name]="'grade-' + grade.id" [(ngModel)]="generation.grades[grade.id]" (ngModelChange)="preview.set(null)" /><span>{{ grade.name }}</span></label
+                    >
+                  }
+                </div>
+              </fieldset>
+              @if (generationError()) {
+                <p class="feedback error-feedback" role="alert">{{ generationError() }}</p>
+              }
+              <div class="inline-actions">
+                <button class="button outline" type="submit" [disabled]="busy()">Ver vista previa</button>
+              </div>
+            </form>
+          }
+          @if (preview(); as p) {
+            <div class="preview-summary" aria-live="polite">
+              <span><strong>{{ p.toCreate }}</strong> por emitir</span>
+              <span><strong>{{ p.existing }}</strong> ya emitidos</span>
+              <span><strong>{{ p.excluded }}</strong> excluidos</span>
+              <span>Total <strong>{{ money(p.total) }}</strong></span>
+            </div>
+            @if (p.rows.length) {
+              <div class="table-scroll" tabindex="0" role="region" aria-label="Vista previa de cargos">
+                <table class="stack-table">
+                  <caption class="sr-only">Destinatarios de la emisión</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Estudiante</th>
+                      <th scope="col">Grado</th>
+                      <th scope="col">Resultado</th>
+                      <th scope="col">Excluir</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of p.rows; track row.enrollmentId) {
+                      <tr>
+                        <td>
+                          <span class="person-copy"><strong>{{ row.studentName }}</strong><small>{{ row.studentCode }}</small></span>
+                        </td>
+                        <td data-label="Grado">{{ row.grade }}{{ row.section ? ' · ' + row.section : '' }}</td>
+                        <td data-label="Resultado">
+                          <span class="pill" [class.mint]="row.outcome === 'Create'" [class.gold]="row.outcome === 'Exists'">{{
+                            row.outcome === 'Create' ? 'Se emitirá' : row.outcome === 'Exists' ? 'Ya emitido' : 'Excluido'
+                          }}</span>
+                        </td>
+                        <td data-label="Excluir">
+                          @if (row.outcome !== 'Exists') {
+                            <label class="checkbox-field"
+                              ><input
+                                type="checkbox"
+                                [checked]="row.outcome === 'Excluded'"
+                                (change)="toggleExcluded(row.enrollmentId, $any($event.target).checked)"
+                                [disabled]="busy()"
+                              /><span class="sr-only">Excluir a {{ row.studentName }}</span></label
+                            >
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <div class="inline-actions">
+                <button class="button" (click)="confirm()" [disabled]="busy() || p.toCreate === 0">
+                  {{ busy() ? 'Emitiendo…' : 'Confirmar emisión de ' + p.toCreate + ' cargos' }}
+                </button>
+              </div>
+            } @else {
+              <p class="empty-inline">No hay inscripciones activas para esa selección.</p>
+            }
+          }
+        </section>
+      </div>
+
+      <aside class="detail-side">
+        <section class="card detail-card" aria-labelledby="concepts-title">
+          <div class="section-heading">
+            <h2 id="concepts-title">Conceptos</h2>
+            @if (canEdit()) {
+              <button class="text-button" (click)="openConcept()">+ Nuevo</button>
+            }
+          </div>
+          <ul class="profile-list">
+            @for (concept of s.concepts; track concept.id) {
+              <li>
+                <span class="grade-copy"
+                  ><strong>{{ concept.name }}</strong
+                  ><small
+                    >{{ concept.code }} · {{ concept.isRecurring ? 'Por cuota' : 'Único' }}{{
+                      concept.countsForClearance ? ' · Solvencia' : ''
+                    }}{{ concept.isActive ? '' : ' · Inactivo' }}</small
+                  ></span
+                >
+                @if (canEdit()) {
+                  <button class="text-button" (click)="openConcept(concept)">Editar <span class="sr-only">{{ concept.name }}</span></button>
+                }
+              </li>
+            } @empty {
+              <li><span class="muted-copy">Aún no hay conceptos.</span></li>
+            }
+          </ul>
+        </section>
+        <section class="card detail-card" aria-labelledby="periods-title">
+          <div class="section-heading">
+            <h2 id="periods-title">Calendario de cuotas</h2>
+            @if (canEdit()) {
+              <button class="text-button" (click)="openPeriod()">+ Agregar</button>
+            }
+          </div>
+          <ol class="period-list">
+            @for (period of s.periods; track period.id) {
+              <li>
+                <span class="period-number">{{ period.sequence }}</span>
+                <span class="period-copy"
+                  ><strong>{{ period.label }}</strong><small>Vence {{ date(period.dueOn) }} · {{ period.charges }} cargos</small></span
+                >
+                @if (canEdit()) {
+                  <button class="text-button" (click)="openPeriod(period)">Editar <span class="sr-only">{{ period.label }}</span></button>
+                }
+              </li>
+            } @empty {
+              <li><span class="muted-copy">Sin cuotas para este ciclo.</span></li>
+            }
+          </ol>
+        </section>
+        <section class="card detail-card" aria-labelledby="cutoffs-title">
+          <div class="section-heading">
+            <h2 id="cutoffs-title">Cortes de solvencia</h2>
+            @if (canEdit() && s.periods.length) {
+              <button class="text-button" (click)="openCutoff()">+ Nuevo</button>
+            }
+          </div>
+          <p class="muted-copy">Cada corte exige las cuotas 1 a N de conceptos que cuentan para solvencia.</p>
+          <ul class="profile-list">
+            @for (cutoff of s.cutoffs; track cutoff.id) {
+              <li>
+                <span class="grade-copy"><strong>{{ cutoff.name }}</strong><small>Hasta la cuota {{ cutoff.throughSequence }}</small></span>
+                <a class="text-button" routerLink="/workspace/finance/clearance" [queryParams]="{ year: yearId, cutoff: cutoff.id }">Ver</a>
+              </li>
+            } @empty {
+              <li><span class="muted-copy">Sin cortes definidos.</span></li>
+            }
+          </ul>
+        </section>
+      </aside>
+    </div>
+  } @else if (loading()) {
+    <p class="loading-state card" role="status">Cargando configuración…</p>
+  }
+
+  <dialog #setupDialog class="account-dialog" (cancel)="onCancel($event)" aria-labelledby="setup-dialog-title">
+    <div class="dialog-heading">
+      <h2 id="setup-dialog-title">{{ title() }}</h2>
+      <button class="icon-button" (click)="closeDialog()" aria-label="Cerrar ventana" [disabled]="busy()">
+        <app-icon name="close" />
+      </button>
+    </div>
+    <form class="access-form" (ngSubmit)="submit()">
+      @switch (mode()) {
+        @case ('concept') {
+          <div class="form-grid">
+            <label class="form-field"
+              ><span>Código</span><input name="code" [(ngModel)]="conceptForm.code" required maxlength="20" autocomplete="off"
+            /></label>
+            <label class="form-field"
+              ><span>Nombre</span><input name="name" [(ngModel)]="conceptForm.name" required maxlength="80" autocomplete="off"
+            /></label>
+          </div>
+          <label class="checkbox-field"
+            ><input type="checkbox" name="isRecurring" [(ngModel)]="conceptForm.isRecurring" /><span
+              >Se cobra por cuota del calendario<small>Por ejemplo, {{ school.terms.tuition.toLowerCase() }}. Desmarca para cobros únicos.</small></span
+            ></label
+          >
+          <label class="checkbox-field"
+            ><input type="checkbox" name="countsForClearance" [(ngModel)]="conceptForm.countsForClearance" /><span
+              >Cuenta para solvencia académica<small>Sus cargos deben estar cubiertos para consultar notas según el corte.</small></span
+            ></label
+          >
+          @if (editing()) {
+            <label class="checkbox-field"
+              ><input type="checkbox" name="isActive" [(ngModel)]="conceptForm.isActive" /><span>Activo</span></label
+            >
+          }
+        }
+        @case ('period') {
+          <label class="form-field"
+            ><span>Nombre de la cuota</span
+            ><input name="label" [(ngModel)]="periodForm.label" required maxlength="60" placeholder="Cuota 1" autocomplete="off"
+          /></label>
+          <label class="form-field"
+            ><span>Vencimiento</span><input name="dueOn" type="date" [(ngModel)]="periodForm.dueOn" required
+          /></label>
+        }
+        @case ('cutoff') {
+          <label class="form-field"
+            ><span>Nombre del corte</span
+            ><input name="cutoffName" [(ngModel)]="cutoffForm.name" required maxlength="80" placeholder="Primer {{ school.terms.period.toLowerCase() }}" autocomplete="off"
+          /></label>
+          <label class="form-field"
+            ><span>Exigir cuotas hasta</span
+            ><select name="through" [(ngModel)]="cutoffForm.throughSequence">
+              @for (period of setup()?.periods ?? []; track period.id) {
+                <option [ngValue]="period.sequence">{{ period.sequence }} · {{ period.label }}</option>
+              }
+            </select></label
+          >
+        }
+      }
+      @if (dialogError()) {
+        <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
+      }
+      <div class="dialog-actions">
+        <button class="button outline" type="button" (click)="closeDialog()" [disabled]="busy()">Cancelar</button
+        ><button class="button" type="submit" [disabled]="busy()">{{ busy() ? 'Guardando…' : 'Guardar' }}</button>
+      </div>
+    </form>
+  </dialog>
+</app-shell>

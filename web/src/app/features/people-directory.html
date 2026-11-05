@@ -1,0 +1,284 @@
+<app-shell title="Personas y familias">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">NUESTRA COMUNIDAD</span>
+      <h1>Personas y familias</h1>
+      <p>
+        {{ school.terms.studentPlural }}, {{ school.terms.guardianPlural.toLowerCase() }} y sus
+        vínculos, en un solo directorio.
+      </p>
+    </div>
+    @if (session.can('people.manage')) {
+      <button class="button" (click)="openCreate()" [disabled]="busy()">
+        <app-icon name="people" />Registrar persona
+      </button>
+    }
+  </div>
+  @if (error()) {
+    <div class="feedback error-feedback" role="alert">
+      {{ error() }} <button class="text-button" (click)="load()">Reintentar</button>
+    </div>
+  }
+  <section class="card directory-card" [attr.aria-busy]="loading()">
+    <form class="filters" (ngSubmit)="load()">
+      <label class="search-field"
+        ><span>Buscar</span>
+        <div>
+          <app-icon name="search" /><input
+            type="search"
+            name="search"
+            placeholder="Nombre, apellido o código"
+            maxlength="100"
+            [(ngModel)]="search"
+          /></div></label
+      ><label class="select-field"
+        ><span>Perfil</span
+        ><select name="role" [(ngModel)]="role" (ngModelChange)="load()">
+          <option value="all">Todos</option>
+          <option value="student">{{ school.terms.studentPlural }}</option>
+          <option value="guardian">{{ school.terms.guardianPlural }}</option>
+          <option value="staff">Personal</option>
+          <option value="none">Sin perfil escolar</option>
+        </select></label
+      ><label class="select-field"
+        ><span>Estado</span
+        ><select name="status" [(ngModel)]="status" (ngModelChange)="load()">
+          <option value="Active">Activas</option>
+          <option value="Archived">Archivadas</option>
+          <option value="all">Todas</option>
+        </select></label
+      ><button class="button outline" type="submit" [disabled]="loading()">Buscar</button
+      ><button class="text-button reset-filters" type="button" (click)="clearFilters()">
+        Limpiar filtros
+      </button>
+    </form>
+    @if (loading() && !data()) {
+      <p class="loading-state" role="status">Cargando directorio…</p>
+    } @else if (data(); as page) {
+      <p class="directory-summary" aria-live="polite">
+        {{ page.total }} {{ page.total === 1 ? 'persona' : 'personas' }} · Página {{ page.page }}
+      </p>
+      @if (page.items.length) {
+        <div
+          class="table-scroll"
+          tabindex="0"
+          role="region"
+          aria-label="Directorio de personas, desplazable horizontalmente"
+        >
+          <table class="stack-table">
+            <caption class="sr-only">
+              Personas registradas en esta institución
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Nombre</th>
+                <th scope="col">Código</th>
+                <th scope="col">Perfiles</th>
+                <th scope="col">Cuenta</th>
+                <th scope="col">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (person of page.items; track person.id) {
+                <tr>
+                  <td>
+                    <a class="person-link" [routerLink]="['/workspace/people', person.id]">
+                      <span class="avatar small" aria-hidden="true">{{
+                        person.givenNames.slice(0, 1)
+                      }}</span
+                      ><span
+                        ><strong>{{ person.familyNames }}</strong
+                        >, {{ person.givenNames }}</span
+                      ></a
+                    >
+                  </td>
+                  <td data-label="Código">{{ person.studentCode ?? '—' }}</td>
+                  <td data-label="Perfiles">
+                    <span class="role-list">
+                      @if (person.studentCode) {
+                        <span class="pill blue">Estudiante</span>
+                      }
+                      @if (person.isGuardian) {
+                        <span class="pill purple">Encargado</span>
+                      }
+                      @if (person.isStaff) {
+                        <span class="pill gold">Personal</span>
+                      }
+                      @if (!person.studentCode && !person.isGuardian && !person.isStaff) {
+                        <span class="muted-copy">Sin perfil</span>
+                      }
+                    </span>
+                  </td>
+                  <td data-label="Cuenta">
+                    @if (person.account) {
+                      {{ person.account }}
+                    } @else {
+                      <span class="muted-copy">Sin cuenta</span>
+                    }
+                  </td>
+                  <td data-label="Estado">
+                    <span
+                      class="pill"
+                      [class.mint]="person.status === 'Active'"
+                      [class.suspended]="person.status === 'Archived'"
+                      >{{ person.status === 'Active' ? 'Activa' : 'Archivada' }}</span
+                    >
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="empty-state">
+          <app-icon name="search" />
+          <h2>No encontramos personas</h2>
+          <p>
+            {{
+              search || role !== 'all' || status !== 'Active'
+                ? 'Prueba con otra búsqueda o limpia los filtros.'
+                : 'Todavía no hay personas registradas en esta instalación.'
+            }}
+          </p>
+        </div>
+      }
+      <div class="pagination">
+        <button
+          class="button outline"
+          [disabled]="page.page <= 1 || loading()"
+          (click)="load(page.page - 1)"
+        >
+          Anterior</button
+        ><span>{{ page.total }} {{ page.total === 1 ? 'resultado' : 'resultados' }}</span
+        ><button
+          class="button outline"
+          [disabled]="page.page * page.pageSize >= page.total || loading()"
+          (click)="load(page.page + 1)"
+        >
+          Siguiente
+        </button>
+      </div>
+    }
+  </section>
+
+  <dialog
+    #personDialog
+    class="account-dialog wide-dialog"
+    (cancel)="onCancel($event)"
+    aria-labelledby="person-dialog-title"
+  >
+    <div class="dialog-heading">
+      <h2 id="person-dialog-title">Registrar persona</h2>
+      <button
+        class="icon-button"
+        (click)="closeDialog()"
+        aria-label="Cerrar ventana"
+        [disabled]="busy()"
+      >
+        <app-icon name="close" />
+      </button>
+    </div>
+    <form (ngSubmit)="create()" class="access-form">
+      <p class="muted-copy">
+        La persona se registra una sola vez. Su cuenta de acceso, sus vínculos familiares y su
+        inscripción anual se administran por separado.
+      </p>
+      <div class="form-grid">
+        <label class="form-field"
+          ><span>Nombres</span
+          ><input
+            name="givenNames"
+            [(ngModel)]="form.givenNames"
+            required
+            maxlength="100"
+            autocomplete="off"
+        /></label>
+        <label class="form-field"
+          ><span>Apellidos</span
+          ><input
+            name="familyNames"
+            [(ngModel)]="form.familyNames"
+            required
+            maxlength="100"
+            autocomplete="off"
+        /></label>
+        <label class="form-field"
+          ><span>Nombre preferido <small>(opcional)</small></span
+          ><input
+            name="preferredName"
+            [(ngModel)]="form.preferredName"
+            maxlength="60"
+            autocomplete="off"
+        /></label>
+        <label class="form-field"
+          ><span>Fecha de nacimiento <small>(opcional)</small></span
+          ><input name="birthDate" type="date" [(ngModel)]="form.birthDate"
+        /></label>
+        <label class="form-field"
+          ><span>Teléfono <small>(opcional)</small></span
+          ><input
+            name="phone"
+            type="tel"
+            [(ngModel)]="form.phone"
+            maxlength="25"
+            autocomplete="off"
+        /></label>
+        <label class="form-field"
+          ><span>Correo <small>(opcional)</small></span
+          ><input
+            name="email"
+            type="email"
+            [(ngModel)]="form.email"
+            maxlength="200"
+            autocomplete="off"
+        /></label>
+      </div>
+      <label class="form-field"
+        ><span>Dirección <small>(opcional)</small></span
+        ><input name="address" [(ngModel)]="form.address" maxlength="200" autocomplete="off"
+      /></label>
+      <fieldset class="choice-group">
+        <legend>Perfiles escolares</legend>
+        <label class="checkbox-field"
+          ><input type="checkbox" name="isStudent" [(ngModel)]="form.isStudent" /><span
+            >Estudiante</span
+          ></label
+        >
+        @if (form.isStudent) {
+          <label class="form-field nested-field"
+            ><span>Código de estudiante</span
+            ><input
+              name="studentCode"
+              [(ngModel)]="form.studentCode"
+              required
+              maxlength="30"
+              autocomplete="off"
+              pattern="[A-Za-z0-9][A-Za-z0-9.\-]*"
+            /><small>Letras, números, punto o guion. Debe ser único en el colegio.</small></label
+          >
+        }
+        <label class="checkbox-field"
+          ><input type="checkbox" name="isGuardian" [(ngModel)]="form.isGuardian" /><span
+            >Encargado o familiar</span
+          ></label
+        >
+      </fieldset>
+      @if (dialogError()) {
+        <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
+      }
+      <div class="dialog-actions">
+        <button class="button outline" type="button" (click)="closeDialog()" [disabled]="busy()">
+          Cancelar
+        </button>
+        @if (duplicateWarning()) {
+          <button class="button outline" type="button" (click)="create(true)" [disabled]="busy()">
+            Son personas distintas: registrar
+          </button>
+        }
+        <button class="button" type="submit" [disabled]="busy()">
+          {{ busy() ? 'Registrando…' : 'Registrar' }}
+        </button>
+      </div>
+    </form>
+  </dialog>
+</app-shell>

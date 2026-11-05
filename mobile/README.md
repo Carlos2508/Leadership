@@ -1,6 +1,6 @@
 # App móvil (prototipo Flutter)
 
-Prototipo navegable de la app para estudiantes, familias, docentes, administración y caja. **Todos los datos son ficticios** y viven en memoria: no hay conexión con la API ni con SQL Server, y nada se guarda al cerrar la app. No representa módulos implementados en el backend (ver `docs/PROGRESS.md`). Decisión y límites: [ADR-004](../docs/adr/ADR-004-PROTOTIPO-FLUTTER.md).
+Prototipo navegable de la app para estudiantes, familias, docentes, administración y caja. **Todos los datos son ficticios** y viven en memoria: no hay conexión con la API ni con SQL Server, y nada se guarda al cerrar la app. No representa módulos implementados en el backend (ver `docs/PROGRESS.md`). Decisión y límites: [ADR-008](../docs/adr/ADR-008-PROTOTIPO-FLUTTER.md).
 
 ## Requisitos
 

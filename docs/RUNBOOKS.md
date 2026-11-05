@@ -16,7 +16,7 @@ dotnet restore --locked-mode
 ./scripts/Start-Development.ps1 -SkipBuild
 ```
 
-Abrir `http://localhost:5080`. El comando de operador pide usuario y contraseña en consola, nunca la imprime y limpia las variables del secreto al terminar. No existe contraseña predeterminada. Si el usuario ya existe, el comando rechaza modificarlo. El espacio autenticado todavía no contiene módulos escolares operativos.
+Abrir `http://localhost:5080`. `Initialize-Development.ps1` aplica las migraciones de Identity y luego las de `SchoolDbContext`. Para crear una migración: `$env:ASPNETCORE_ENVIRONMENT='Development'; dotnet ef migrations add <Nombre> -p src/SchoolPlatform.Host -c SchoolDbContext -o SchoolData/Migrations` (o `-c IdentityDbContext -o IdentityAccess/Migrations`). El comando de operador pide usuario y contraseña en consola, nunca la imprime y limpia las variables del secreto al terminar. No existe contraseña predeterminada. Si el usuario ya existe, el comando rechaza modificarlo. El espacio autenticado todavía no contiene módulos escolares operativos.
 
 Ese primer operador dispone ahora de gestión de cuentas/auditoría; el procedimiento rechaza crear otro gestor inicial si ya existe uno activo. Los siguientes usuarios se invitan en `/workspace/access`. No son usuarios académicos hasta vincularlos a sus futuros expedientes y facultades. Los comandos no han creado una cuenta predeterminada en la base local.
 
@@ -25,6 +25,20 @@ Ese primer operador dispone ahora de gestión de cuentas/auditoría; el procedim
 ## Interfaz
 
 `/`: bienvenida. `/Identity/Account/Login`: acceso real. `/workspace`: sesión protegida y estado inicial. `/preview` y `/preview/students`: muestra sintética solo Development.
+
+Rutas principales (todas verificadas en servidor por permiso o recurso):
+
+| Ruta | Para |
+| --- | --- |
+| `/workspace` | Inicio: accesos rápidos según permisos, ficha propia, estudiantes a cargo y «Mis cursos» |
+| `/workspace/enrollment?year=…` | Inscripciones por ciclo (ciclo siempre en la URL) |
+| `/workspace/academic?year=…` | Ciclos, períodos, grados y secciones |
+| `/workspace/courses?year=…`, `/workspace/courses/{id}`, `/…/assignments`, `/…/grades` | Cursos, lista por fecha, actividades y libreta |
+| `/workspace/grades?year=…` | Publicación de notas por período con corte de solvencia |
+| `/workspace/finance?student=…`, `/workspace/finance/setup`, `/workspace/finance/clearance`, `/workspace/finance/receipts/{id}` | Caja, configuración y emisión, solvencia y recibo imprimible |
+| `/workspace/my/students/{id}` | Portal del estudiante o encargado: calificaciones, tareas, inscripción y estado de cuenta según facultades |
+
+`/workspace/people`: directorio de personas y familias (`people.read`; altas y vínculos con `people.manage`). `/workspace/people/{id}`: ficha, vínculos, facultades y cuenta.
 
 `/workspace/access`: gestión persistente de cuentas para quien tenga `accounts.manage`. `/workspace/audit`: auditoría para `audit.read`. `/Identity/Account/Activate`: formulario del titular para usar un código de activación o recuperación. Ver `IDENTITY_AND_ACCESS.md` para entrega/verificación y vigencia. No enviar códigos mediante URLs.
 
@@ -42,6 +56,8 @@ git diff --check
 ```
 
 Las pruebas de integración SQL crean y eliminan **sus propias bases aleatorias** `SchoolPlatform_Test_*`. Si no se usa SQL local, definir `SCHOOLPLATFORM_TEST_SQL`; el fixture reemplaza siempre el catálogo de esa conexión por su nombre aleatorio. Nunca elimina el catálogo facilitado por el operador. Debe disponer de permiso de crear/eliminar bases en la instancia de pruebas. Sin SQL, ejecutar solo `dotnet test --filter 'Category!=SqlServer'` o `Verify.ps1 -WithoutSql` y reportar claramente que SQL y E2E de cuentas se omitieron.
+
+Para pasar argumentos a Playwright (por ejemplo `--repeat-each 2` o un archivo concreto) usar desde `web/`: `../.tools/node/node_modules/node/bin/node.exe node_modules/@playwright/test/cli.js test <filtro> --repeat-each 2`; el wrapper npm consume las opciones con guiones. El servidor de pruebas muestra su salida (`stdout: pipe`) para diagnosticar errores 500.
 
 Playwright inicia un host en 5085 con una **base separada** `SchoolPlatform_E2E_<uuid>`. `tests/SchoolPlatform.TestHarness` crea su esquema y un gestor sintético con contraseña aleatoria en memoria; la base se elimina al terminar. `SCHOOLPLATFORM_E2E_SQL` permite otra instancia de pruebas. No configura ni consulta `SchoolPlatform_Development`. El harness no se distribuye con el host. Si se interrumpe abruptamente el proceso, revisar la base exacta antes de limpiarla; no ejecutar borrados generales por prefijo.
 

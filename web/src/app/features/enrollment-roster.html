@@ -1,0 +1,314 @@
+<app-shell title="Inscripciones">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">MATRÍCULA ANUAL</span>
+      <h1>Inscripciones</h1>
+      <p>Una inscripción por estudiante y ciclo; cada cambio de grado o sección queda fechado.</p>
+    </div>
+    @if (canEnroll() && open()) {
+      <button class="button" (click)="openEnroll()" [disabled]="busy()">
+        <app-icon name="school" />Inscribir estudiante
+      </button>
+    }
+  </div>
+  @if (notice()) {
+    <p class="feedback success-feedback" role="status" tabindex="-1" #noticeRef>{{ notice() }}</p>
+  }
+  @if (error()) {
+    <div class="feedback error-feedback" role="alert">
+      {{ error() }} <button class="text-button" (click)="init()">Reintentar</button>
+    </div>
+  }
+  @if (!loading() && !years().length) {
+    <section class="card empty-state">
+      <app-icon name="calendar" />
+      <h2>No hay ciclos escolares</h2>
+      <p>Crea un ciclo y sus grados antes de registrar inscripciones.</p>
+      @if (session.can('academic.read')) {
+        <a class="button" routerLink="/workspace/academic">Ir a ciclos y grados</a>
+      }
+    </section>
+  } @else {
+    <section class="card directory-card" [attr.aria-busy]="loading()">
+      <form class="filters" (ngSubmit)="load()">
+        <label class="select-field"
+          ><span>Ciclo</span
+          ><select name="year" [(ngModel)]="yearId" (ngModelChange)="changeYear()">
+            @for (item of years(); track item.id) {
+              <option [value]="item.id">{{ item.label }} · {{ yearLabels[item.status] }}</option>
+            }
+          </select></label
+        ><label class="select-field"
+          ><span>Grado</span
+          ><select name="grade" [(ngModel)]="gradeId" (ngModelChange)="sectionId = ''; load()">
+            <option value="">Todos</option>
+            @for (grade of grades(); track grade.id) {
+              <option [value]="grade.id">{{ grade.name }}</option>
+            }
+          </select></label
+        >@if (gradeId && sectionsFor(gradeId).length) {
+          <label class="select-field"
+            ><span>Sección</span
+            ><select name="section" [(ngModel)]="sectionId" (ngModelChange)="load()">
+              <option value="">Todas</option>
+              @for (section of sectionsFor(gradeId); track section.id) {
+                <option [value]="section.id">{{ section.name }}</option>
+              }
+            </select></label
+          >
+        }<label class="select-field"
+          ><span>Estado</span
+          ><select name="status" [(ngModel)]="status" (ngModelChange)="load()">
+            <option value="Active">Inscritos</option>
+            <option value="Withdrawn">Retirados</option>
+            <option value="all">Todos</option>
+          </select></label
+        ><label class="search-field"
+          ><span>Buscar</span>
+          <div>
+            <app-icon name="search" /><input
+              type="search"
+              name="search"
+              placeholder="Nombre o código"
+              maxlength="100"
+              [(ngModel)]="search"
+            /></div></label
+        ><button class="button outline" type="submit" [disabled]="loading()">Buscar</button
+        ><button class="text-button reset-filters" type="button" (click)="clearFilters()">
+          Limpiar filtros
+        </button>
+      </form>
+      @if (detail(); as d) {
+        @if (!open()) {
+          <p class="year-notice">
+            <app-icon name="info" /><span
+              >El ciclo {{ d.year.label }} está {{ yearLabels[d.year.status].toLowerCase() }}:
+              {{
+                d.year.status === 'Draft'
+                  ? 'abre las inscripciones en Ciclos y grados para registrar estudiantes.'
+                  : 'solo se consulta su historial.'
+              }}</span
+            >
+          </p>
+        }
+      }
+      @if (loading() && !data()) {
+        <p class="loading-state" role="status">Cargando inscripciones…</p>
+      } @else if (data(); as page) {
+        <p class="directory-summary" aria-live="polite">
+          {{ page.total }} {{ page.total === 1 ? 'inscripción' : 'inscripciones' }} · Página
+          {{ page.page }}
+        </p>
+        @if (page.items.length) {
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Inscripciones del ciclo">
+            <table class="stack-table">
+              <caption class="sr-only">
+                Inscripciones del ciclo seleccionado
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Estudiante</th>
+                  <th scope="col">Grado</th>
+                  <th scope="col">Sección</th>
+                  <th scope="col">Estado</th>
+                  @if (canEnroll() && open()) {
+                    <th scope="col">Acciones</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of page.items; track row.id) {
+                  <tr>
+                    <td>
+                      <a class="person-link" [routerLink]="['/workspace/people', row.studentId]"
+                        ><span class="avatar small" aria-hidden="true">{{ row.studentName.slice(0, 1) }}</span
+                        ><span class="person-copy"
+                          ><strong>{{ row.studentName }}</strong
+                          ><small>{{ row.studentCode }}</small></span
+                        ></a
+                      >
+                    </td>
+                    <td data-label="Grado">{{ row.grade ?? '—' }}</td>
+                    <td data-label="Sección">
+                      @if (row.section) {
+                        {{ row.section }}
+                      } @else {
+                        <span class="muted-copy">Sin sección</span>
+                      }
+                    </td>
+                    <td data-label="Estado">
+                      <span
+                        class="pill"
+                        [class.mint]="row.status === 'Active'"
+                        [class.suspended]="row.status === 'Withdrawn'"
+                        >{{ statusLabels[row.status] }}</span
+                      >
+                      @if (row.withdrawnOn) {
+                        <small class="cell-note">desde {{ date(row.withdrawnOn) }}</small>
+                      }
+                    </td>
+                    @if (canEnroll() && open()) {
+                      <td class="row-actions">
+                        @if (row.status === 'Active') {
+                          <button class="button outline compact-button" (click)="openPlacement(row)">
+                            Cambiar ubicación <span class="sr-only">de {{ row.studentName }}</span></button
+                          ><button class="text-button danger-text" (click)="openWithdraw(row)">
+                            Retiro <span class="sr-only">de {{ row.studentName }}</span>
+                          </button>
+                        } @else if (row.status === 'Withdrawn') {
+                          <button class="button outline compact-button" (click)="openReactivate(row)">
+                            Reingreso <span class="sr-only">de {{ row.studentName }}</span>
+                          </button>
+                        }
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="empty-state">
+            <app-icon name="search" />
+            <h2>No hay inscripciones con estos filtros</h2>
+            <p>
+              {{
+                canEnroll() && open()
+                  ? 'Usa «Inscribir estudiante» para registrar la primera.'
+                  : 'Prueba con otros filtros o selecciona otro ciclo.'
+              }}
+            </p>
+          </div>
+        }
+        <div class="pagination">
+          <button class="button outline" [disabled]="page.page <= 1 || loading()" (click)="load(page.page - 1)">
+            Anterior</button
+          ><span>{{ page.total }} {{ page.total === 1 ? 'resultado' : 'resultados' }}</span
+          ><button
+            class="button outline"
+            [disabled]="page.page * page.pageSize >= page.total || loading()"
+            (click)="load(page.page + 1)"
+          >
+            Siguiente
+          </button>
+        </div>
+      }
+    </section>
+  }
+
+  <dialog
+    #enrollmentDialog
+    class="account-dialog wide-dialog"
+    (cancel)="onCancel($event)"
+    aria-labelledby="enrollment-dialog-title"
+  >
+    <div class="dialog-heading">
+      <h2 id="enrollment-dialog-title">{{ title() }}</h2>
+      <button class="icon-button" (click)="closeDialog()" aria-label="Cerrar ventana" [disabled]="busy()">
+        <app-icon name="close" />
+      </button>
+    </div>
+    <form class="access-form" (ngSubmit)="submit()">
+      <p class="muted-copy">Ciclo {{ detail()?.year?.label }}</p>
+      @if (mode() === 'enroll') {
+        <div class="candidate-search">
+          <label class="form-field"
+            ><span>Buscar estudiante</span
+            ><input
+              name="candidateSearch"
+              type="search"
+              [(ngModel)]="candidateSearch"
+              maxlength="100"
+              placeholder="Nombre, apellido o código"
+              autocomplete="off"
+              (keydown.enter)="$event.preventDefault(); searchCandidates()"
+          /></label>
+          <button type="button" class="button outline" (click)="searchCandidates()" [disabled]="searching()">
+            Buscar
+          </button>
+        </div>
+        @if (candidates().length) {
+          <fieldset class="choice-group candidate-list">
+            <legend>Selecciona un estudiante</legend>
+            @for (candidate of candidates(); track candidate.id) {
+              <label class="radio-option"
+                ><input type="radio" name="student" [value]="candidate.id" [(ngModel)]="form.studentId" /><span
+                  >{{ candidate.displayName }} <small>· {{ candidate.studentCode }}</small></span
+                ></label
+              >
+            }
+          </fieldset>
+        } @else {
+          <p class="muted-copy">Solo aparecen personas activas con perfil de estudiante.</p>
+        }
+      } @else if (selected(); as row) {
+        <p class="managed-user">
+          {{ row.studentName }}
+          <span class="muted-copy"
+            >· {{ row.grade ?? '—' }}{{ row.section ? ' · Sección ' + row.section : '' }}</span
+          >
+        </p>
+      }
+      @if (mode() !== 'withdraw') {
+        <div class="form-grid">
+          <label class="form-field"
+            ><span>Grado</span
+            ><select name="formGrade" [(ngModel)]="form.gradeId" (ngModelChange)="form.sectionId = ''" required>
+              <option value="" disabled>Selecciona un grado</option>
+              @for (grade of activeGrades(); track grade.id) {
+                <option [value]="grade.id">{{ grade.name }}</option>
+              }
+            </select></label
+          >
+          <label class="form-field"
+            ><span>Sección <small>(opcional)</small></span
+            ><select name="formSection" [(ngModel)]="form.sectionId" [disabled]="!form.gradeId">
+              <option value="">Sin sección</option>
+              @for (section of sectionsFor(form.gradeId); track section.id) {
+                <option [value]="section.id">
+                  {{ section.name }}{{ section.capacity ? ' (' + section.current + '/' + section.capacity + ')' : '' }}
+                </option>
+              }
+            </select></label
+          >
+        </div>
+      }
+      <label class="form-field"
+        ><span>{{
+          mode() === 'enroll' ? 'Fecha de ingreso' : mode() === 'withdraw' ? 'Fecha de retiro' : 'Vigente desde'
+        }}</span
+        ><input
+          name="formDate"
+          type="date"
+          [(ngModel)]="form.date"
+          required
+          [min]="detail()?.year?.startsOn ?? ''"
+          [max]="detail()?.year?.endsOn ?? ''"
+        /><small>Fecha efectiva dentro del ciclo. Se registra aparte de la fecha de captura.</small></label
+      >
+      <label class="form-field"
+        ><span>{{ mode() === 'enroll' ? 'Observación' : 'Motivo del cambio' }}
+          @if (mode() === 'enroll') {
+            <small>(opcional)</small>
+          }</span
+        ><textarea
+          name="formReason"
+          [(ngModel)]="form.reason"
+          [required]="mode() !== 'enroll'"
+          [attr.minlength]="mode() === 'enroll' ? null : 8"
+          maxlength="500"
+          rows="3"
+        ></textarea
+      ></label>
+      @if (dialogError()) {
+        <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
+      }
+      <div class="dialog-actions">
+        <button class="button outline" type="button" (click)="closeDialog()" [disabled]="busy()">Cancelar</button
+        ><button class="button" type="submit" [disabled]="busy()">
+          {{ busy() ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </form>
+  </dialog>
+</app-shell>

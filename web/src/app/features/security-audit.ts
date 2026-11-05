@@ -55,7 +55,7 @@ import { Shell } from '../shared/shell';
                         }
                       </td>
                       <td>{{ event.actor || 'Preparación inicial o intento sin identificar' }}</td>
-                      <td>{{ event.target || '—' }}</td>
+                      <td>{{ targetLabel(event) }}</td>
                       <td class="audit-reason">{{ event.reason || '—' }}</td>
                     </tr>
                   }
@@ -126,9 +126,26 @@ export class SecurityAudit {
           LoginFailed: 'Ingreso rechazado',
           LoginLockedOut: 'Cuenta bloqueada por intentos',
           Logout: 'Salida de la cuenta',
+          PersonCreated: 'Persona registrada',
+          PersonUpdated: 'Datos personales actualizados',
+          StudentProfileAdded: 'Perfil de estudiante agregado',
+          GuardianProfileAdded: 'Perfil de encargado agregado',
+          PersonArchived: 'Persona archivada',
+          PersonRestored: 'Persona restaurada',
+          GuardianLinked: 'Vínculo familiar registrado',
+          GuardianFacultiesChanged: 'Facultades modificadas',
+          GuardianUnlinked: 'Vínculo familiar finalizado',
+          AccountLinkedToPerson: 'Cuenta vinculada a persona',
+          AccountUnlinkedFromPerson: 'Cuenta desvinculada de persona',
         } as Record<string, string>
-      )[action] ?? 'Operación de acceso'
+      )[action] ?? 'Operación registrada'
     );
+  }
+  targetLabel(event: AuditEntry): string {
+    // Person/relationship targets are identified by a short reference; names stay in the protected directory.
+    if (event.targetType === 'Person') return 'Persona ' + (event.targetId ?? '').slice(0, 8);
+    if (event.targetType === 'Relationship') return 'Vínculo ' + (event.targetId ?? '').slice(0, 8);
+    return event.target || '—';
   }
   detail(value: string): string {
     return (
@@ -140,6 +157,9 @@ export class SecurityAudit {
           'access-owner': 'Gestión y auditoría',
           Activation: 'Activación',
           Recovery: 'Recuperación',
+          'people-reader': 'Consulta de personas',
+          registrar: 'Secretaría',
+          administrator: 'Administración institucional',
         } as Record<string, string>
       )[value] ?? ''
     );

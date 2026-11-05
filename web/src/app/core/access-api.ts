@@ -38,6 +38,8 @@ export interface AuditEntry {
   detail: string;
   actor: string | null;
   target: string | null;
+  targetId: string | null;
+  targetType: string | null;
   traceId: string;
 }
 

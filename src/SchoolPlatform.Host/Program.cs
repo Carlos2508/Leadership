@@ -5,7 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SchoolPlatform.Host.Branding;
 using SchoolPlatform.Host.IdentityAccess;
+using SchoolPlatform.Host.People;
 using SchoolPlatform.Host.Preview;
+using SchoolPlatform.Host.SchoolData;
 
 var hostArgs = args.Where(x => x is not "--initialize-database" and not "--create-operator" and not "--provision-owner").ToArray();
 var builder = WebApplication.CreateBuilder(hostArgs);
@@ -16,6 +18,7 @@ builder.Configuration.AddJsonFile(Path.Combine(configDirectory, "institution.jso
 builder.Services.AddSingleton<IValidateOptions<InstitutionOptions>, InstitutionValidator>();
 builder.Services.AddOptions<InstitutionOptions>().BindConfiguration("Institution").ValidateOnStart();
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<SchoolPlatform.Host.Common.BadRequestExceptionHandler>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<SecurityAudit>();
@@ -23,8 +26,25 @@ builder.Services.AddScoped<AccountAccessService>();
 builder.Services.AddOptions<AccountAccessOptions>().BindConfiguration("AccountAccess")
     .Validate(x => x.ActivationMinutes is >= 1 and <= 4320 && x.RecoveryMinutes is >= 1 and <= 60,
         "Vigencia de códigos fuera del rango permitido.").ValidateOnStart();
-builder.Services.AddDbContext<IdentityDbContext>(options => options.UseSqlServer(
-    builder.Configuration.GetConnectionString("SchoolDatabase") ?? throw new InvalidOperationException("Falta ConnectionStrings:SchoolDatabase.")));
+// Resolve the connection lazily from the final configuration: hosts and test factories may add sources after this line.
+static string SchoolDatabase(IServiceProvider services) =>
+    services.GetRequiredService<IConfiguration>().GetConnectionString("SchoolDatabase")
+    ?? throw new InvalidOperationException("Falta ConnectionStrings:SchoolDatabase.");
+builder.Services.AddDbContext<IdentityDbContext>((services, options) => options.UseSqlServer(SchoolDatabase(services)));
+builder.Services.AddDbContext<SchoolDbContext>((services, options) => options.UseSqlServer(SchoolDatabase(services),
+    sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "school")));
+builder.Services.AddScoped<SchoolAudit>();
+builder.Services.AddScoped<PeopleService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Academic.AcademicService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Academic.EnrollmentService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Academic.CourseService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Finance.FinanceSetupService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Finance.ChargeService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Finance.PaymentService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Finance.ClearanceService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Grades.GradeService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Learning.LearningService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Attendance.AttendanceService>();
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
 {
     options.Password.RequiredLength = 12;
@@ -91,7 +111,13 @@ if (args.Contains("--initialize-database") || args.Contains("--create-operator")
     return;
 }
 if (!app.Environment.IsDevelopment()) { app.UseHsts(); app.UseHttpsRedirection(); }
-app.UseExceptionHandler();
+app.UseExceptionHandler(new ExceptionHandlerOptions
+{
+    // A client that navigates away cancels its SQL command; that is not a server failure worth an error log.
+    // Malformed request bodies are client errors answered with 400 by BadRequestExceptionHandler.
+    SuppressDiagnosticsCallback = context => context.HttpContext.RequestAborted.IsCancellationRequested ||
+        context.Exception is BadHttpRequestException
+});
 app.Use(async (context, next) =>
 {
     context.Response.Headers.XContentTypeOptions = "nosniff";
@@ -111,6 +137,13 @@ app.UseRateLimiter();
 app.UseAntiforgery();
 app.MapRazorPages().RequireRateLimiting("identity-forms");
 app.MapAccountAccess();
+app.MapPeople();
+SchoolPlatform.Host.Academic.AcademicEndpoints.MapAcademic(app);
+SchoolPlatform.Host.Academic.AcademicEndpoints.MapCourses(app);
+SchoolPlatform.Host.Finance.FinanceEndpoints.MapFinance(app);
+SchoolPlatform.Host.Grades.GradeEndpoints.MapGrades(app);
+SchoolPlatform.Host.Learning.LearningEndpoints.MapLearning(app);
+SchoolPlatform.Host.Attendance.AttendanceEndpoints.MapAttendance(app);
 app.MapHealthChecks("/health/live").AllowAnonymous();
 app.MapGet("/branding/theme.css", (IOptions<InstitutionOptions> options) =>
 {

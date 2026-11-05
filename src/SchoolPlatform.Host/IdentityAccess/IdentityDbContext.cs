@@ -41,6 +41,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
             entity.Property(x => x.Reason).HasMaxLength(500);
             entity.Property(x => x.Detail).HasMaxLength(120);
             entity.Property(x => x.TraceId).HasMaxLength(100);
+            entity.Property(x => x.TargetType).HasMaxLength(40).IsUnicode(false);
             entity.HasIndex(x => new { x.OccurredAt, x.Id }).IsDescending();
             entity.HasIndex(x => new { x.TargetId, x.OccurredAt });
         });

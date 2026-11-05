@@ -24,6 +24,86 @@ export const routes: Routes = [
     loadComponent: () => import('./features/security-audit').then((x) => x.SecurityAudit),
   },
   {
+    path: 'workspace/people',
+    canActivate: [permissionGuard('people.read')],
+    loadComponent: () => import('./features/people-directory').then((x) => x.PeopleDirectory),
+  },
+  {
+    path: 'workspace/people/:id',
+    canActivate: [permissionGuard('people.read')],
+    loadComponent: () => import('./features/person-detail').then((x) => x.PersonDetail),
+  },
+  {
+    path: 'workspace/academic',
+    canActivate: [permissionGuard('academic.read')],
+    loadComponent: () => import('./features/academic-structure').then((x) => x.AcademicStructure),
+  },
+  {
+    path: 'workspace/enrollment',
+    canActivate: [permissionGuard('academic.read')],
+    loadComponent: () => import('./features/enrollment-roster').then((x) => x.EnrollmentRoster),
+  },
+  {
+    path: 'workspace/courses',
+    canActivate: [permissionGuard('academic.read')],
+    loadComponent: () => import('./features/courses').then((x) => x.Courses),
+  },
+  {
+    path: 'workspace/courses/:id/attendance',
+    canActivate: [sessionGuard],
+    loadComponent: () => import('./features/course-attendance').then((x) => x.CourseAttendance),
+  },
+  {
+    path: 'workspace/courses/:id/assignments',
+    canActivate: [sessionGuard],
+    loadComponent: () => import('./features/course-assignments').then((x) => x.CourseAssignments),
+  },
+  {
+    path: 'workspace/courses/:id/grades',
+    canActivate: [sessionGuard],
+    loadComponent: () => import('./features/course-grades').then((x) => x.CourseGrades),
+  },
+  {
+    path: 'workspace/grades',
+    canActivate: [permissionGuard('academic.read')],
+    loadComponent: () => import('./features/grade-publications').then((x) => x.GradePublications),
+  },
+  {
+    path: 'workspace/courses/:id',
+    canActivate: [sessionGuard],
+    loadComponent: () => import('./features/course-roster').then((x) => x.CourseRoster),
+  },
+  {
+    path: 'workspace/finance',
+    canActivate: [permissionGuard('finance.read')],
+    loadComponent: () => import('./features/finance-cashier').then((x) => x.FinanceCashier),
+  },
+  {
+    path: 'workspace/finance/setup',
+    canActivate: [permissionGuard('finance.read')],
+    loadComponent: () => import('./features/finance-setup').then((x) => x.FinanceSetup),
+  },
+  {
+    path: 'workspace/finance/clearance',
+    canActivate: [permissionGuard('finance.read')],
+    loadComponent: () => import('./features/finance-clearance').then((x) => x.FinanceClearance),
+  },
+  {
+    path: 'workspace/finance/receipts/:id',
+    canActivate: [permissionGuard('finance.read')],
+    loadComponent: () => import('./features/receipt-view').then((x) => x.ReceiptView),
+  },
+  {
+    path: 'workspace/my/students/:id',
+    canActivate: [sessionGuard],
+    loadComponent: () => import('./features/my-student').then((x) => x.MyStudent),
+  },
+  {
+    path: 'workspace/my/students/:studentId/receipts/:id',
+    canActivate: [sessionGuard],
+    loadComponent: () => import('./features/receipt-view').then((x) => x.ReceiptView),
+  },
+  {
     path: 'preview',
     canActivate: [previewGuard],
     loadComponent: () => import('./features/preview-dashboard').then((x) => x.PreviewDashboard),

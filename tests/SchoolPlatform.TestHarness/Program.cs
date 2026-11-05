@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SchoolPlatform.Host.IdentityAccess;
+using SchoolPlatform.Host.SchoolData;
 
 // Browser tests own this isolated database. This harness is never shipped with the web host.
 var builder = Host.CreateApplicationBuilder();
@@ -15,6 +16,8 @@ if (!Regex.IsMatch(database, "^SchoolPlatform_E2E_[a-f0-9]{32}$"))
     throw new InvalidOperationException("The browser harness requires its generated E2E database name.");
 connection.InitialCatalog = database;
 builder.Services.AddDbContext<IdentityDbContext>(options => options.UseSqlServer(connection.ConnectionString));
+builder.Services.AddDbContext<SchoolDbContext>(options => options.UseSqlServer(connection.ConnectionString,
+    sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "school")));
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options => options.Password.RequiredLength = 12)
     .AddEntityFrameworkStores<IdentityDbContext>().AddDefaultTokenProviders();
 builder.Services.AddSingleton(TimeProvider.System);
@@ -29,6 +32,7 @@ if (args is ["prepare"])
 {
     if (await db.Database.CanConnectAsync()) throw new InvalidOperationException("The generated E2E database already exists; refusing to modify it.");
     await db.Database.MigrateAsync();
+    await scope.ServiceProvider.GetRequiredService<SchoolDbContext>().Database.MigrateAsync();
     var username = Environment.GetEnvironmentVariable("SCHOOLPLATFORM_E2E_USERNAME") ?? throw new InvalidOperationException("Missing synthetic username.");
     var password = Environment.GetEnvironmentVariable("SCHOOLPLATFORM_E2E_PASSWORD") ?? throw new InvalidOperationException("Missing synthetic password.");
     await scope.ServiceProvider.GetRequiredService<AccountAccessService>().ProvisionOwnerAsync(username, password);

@@ -1,4 +1,4 @@
-# ADR-004: prototipo móvil en Flutter con datos ficticios
+# ADR-008: prototipo móvil en Flutter con datos ficticios
 
 Estado: adoptado como prototipo; no es la app de producción.
 

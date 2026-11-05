@@ -34,8 +34,5 @@ public sealed record AccountSummary(Guid Id, string Username, string Status, str
     DateTimeOffset? CodeExpiresAt, string? CodePurpose);
 public sealed record PageResult<T>(T[] Items, int Total, int Page, int PageSize);
 
-public sealed class AccessOperationException(int status, string code, string message) : Exception(message)
-{
-    public int Status { get; } = status;
-    public string Code { get; } = code;
-}
+public sealed class AccessOperationException(int status, string code, string message)
+    : SchoolPlatform.Host.Common.OperationException(status, code, message);

@@ -1,6 +1,6 @@
 # Arquitectura inicial
 
-Estado: infraestructura y gestión de acceso persistente; núcleo escolar todavía pendiente.
+Estado: infraestructura, acceso, personas/familias, ciclos y matrícula; cursos, finanzas, tareas y notas pendientes. Los errores de enlace de modelo (JSON inválido) devuelven 400 `invalid-request` mediante `BadRequestExceptionHandler`.
 
 Cada colegio tiene una copia independiente del proyecto, su despliegue y su base de datos. No hay selección de cliente en runtime, tenants, directorio compartido ni membresías entre colegios. `SchoolId` es un identificador de la institución instalada, sin función de enrutamiento o particionamiento.
 
@@ -11,6 +11,8 @@ El primer módulo separado es `SchoolPlatform.Assessment`, una biblioteca sin de
 SQL Server conserva Identity en `iam`; `ApplicationUser.IsActive` controla el acceso a los recursos privados y se comprueba con la cookie actual. Las migraciones son explícitas; el host normal no ejecuta migraciones ni crea cuentas al arrancar. `--initialize-database` y `--create-operator` son comandos solo de Development. El historial incluye la primera migración local y su simplificación a cuentas de una sola institución; el modelo final no contiene membresías ni tablas de tenants.
 
 El segundo incremento añade concesiones de permisos y códigos en `iam`, y eventos inmutables por aplicación/trigger en `audit`. `AccountAccessService` mantiene cada cambio y su auditoría en una transacción corta con un bloqueo de aplicación SQL: protege el último gestor y el canje de un solo uso. No se ejecutan envíos ni llamadas externas bajo ese bloqueo. Las cookies validan su sello durable directamente por petición. `--provision-owner` prepara solo el primer gestor contra una base ya migrada, sin iniciar la web ni migrar Production.
+
+El tercer incremento agrega `SchoolDbContext` (carpetas `People/` y `SchoolData/`) para registros escolares, con historial `school.__EFMigrationsHistory`. Mapea `iam.AspNetUsers`, `iam.AccountPermissions` y `audit.Events` excluidos de sus migraciones, para FK, recomprobación de permisos y auditoría en el mismo `SaveChanges`. Identity migra primero. Ver ADR-004.
 
 ## Contratos existentes
 
@@ -26,7 +28,15 @@ El segundo incremento añade concesiones de permisos y códigos en `iam`, y even
 | GET/POST `/Identity/Account/Logout` | Autenticado, POST antiforgery | Confirmación y cierre real de cookie |
 | GET/POST `/Identity/Account/Activate` | Código de un uso; POST antiforgery | Activación o recuperación sin correo obligatorio |
 | `/api/v1/access/*` | `accounts.manage`; POST con CSRF | Invitaciones, perfiles, estado, sesiones y códigos |
-| GET `/api/v1/audit` | `audit.read` | Eventos paginados de acceso |
+| GET `/api/v1/audit` | `audit.read` | Eventos paginados de acceso y de registros escolares (`TargetType`) |
+| `/api/v1/people/*`, `/api/v1/relationships/*` | `people.read` / `people.manage`; vínculo de cuenta además `accounts.manage` | Personas, perfiles, vínculos y facultades (ver `PEOPLE_AND_FAMILIES.md`) |
+| `/api/v1/academic/*`, `/api/v1/years/{id}/enrollments`, `/api/v1/enrollments/*` | `academic.read` / `academic.manage` / `enrollment.manage` | Ciclos, períodos, grados, secciones e inscripciones (ver `ENROLLMENT.md`) |
+| `/api/v1/academic/subjects`, `/api/v1/years/{id}/courses`, `/api/v1/courses/*`, `/api/v1/me/courses` | `academic.read` / `academic.manage` / docente asignado | Materias, cursos, asignaciones y listas (ver `COURSES.md`) |
+| `/api/v1/courses/{id}/grades`, `/api/v1/years/{id}/publications`, `/api/v1/me/students/{id}/grades` | Docente asignado o `academic.manage` / `academic.read` / facultad `AcademicRecords` + solvencia | Libreta, publicación y consulta (ver ADR-007) |
+| `/api/v1/courses/{id}/assignments*`, `/api/v1/me/students/{id}/assignments`, `/api/v1/me/assignments/{id}/submission` | Docente asignado / estudiante / facultad | Tareas y entregas (ver `LEARNING.md`) |
+| `/api/v1/courses/{id}/attendance`, `/api/v1/me/students/{id}/attendance` | Docente asignado / facultad `AcademicRecords` | Asistencia (ver `ATTENDANCE.md`) |
+| `/api/v1/finance/*` | `finance.read` / `finance.charges` / `finance.collect` / `finance.reverse` | Conceptos, cuotas, cortes, cargos, pagos, recibos y solvencia (ver `BILLING_AND_CLEARANCE.md`) |
+| GET `/api/v1/me`, `/api/v1/me/students/{id}` | Cuenta activa + vínculo vigente | Autoservicio por recurso; 404 sin acceso |
 
 Las API desconocidas devuelven 404, las privadas 401/403 sin HTML de login. La SPA puede descargar su shell anónimamente, pero no obtiene datos privados sin autorización del servidor. La muestra no se usa en `/workspace` y su API no se registra en Production. Las rutas Angular se cargan por funcionalidad.
 

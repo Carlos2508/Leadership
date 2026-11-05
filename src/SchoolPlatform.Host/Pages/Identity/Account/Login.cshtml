@@ -1,0 +1,25 @@
+@page "/Identity/Account/Login"
+@model SchoolPlatform.Host.Pages.Identity.Account.LoginModel
+@inject IOptions<InstitutionOptions> Institution
+@{ ViewData["Title"] = "Ingresar"; }
+<div class="login-content">
+  <a class="back" href="/">← Volver al inicio</a>
+  <img class="login-logo" src="@Institution.Value.Assets.LoginLogo" alt="@Institution.Value.DisplayName" />
+  <div class="eyebrow">TU COMUNIDAD, MÁS CERCA</div>
+  <h2>Qué bueno verte de nuevo.</h2>
+  <p class="muted">Ingresa con la cuenta que te proporcionó el colegio.</p>
+  <form method="post">
+    <div asp-validation-summary="ModelOnly" class="error" role="alert"></div>
+    <label asp-for="Input.Username">Usuario</label>
+    <input asp-for="Input.Username" autocomplete="username" autofocus required maxlength="256" />
+    <span asp-validation-for="Input.Username" class="field-error"></span>
+    <label asp-for="Input.Password">Contraseña</label>
+    <input asp-for="Input.Password" type="password" autocomplete="current-password" required maxlength="1024" />
+    <span asp-validation-for="Input.Password" class="field-error"></span>
+    <button type="submit">Ingresar a mi espacio <span aria-hidden="true">→</span></button>
+  </form>
+  <div class="help"><strong>¿Necesitas ayuda para ingresar?</strong><p>Comunícate con la administración del colegio para recuperar tu acceso.</p><p><a href="/Identity/Account/Activate">Tengo un código de activación o recuperación</a></p>
+  @if (!string.IsNullOrWhiteSpace(Institution.Value.Contact.Phone)) { <p>@Institution.Value.Contact.Phone</p> }
+  @if (!string.IsNullOrWhiteSpace(Institution.Value.Contact.Email)) { <p>@Institution.Value.Contact.Email</p> }
+  </div>
+</div>

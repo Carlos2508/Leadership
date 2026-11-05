@@ -1,0 +1,35 @@
+{
+  "name": "school-platform",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve --proxy-config proxy.conf.json",
+    "build": "ng build && node ../scripts/Copy-Web.mjs",
+    "watch": "ng build --watch --configuration development",
+    "test": "playwright test"
+  },
+  "private": true,
+  "packageManager": "npm@10.8.2",
+  "dependencies": {
+    "@angular/common": "22.2.4",
+    "@angular/compiler": "22.2.4",
+    "@angular/core": "22.2.4",
+    "@angular/forms": "22.2.4",
+    "@angular/platform-browser": "22.2.4",
+    "@angular/router": "22.2.4",
+    "rxjs": "7.8.0",
+    "tslib": "2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "22.2.6",
+    "@angular/cli": "22.2.6",
+    "@angular/compiler-cli": "22.2.4",
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
+    "prettier": "3.8.1",
+    "typescript": "6.0.2"
+  },
+  "engines": {
+    "node": ">=24.15.0 <25"
+  }
+}

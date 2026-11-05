@@ -1,0 +1,319 @@
+<app-shell title="Cuentas y accesos">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">UNA COMUNIDAD CON ACCESOS CLAROS</span>
+      <h1>Cuentas y accesos</h1>
+      <p>Invita a cada persona y define qué puede administrar.</p>
+    </div>
+    <button class="button" (click)="openInvite()" [disabled]="loading() || busy()">
+      <app-icon name="people" />Invitar cuenta
+    </button>
+  </div>
+  @if (notice()) {
+    <p class="feedback success-feedback" role="status">{{ notice() }}</p>
+  }
+  @if (error()) {
+    <div class="feedback error-feedback" role="alert">
+      {{ error() }} <button class="text-button" (click)="load()">Reintentar</button>
+    </div>
+  }
+  <section class="card directory-card" [attr.aria-busy]="loading()">
+    <form class="filters" (ngSubmit)="load()">
+      <label class="search-field"
+        ><span>Buscar usuario</span>
+        <div>
+          <app-icon name="search" /><input
+            type="search"
+            name="search"
+            placeholder="Nombre de usuario"
+            maxlength="100"
+            [(ngModel)]="search"
+          /></div></label
+      ><button class="button outline" type="submit" [disabled]="loading()">Buscar</button>
+    </form>
+    @if (loading()) {
+      <p class="loading-state" role="status">Cargando cuentas…</p>
+    } @else if (data(); as page) {
+      <p class="directory-summary" aria-live="polite">
+        {{ page.total }} {{ page.total === 1 ? 'cuenta' : 'cuentas' }} · Página {{ page.page }}
+      </p>
+      @if (page.items.length) {
+        <div
+          class="table-scroll"
+          tabindex="0"
+          role="region"
+          aria-label="Tabla de cuentas, desplazable horizontalmente"
+        >
+          <table>
+            <caption class="sr-only">
+              Cuentas de esta instalación y su estado de acceso
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Usuario</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Perfil de acceso</th>
+                <th scope="col">Código vigente</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (account of page.items; track account.id) {
+                <tr>
+                  <td>
+                    <strong>{{ account.username }}</strong>
+                    @if (account.id === session.userId()) {
+                      <span class="own-account">Tu cuenta</span>
+                    }
+                  </td>
+                  <td>
+                    <span
+                      class="pill"
+                      [class.mint]="account.status === 'Active'"
+                      [class.gold]="account.status === 'Pending'"
+                      [class.suspended]="account.status === 'Suspended'"
+                      >{{ status(account) }}</span
+                    >
+                  </td>
+                  <td>{{ profileLabel(account.profile) }}</td>
+                  <td>
+                    @if (account.codeExpiresAt) {
+                      <span class="code-expiry">Vence {{ api.date(account.codeExpiresAt) }}</span>
+                    } @else {
+                      <span class="muted-copy">Sin código vigente</span>
+                    }
+                  </td>
+                  <td>
+                    <button class="button outline compact-button" (click)="openAccount(account)">
+                      Gestionar <span class="sr-only">{{ account.username }}</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="empty-state">
+          <app-icon name="search" />
+          <h2>No encontramos cuentas</h2>
+          <p>Prueba con otro usuario o crea una invitación.</p>
+        </div>
+      }
+      <div class="pagination">
+        <button class="button outline" [disabled]="page.page <= 1" (click)="load(page.page - 1)">
+          Anterior</button
+        ><span>{{ page.total }} {{ page.total === 1 ? 'resultado' : 'resultados' }}</span
+        ><button
+          class="button outline"
+          [disabled]="page.page * page.pageSize >= page.total"
+          (click)="load(page.page + 1)"
+        >
+          Siguiente
+        </button>
+      </div>
+    }
+  </section>
+
+  <dialog
+    #accountDialog
+    class="account-dialog"
+    (cancel)="onCancel($event)"
+    aria-labelledby="account-dialog-title"
+  >
+    <div class="dialog-heading">
+      <h2 id="account-dialog-title">
+        {{
+          mode() === 'code'
+            ? 'Entrega este código una sola vez'
+            : mode() === 'invite'
+              ? 'Invitar una cuenta'
+              : 'Gestionar cuenta'
+        }}
+      </h2>
+      <button
+        class="icon-button"
+        (click)="closeDialog()"
+        aria-label="Cerrar ventana"
+        [disabled]="busy()"
+      >
+        <app-icon name="close" />
+      </button>
+    </div>
+    @if (dialogError()) {
+      <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
+    }
+    @if (mode() === 'code') {
+      @if (code(); as ticket) {
+        <p class="muted-copy">
+          Comparte la página de acceso y el código por un canal verificado. Al cerrar esta ventana
+          el código no volverá a mostrarse.
+        </p>
+        <label class="form-field"
+          ><span>Código de un solo uso</span
+          ><input
+            class="one-time-code"
+            [value]="ticket.code"
+            readonly
+            autocomplete="off"
+            spellcheck="false"
+        /></label>
+        <p class="code-expiry">Vence: {{ api.date(ticket.expiresAt) }}</p>
+        <p class="muted-copy">
+          Página para activación y recuperación:
+          <a href="/Identity/Account/Activate" target="_blank" rel="noopener noreferrer"
+            >Abrir página de acceso</a
+          >. El código se ingresa allí; no forma parte del enlace.
+        </p>
+        @if (copyNotice()) {
+          <p role="status" class="muted-copy">{{ copyNotice() }}</p>
+        }
+        <div class="dialog-actions">
+          <button class="button outline" (click)="copyCode()">Copiar código</button
+          ><button class="button" (click)="closeDialog()" [disabled]="busy()">Ya lo guardé</button>
+        </div>
+      }
+    } @else if (mode() === 'invite') {
+      <form (ngSubmit)="invite()" class="access-form">
+        <p class="muted-copy">
+          La persona elegirá su contraseña al activar la cuenta. No necesita correo electrónico.
+        </p>
+        <label class="form-field"
+          ><span id="invite-username-label">Nombre de usuario</span
+          ><input
+            name="username"
+            aria-labelledby="invite-username-label"
+            aria-describedby="invite-username-help"
+            [(ngModel)]="username"
+            required
+            maxlength="100"
+            autocomplete="off"
+            pattern="[a-zA-Z0-9._@+\-]+"
+          /><small id="invite-username-help"
+            >Usa letras sin acentos, números, punto, guion o guion bajo.</small
+          ></label
+        >
+        <label class="form-field"
+          ><span>Perfil de acceso</span
+          ><select name="profile" [(ngModel)]="profile" required>
+            @for (profile of profiles(); track profile.key) {
+              <option [value]="profile.key">{{ profile.label }}</option>
+            }
+          </select></label
+        >
+        <label class="form-field"
+          ><span id="invite-reason-label">Motivo de la invitación</span
+          ><textarea
+            aria-labelledby="invite-reason-label"
+            aria-describedby="invite-reason-help"
+            name="reason"
+            [(ngModel)]="reason"
+            required
+            minlength="8"
+            maxlength="500"
+            rows="3"
+          ></textarea
+          ><small id="invite-reason-help"
+            >Describe la autorización recibida. Evita copiar números de documentos o datos
+            sensibles.</small
+          ></label
+        >
+        <div class="dialog-actions">
+          <button class="button outline" type="button" (click)="closeDialog()" [disabled]="busy()">
+            Cancelar</button
+          ><button class="button" type="submit" [disabled]="busy()">
+            {{ busy() ? 'Creando invitación…' : 'Crear invitación' }}
+          </button>
+        </div>
+      </form>
+    } @else if (selected(); as account) {
+      <form (ngSubmit)="apply()" class="access-form">
+        <p class="managed-user">
+          {{ account.username }} <span class="muted-copy">· {{ status(account) }}</span>
+        </p>
+        <label class="form-field"
+          ><span>Acción</span
+          ><select name="operation" [(ngModel)]="operation">
+            <option value="profile">Cambiar perfil de acceso</option>
+            @if (account.status !== 'Pending') {
+              <option value="state">
+                {{ account.status === 'Suspended' ? 'Habilitar cuenta' : 'Suspender cuenta' }}
+              </option>
+              <option value="sessions">Cerrar todas las sesiones</option>
+            }
+            @if (account.status !== 'Suspended') {
+              <option value="issue">
+                {{
+                  account.status === 'Pending'
+                    ? 'Generar otro código de activación'
+                    : 'Recuperar contraseña'
+                }}
+              </option>
+            }
+            @if (account.codeExpiresAt) {
+              <option value="cancel">Anular códigos vigentes</option>
+            }
+          </select></label
+        >
+        @if (operation === 'profile') {
+          <label class="form-field"
+            ><span>Nuevo perfil</span
+            ><select name="profile" [(ngModel)]="profile">
+              @for (profile of profiles(); track profile.key) {
+                <option [value]="profile.key">{{ profile.label }}</option>
+              }
+            </select></label
+          >
+          <p class="muted-copy">
+            Al cambiar el perfil se cerrarán las sesiones de esta cuenta para aplicar el nuevo
+            acceso.
+          </p>
+        }
+        @if (operation === 'state' && account.status === 'Active') {
+          <p class="action-explanation">
+            Se cerrarán sus sesiones y se anularán sus códigos pendientes. Sus registros se
+            conservarán.
+          </p>
+        }
+        @if (operation === 'sessions') {
+          <p class="action-explanation">
+            La persona deberá ingresar nuevamente en todos sus dispositivos. Su contraseña seguirá
+            siendo la misma.
+          </p>
+        }
+        @if (operation === 'issue') {
+          <p class="action-explanation">
+            El código anterior dejará de funcionar. La persona elegirá una contraseña nueva; al
+            guardarla se cerrarán las sesiones anteriores.
+          </p>
+          <label class="checkbox-field"
+            ><input type="checkbox" name="verified" [(ngModel)]="verified" required /><span
+              >Verifiqué la identidad del titular según el procedimiento del colegio.</span
+            ></label
+          >
+        }
+        <label class="form-field"
+          ><span>{{
+            operation === 'issue' ? 'Cómo verificaste la identidad' : 'Motivo del cambio'
+          }}</span
+          ><textarea
+            name="reason"
+            [(ngModel)]="reason"
+            required
+            minlength="8"
+            maxlength="500"
+            rows="3"
+          ></textarea
+          ><small>Evita copiar datos de documentos o información sensible.</small></label
+        >
+        <div class="dialog-actions">
+          <button class="button outline" type="button" (click)="closeDialog()" [disabled]="busy()">
+            Cancelar</button
+          ><button class="button" type="submit" [disabled]="busy()">
+            {{ busy() ? 'Guardando…' : actionLabel() }}
+          </button>
+        </div>
+      </form>
+    }
+  </dialog>
+</app-shell>

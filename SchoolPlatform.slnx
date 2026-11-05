@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SchoolPlatform.Host/SchoolPlatform.Host.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Assessment/">
+    <Project Path="src/Modules/Assessment/SchoolPlatform.Assessment.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SchoolPlatform.TestHarness/SchoolPlatform.TestHarness.csproj" />
+    <Project Path="tests/SchoolPlatform.Tests/SchoolPlatform.Tests.csproj" />
+  </Folder>
+</Solution>

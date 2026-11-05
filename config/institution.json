@@ -1,0 +1,24 @@
+{
+  "Institution": {
+    "SchoolId": "d0883093-df28-41e9-aee4-454bb2262551",
+    "DisplayName": "Colegio Leadership Mixco",
+    "ShortName": "Leadership",
+    "CampusLabel": "Mixco · Campus",
+    "LegalName": "",
+    "Tagline": "¡Piensa en grande!",
+    "WelcomeMessage": "Tu espacio para aprender, conectar y crecer.",
+    "Contact": { "Phone": "", "Email": "", "Address": "", "Website": "" },
+    "Documents": { "TaxId": "", "ReceiptFooter": "", "ReportCardFooter": "" },
+    "Assets": {
+      "MainLogo": "/branding/main.png",
+      "LoginLogo": "/branding/main.png",
+      "ReceiptLogo": "/branding/receipt.png",
+      "ReportCardLogo": "/branding/report.png",
+      "Favicon": "/branding/favicon.png"
+    },
+    "Theme": { "Deep": "#073B25", "Primary": "#0B5835", "Accent": "#ECA42E", "Surface": "#F7F9F5" },
+    "Locale": { "Culture": "es-GT", "TimeZone": "America/Guatemala", "Currency": "GTQ" },
+    "Terms": { "StudentPlural": "Estudiantes", "GuardianPlural": "Encargados", "Tuition": "Colegiatura", "Period": "Bimestre" }
+  }
+}
+

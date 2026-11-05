@@ -1,0 +1,6 @@
+{
+  "/api": { "target": "http://localhost:5080", "secure": false },
+  "/Identity": { "target": "http://localhost:5080", "secure": false },
+  "/branding": { "target": "http://localhost:5080", "secure": false },
+  "/auth.css": { "target": "http://localhost:5080", "secure": false }
+}

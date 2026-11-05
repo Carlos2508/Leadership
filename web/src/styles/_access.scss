@@ -1,0 +1,214 @@
+.workspace-action {
+  margin: 24px 10px 0 0;
+}
+.feedback {
+  border: 1px solid;
+  border-radius: 12px;
+  padding: 14px 18px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.success-feedback {
+  color: #205a39;
+  background: #e6f5ec;
+  border-color: #a5c9b3;
+}
+.error-feedback {
+  color: #922c2c;
+  background: #fff2ef;
+  border-color: #ebc4be;
+}
+.muted-copy {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.own-account {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.code-expiry {
+  font-size: 12px;
+  color: var(--muted);
+}
+.suspended {
+  background: #f8eeee;
+  color: #922c2c;
+}
+.compact-button {
+  min-height: 38px;
+  padding: 9px 12px;
+  font-size: 12px;
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+  padding: 20px 24px;
+  border-top: 1px solid var(--border);
+}
+.pagination span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.account-dialog {
+  position: fixed;
+  inset: 0;
+  width: 560px;
+  min-width: 0;
+  max-width: calc(100dvw - 32px);
+  margin: auto;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 20px 100px #073b2530;
+}
+.account-dialog::backdrop {
+  background: #11291ec9;
+}
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 12px;
+}
+.dialog-heading h2 {
+  font-size: 22px;
+  line-height: 1.3;
+  margin-bottom: 0;
+}
+.dialog-heading .icon-button {
+  flex-shrink: 0;
+}
+.access-form {
+  min-width: 0;
+  display: grid;
+  gap: 20px;
+}
+.form-field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 650;
+}
+.form-field input,
+.form-field select,
+.form-field textarea {
+  min-width: 0;
+  width: 100%;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid #b6c9bb;
+  border-radius: 9px;
+  padding: 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  min-height: 46px;
+}
+.form-field small {
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 11px;
+  font-weight: 400;
+}
+.form-field textarea {
+  resize: vertical;
+}
+.form-field .one-time-code {
+  font-family: Consolas, monospace;
+  font-size: 12px;
+}
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+}
+.checkbox-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.checkbox-field input {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  accent-color: var(--primary);
+}
+.action-explanation {
+  color: #755217;
+  background: #fff8e8;
+  border: 1px solid #ecdfc4;
+  border-radius: 10px;
+  padding: 13px 16px;
+  margin-bottom: 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.managed-user {
+  font-size: 16px;
+  font-weight: 650;
+  margin-bottom: 0;
+  word-break: break-word;
+}
+.audit-summary {
+  padding: 20px 24px 0;
+}
+.audit-detail {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.audit-reason {
+  white-space: normal;
+  min-width: 220px;
+  max-width: 360px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .form-field input,
+  .form-field select,
+  .form-field textarea {
+    font-size: 16px;
+  }
+  .account-dialog {
+    padding: 20px;
+    max-height: calc(100dvh - 24px);
+  }
+  .dialog-heading h2 {
+    font-size: 20px;
+  }
+  .dialog-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .pagination {
+    padding: 18px;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .pagination .button {
+    padding: 10px 14px;
+  }
+  .pagination span {
+    font-size: 10px;
+  }
+}

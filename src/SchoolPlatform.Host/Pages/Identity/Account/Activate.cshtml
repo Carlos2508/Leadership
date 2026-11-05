@@ -1,0 +1,32 @@
+@page "/Identity/Account/Activate"
+@model SchoolPlatform.Host.Pages.Identity.Account.ActivateModel
+@inject IOptions<InstitutionOptions> Institution
+@{ ViewData["Title"] = "Activar o recuperar acceso"; }
+<div class="login-content">
+  <a class="back" href="/Identity/Account/Login">← Volver al ingreso</a>
+  <img class="login-logo" src="@Institution.Value.Assets.LoginLogo" alt="@Institution.Value.DisplayName" />
+  @if (Model.Completed)
+  {
+    <h2>Tu acceso está listo</h2>
+    <p class="muted" role="status">La contraseña se guardó. Ingresa con tu usuario y tu nueva contraseña.</p>
+    <a class="auth-action" href="/Identity/Account/Login">Ingresar a mi espacio →</a>
+  }
+  else
+  {
+    <div class="eyebrow">UN NUEVO COMIENZO</div>
+    <h2>Prepara tu acceso.</h2>
+    <p class="muted">Usa el código que te entregó el colegio para activar tu cuenta o recuperar tu contraseña.</p>
+    <form method="post" autocomplete="off">
+      <div asp-validation-summary="All" class="error" role="alert"></div>
+      <label asp-for="Input.Code">Código de acceso</label>
+      <input asp-for="Input.Code" type="password" autocomplete="off" required maxlength="100" spellcheck="false" autocapitalize="none" />
+      <label asp-for="Input.Password">Nueva contraseña</label>
+      <input asp-for="Input.Password" type="password" autocomplete="new-password" required minlength="12" maxlength="1024" aria-describedby="password-help" />
+      <p class="password-help" id="password-help">Al menos 12 caracteres, con mayúscula, minúscula, número y símbolo.</p>
+      <label asp-for="Input.Confirmation">Confirmar contraseña</label>
+      <input asp-for="Input.Confirmation" type="password" autocomplete="new-password" required minlength="12" maxlength="1024" />
+      <button type="submit">Guardar mi contraseña <span aria-hidden="true">→</span></button>
+    </form>
+    <div class="help"><strong>¿No tienes un código o ya venció?</strong><p>Solicita ayuda a la administración. No necesitas tener correo electrónico para recuperar tu acceso.</p></div>
+  }
+</div>

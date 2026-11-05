@@ -1,0 +1,9 @@
+@charset "UTF-8";
+:root{
+--forest:#073B25;--primary:#0B5835;--green:#168057;--gold:#ECA42E;--gold-soft:#FFF1D2;
+--mint:#E6F5EC;--cream:#F7F9F5;--white:#fff;--blue:#4D87D8;--blue-soft:#EAF2FF;
+--purple:#846AD3;--purple-soft:#EEEAFB;--coral:#E7796B;--coral-soft:#FDEBE6;
+--ink:#193B2B;--muted:#607461;--border:#E3EBE3;--success:#19814F;--warning:#B66C10;--error:#B63232;
+--radius-sm:10px;--radius-md:16px;--radius-lg:22px;--radius-xl:30px;
+--shadow:0 9px 30px rgba(17,66,41,.05);--font:Inter,Arial,sans-serif;
+}

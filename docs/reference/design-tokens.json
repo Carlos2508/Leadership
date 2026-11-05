@@ -1,0 +1,58 @@
+{
+  "brand": {
+    "deep": "#073B25",
+    "primary": "#0B5835",
+    "green": "#168057",
+    "gold": "#ECA42E",
+    "goldSoft": "#FFF1D2",
+    "mint": "#E6F5EC",
+    "cream": "#F7F9F5",
+    "white": "#FFFFFF"
+  },
+  "functional": {
+    "blue": "#4D87D8",
+    "blueSoft": "#EAF2FF",
+    "purple": "#846AD3",
+    "purpleSoft": "#EEEAFB",
+    "coral": "#E7796B",
+    "coralSoft": "#FDEBE6",
+    "text": "#193B2B",
+    "muted": "#607461",
+    "border": "#E3EBE3",
+    "success": "#19814F",
+    "warning": "#B66C10",
+    "error": "#B63232"
+  },
+  "radii": {
+    "sm": 10,
+    "md": 16,
+    "lg": 22,
+    "xl": 30
+  },
+  "spacing": {
+    "xs": 4,
+    "sm": 8,
+    "md": 16,
+    "lg": 24,
+    "xl": 32,
+    "xxl": 48
+  },
+  "typography": {
+    "ui": "Inter, Arial, sans-serif",
+    "display": "Inter Display, Inter, Arial, sans-serif"
+  },
+  "breakpoints": {
+    "phone": 480,
+    "tablet": 768,
+    "laptop": 1024,
+    "desktop": 1440
+  },
+  "roles": [
+    "Estudiante",
+    "Familia",
+    "Docente",
+    "Administración",
+    "Finanzas"
+  ],
+  "status": "CONCEPTUAL - pendiente de validación de identidad y datos"
+}

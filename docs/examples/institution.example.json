@@ -1,0 +1,24 @@
+{
+  "Institution": {
+    "SchoolId": "8ec97557-d19c-4e03-acba-8af401c2394f",
+    "DisplayName": "Colegio de ejemplo",
+    "ShortName": "Mi colegio",
+    "CampusLabel": "Comunidad educativa",
+    "LegalName": "",
+    "Tagline": "Aprendemos juntos",
+    "WelcomeMessage": "Una comunidad para aprender y crecer.",
+    "Contact": { "Phone": "", "Email": "", "Address": "", "Website": "" },
+    "Documents": { "TaxId": "", "ReceiptFooter": "", "ReportCardFooter": "" },
+    "Assets": {
+      "MainLogo": "/branding/main.png",
+      "LoginLogo": "/branding/main.png",
+      "ReceiptLogo": "/branding/main.png",
+      "ReportCardLogo": "/branding/main.png",
+      "Favicon": "/branding/main.png"
+    },
+    "Theme": { "Deep": "#18324A", "Primary": "#234C6F", "Accent": "#ECA42E", "Surface": "#F5F8FA" },
+    "Locale": { "Culture": "es-GT", "TimeZone": "America/Guatemala", "Currency": "GTQ" },
+    "Terms": { "StudentPlural": "Alumnos", "GuardianPlural": "Familias", "Tuition": "Mensualidad", "Period": "Bimestre" }
+  }
+}
+

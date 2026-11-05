@@ -35,8 +35,12 @@ void main() {
   };
 
   for (final role in UserRole.values) {
-    for (final entry in sizes.entries) {
+    for (final entry in {...sizes, 'texto grande': const Size(390, 844)}.entries) {
       testWidgets('${role.label}: recorre pestañas y detalles en ${entry.key}', (tester) async {
+        if (entry.key == 'texto grande') {
+          tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        }
         final container = await pumpApp(tester, size: entry.value);
         await container
             .read(authControllerProvider.notifier)
@@ -71,8 +75,12 @@ void main() {
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull, reason: route);
           expect(router.state.matchedLocation, isNot(homePathFor(role)), reason: route);
-          router.pop();
+          // Botón atrás del sistema: vuelve a la pantalla anterior sin salir.
+          final before = router.state.matchedLocation;
+          await tester.binding.handlePopRoute();
           await tester.pumpAndSettle();
+          expect(router.state.matchedLocation, isNot(before), reason: 'atrás desde $route');
+          expect(tester.takeException(), isNull, reason: 'atrás desde $route');
         }
       });
     }

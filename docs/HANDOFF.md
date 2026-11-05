@@ -43,7 +43,7 @@ Al cerrar el primer incremento quedó iniciado ese host en 5080. También se pro
 
 ## Prototipo móvil
 
-`mobile/` contiene un prototipo Flutter con datos ficticios (ADR-004, `mobile/README.md`). Antes de ejecutarlo: `flutter pub get` y `dart run tool/sync_institution.dart` desde `mobile/`. Verificar con `flutter analyze` y `flutter test` (50 pruebas). El servidor simulado (`lib/data/demo`) ilustra reglas pendientes de política; no copiarlo a la API ni tratarlo como especificación aprobada. Para integrar la API, implementar las interfaces de `lib/domain/repositories` con HTTP y sustituir los proveedores de `lib/data/repository_providers.dart`; falta OIDC + PKCE y almacenamiento seguro. No se probó en Android/iOS reales.
+`mobile/` contiene un prototipo Flutter con datos ficticios (ADR-004, `mobile/README.md`). Antes de ejecutarlo: `flutter pub get` y `dart run tool/sync_institution.dart` desde `mobile/`. Verificar con `flutter analyze` y `flutter test` (62 pruebas). El manejo del botón atrás está en `lib/shared/back_navigation.dart` (salida con doble pulsación en raíces, confirmación de cambios sin guardar); toda pantalla raíz nueva debe pasar por `RoleShell` o `ExitOnDoubleBack`, y todo formulario nuevo por `UnsavedChangesGuard`. El servidor simulado (`lib/data/demo`) ilustra reglas pendientes de política; no copiarlo a la API ni tratarlo como especificación aprobada. Para integrar la API, implementar las interfaces de `lib/domain/repositories` con HTTP y sustituir los proveedores de `lib/data/repository_providers.dart`; falta OIDC + PKCE y almacenamiento seguro. No se probó en Android/iOS reales.
 
 ## Siguiente incremento recomendado
 

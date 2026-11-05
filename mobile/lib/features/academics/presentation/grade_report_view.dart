@@ -106,9 +106,13 @@ class _AvailableGradesState extends ConsumerState<_AvailableGrades> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.sm, Spacing.lg, Spacing.xs),
-                child: Row(
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: Spacing.md,
+                  runSpacing: Spacing.xs,
                   children: [
-                    Expanded(child: Text('Mis materias', style: theme.textTheme.titleMedium)),
+                    Text('Mis materias', style: theme.textTheme.titleMedium),
                     Text(
                       'Publicado ${format.shortDate(report.publishedAt)}',
                       style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),

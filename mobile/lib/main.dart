@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,6 +12,9 @@ import 'core/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // En web, la URL y el botón atrás del navegador reflejan también las
+  // pantallas abiertas con push (detalles), no solo las pestañas.
+  GoRouter.optionURLReflectsImperativeAPIs = true;
 
   try {
     // Carga los símbolos locales de fecha incluidos en intl (sin red).

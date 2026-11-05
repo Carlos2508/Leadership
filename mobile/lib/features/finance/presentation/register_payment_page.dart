@@ -12,6 +12,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../domain/models/finance.dart';
+import '../../../shared/back_navigation.dart';
 import '../../../shared/page_layout.dart';
 import '../application/finance_providers.dart';
 
@@ -39,6 +40,9 @@ class _RegisterPaymentPageState extends ConsumerState<RegisterPaymentPage> {
   PaymentMethod _method = PaymentMethod.cash;
   bool _initialized = false;
   bool _amountEdited = false;
+
+  /// La persona modificó algo del formulario (se pide confirmar al salir).
+  bool _touched = false;
   bool _busy = false;
   String? _error;
 
@@ -135,132 +139,141 @@ class _RegisterPaymentPageState extends ConsumerState<RegisterPaymentPage> {
       _syncAmount(open);
     }
 
-    return DetailPage(
-      title: 'Registrar pago',
-      bottomBar: FilledButton(
-        onPressed: _busy || open.isEmpty ? null : () => _review(open, format),
-        child: _busy
-            ? const SizedBox.square(
-                dimension: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.5),
-              )
-            : const Text('Revisar pago'),
-      ),
-      children: [
-        AsyncValueView(
-          value: statement,
-          onRetry: () => ref.invalidate(statementProvider(widget.studentId)),
-          data: (data) => Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(data.student.fullName, style: theme.textTheme.titleLarge),
-                Text(
-                  '${data.student.code} · ${data.student.placement}',
-                  style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
-                ),
-                const SectionHeader(title: '1. Cargos a cubrir'),
-                AppCard(
-                  padding: const EdgeInsets.symmetric(vertical: Spacing.xs),
-                  child: Column(
+    return UnsavedChangesGuard(
+      hasChanges: _touched && !_busy,
+      child: DetailPage(
+        title: 'Registrar pago',
+        bottomBar: FilledButton(
+          onPressed: _busy || open.isEmpty ? null : () => _review(open, format),
+          child: _busy
+              ? const SizedBox.square(
+                  dimension: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                )
+              : const Text('Revisar pago'),
+        ),
+        children: [
+          AsyncValueView(
+            value: statement,
+            onRetry: () => ref.invalidate(statementProvider(widget.studentId)),
+            data: (data) => Form(
+              key: _formKey,
+              onChanged: () => setState(() => _touched = true),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(data.student.fullName, style: theme.textTheme.titleLarge),
+                  Text(
+                    '${data.student.code} · ${data.student.placement}',
+                    style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
+                  ),
+                  const SectionHeader(title: '1. Cargos a cubrir'),
+                  AppCard(
+                    padding: const EdgeInsets.symmetric(vertical: Spacing.xs),
+                    child: Column(
+                      children: [
+                        for (final charge in open)
+                          CheckboxListTile(
+                            value: _selected.contains(charge.id),
+                            onChanged: _busy
+                                ? null
+                                : (value) => setState(() {
+                                    value == true
+                                        ? _selected.add(charge.id)
+                                        : _selected.remove(charge.id);
+                                    _syncAmount(open);
+                                  }),
+                            title: Text(charge.label),
+                            subtitle: Text(
+                              '${charge.status.label} · vence ${format.shortDate(charge.dueDate)}',
+                            ),
+                            secondary: Text(
+                              format.currency(charge.balance),
+                              style: theme.textTheme.titleSmall,
+                            ),
+                            controlAffinity: ListTileControlAffinity.leading,
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: Spacing.sm),
+                  Text(
+                    'Se aplica en el orden mostrado, de la cuota más antigua a la más reciente.',
+                    style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
+                  ),
+                  const SectionHeader(title: '2. Monto y medio'),
+                  TextFormField(
+                    controller: _amount,
+                    enabled: !_busy,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                    onChanged: (_) => _amountEdited = true,
+                    decoration: InputDecoration(
+                      labelText: 'Monto recibido',
+                      prefixText: '${format.currencySymbol} ',
+                      helperText:
+                          'Seleccionado: ${format.currency(_selectedTotal(open))}. El excedente queda como saldo a favor.',
+                      helperMaxLines: 2,
+                    ),
+                    validator: (value) {
+                      final amount = double.tryParse((value ?? '').replaceAll(',', ''));
+                      if (amount == null || amount <= 0) return 'Escribe un monto válido.';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: Spacing.lg),
+                  Wrap(
+                    spacing: Spacing.sm,
+                    runSpacing: Spacing.sm,
                     children: [
-                      for (final charge in open)
-                        CheckboxListTile(
-                          value: _selected.contains(charge.id),
-                          onChanged: _busy
+                      for (final method in PaymentMethod.values)
+                        ChoiceChip(
+                          label: Text(method.label),
+                          selected: _method == method,
+                          onSelected: _busy
                               ? null
-                              : (value) => setState(() {
-                                  value == true
-                                      ? _selected.add(charge.id)
-                                      : _selected.remove(charge.id);
-                                  _syncAmount(open);
+                              : (_) => setState(() {
+                                  _method = method;
+                                  _touched = true;
                                 }),
-                          title: Text(charge.label),
-                          subtitle: Text(
-                            '${charge.status.label} · vence ${format.shortDate(charge.dueDate)}',
-                          ),
-                          secondary: Text(
-                            format.currency(charge.balance),
-                            style: theme.textTheme.titleSmall,
-                          ),
-                          controlAffinity: ListTileControlAffinity.leading,
                         ),
                     ],
                   ),
-                ),
-                const SizedBox(height: Spacing.sm),
-                Text(
-                  'Se aplica en el orden mostrado, de la cuota más antigua a la más reciente.',
-                  style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
-                ),
-                const SectionHeader(title: '2. Monto y medio'),
-                TextFormField(
-                  controller: _amount,
-                  enabled: !_busy,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-                  onChanged: (_) => _amountEdited = true,
-                  decoration: InputDecoration(
-                    labelText: 'Monto recibido',
-                    prefixText: '${format.currencySymbol} ',
-                    helperText:
-                        'Seleccionado: ${format.currency(_selectedTotal(open))}. El excedente queda como saldo a favor.',
-                    helperMaxLines: 2,
-                  ),
-                  validator: (value) {
-                    final amount = double.tryParse((value ?? '').replaceAll(',', ''));
-                    if (amount == null || amount <= 0) return 'Escribe un monto válido.';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: Spacing.lg),
-                Wrap(
-                  spacing: Spacing.sm,
-                  runSpacing: Spacing.sm,
-                  children: [
-                    for (final method in PaymentMethod.values)
-                      ChoiceChip(
-                        label: Text(method.label),
-                        selected: _method == method,
-                        onSelected: _busy ? null : (_) => setState(() => _method = method),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: Spacing.lg),
-                TextFormField(
-                  controller: _reference,
-                  enabled: !_busy,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: InputDecoration(
-                    labelText: _method == PaymentMethod.cash
-                        ? 'Referencia (opcional)'
-                        : 'Referencia bancaria',
-                    prefixIcon: const Icon(Icons.tag_rounded),
-                  ),
-                  validator: (value) =>
-                      _method != PaymentMethod.cash && (value ?? '').trim().length < 4
-                      ? 'La referencia es obligatoria para este medio.'
-                      : null,
-                ),
-                if (_error != null) ...[
                   const SizedBox(height: Spacing.lg),
-                  Semantics(
-                    liveRegion: true,
-                    child: Text(
-                      _error!,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colors.tone(AppTone.danger).foreground,
-                        fontWeight: FontWeight.w600,
+                  TextFormField(
+                    controller: _reference,
+                    enabled: !_busy,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: InputDecoration(
+                      labelText: _method == PaymentMethod.cash
+                          ? 'Referencia (opcional)'
+                          : 'Referencia bancaria',
+                      prefixIcon: const Icon(Icons.tag_rounded),
+                    ),
+                    validator: (value) =>
+                        _method != PaymentMethod.cash && (value ?? '').trim().length < 4
+                        ? 'La referencia es obligatoria para este medio.'
+                        : null,
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: Spacing.lg),
+                    Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        _error!,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colors.tone(AppTone.danger).foreground,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

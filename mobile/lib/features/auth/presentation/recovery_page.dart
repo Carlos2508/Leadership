@@ -9,6 +9,7 @@ import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../data/repository_providers.dart';
 import '../../../domain/repositories/auth_repository.dart';
+import '../../../shared/back_navigation.dart';
 import '../../../shared/page_layout.dart';
 
 /// Activación o recuperación asistida con un código de un solo uso entregado
@@ -64,112 +65,117 @@ class _RecoveryPageState extends ConsumerState<RecoveryPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = AppColors.of(context);
-    return DetailPage(
-      title: 'Recuperar acceso',
-      children: [
-        const PageIntro(
-          title: 'Activa o recupera tu cuenta',
-          subtitle: 'Por seguridad, la recuperación es asistida: secretaría verifica tu identidad y te entrega un código de un solo uso.',
-        ),
-        const AppCard(
-          tone: AppTone.brand,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _Step(number: 1, text: 'Acércate a secretaría con tu identificación.'),
-              _Step(
-                number: 2,
-                text: 'Recibe un código válido por 48 horas, en persona o por un canal verificado.',
-              ),
-              _Step(number: 3, text: 'Escríbelo aquí y crea una contraseña nueva.'),
-            ],
+    return UnsavedChangesGuard(
+      hasChanges: !_submitting && (_code.text.isNotEmpty || _password.text.isNotEmpty),
+      child: DetailPage(
+        title: 'Recuperar acceso',
+        children: [
+          const PageIntro(
+            title: 'Activa o recupera tu cuenta',
+            subtitle: 'Por seguridad, la recuperación es asistida: secretaría verifica tu identidad y te entrega un código de un solo uso.',
           ),
-        ),
-        const SizedBox(height: Spacing.xl),
-        Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _code,
-                enabled: !_submitting,
-                textCapitalization: TextCapitalization.characters,
-                autocorrect: false,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9-]')),
-                  LengthLimitingTextInputFormatter(9),
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'Código de un solo uso',
-                  hintText: 'XXXX-XXXX',
-                  prefixIcon: Icon(Icons.key_rounded),
+          const AppCard(
+            tone: AppTone.brand,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Step(number: 1, text: 'Acércate a secretaría con tu identificación.'),
+                _Step(
+                  number: 2,
+                  text:
+                      'Recibe un código válido por 48 horas, en persona o por un canal verificado.',
                 ),
-                validator: (value) =>
-                    RegExp(r'^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$').hasMatch(value?.trim() ?? '')
-                    ? null
-                    : 'El código tiene el formato XXXX-XXXX.',
-              ),
-              const SizedBox(height: Spacing.lg),
-              TextFormField(
-                controller: _password,
-                enabled: !_submitting,
-                obscureText: true,
-                autofillHints: const [AutofillHints.newPassword],
-                decoration: const InputDecoration(
-                  labelText: 'Contraseña nueva',
-                  helperText: 'Mínimo 8 caracteres.',
-                  prefixIcon: Icon(Icons.lock_outline_rounded),
+                _Step(number: 3, text: 'Escríbelo aquí y crea una contraseña nueva.'),
+              ],
+            ),
+          ),
+          const SizedBox(height: Spacing.xl),
+          Form(
+            key: _formKey,
+            onChanged: () => setState(() {}),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  controller: _code,
+                  enabled: !_submitting,
+                  textCapitalization: TextCapitalization.characters,
+                  autocorrect: false,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9-]')),
+                    LengthLimitingTextInputFormatter(9),
+                  ],
+                  decoration: const InputDecoration(
+                    labelText: 'Código de un solo uso',
+                    hintText: 'XXXX-XXXX',
+                    prefixIcon: Icon(Icons.key_rounded),
+                  ),
+                  validator: (value) =>
+                      RegExp(r'^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$').hasMatch(value?.trim() ?? '')
+                      ? null
+                      : 'El código tiene el formato XXXX-XXXX.',
                 ),
-                validator: (value) =>
-                    (value ?? '').length < 8 ? 'Usa al menos 8 caracteres.' : null,
-              ),
-              const SizedBox(height: Spacing.lg),
-              TextFormField(
-                controller: _confirm,
-                enabled: !_submitting,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Confirma la contraseña',
-                  prefixIcon: Icon(Icons.lock_outline_rounded),
-                ),
-                onFieldSubmitted: (_) => _submit(),
-                validator: (value) =>
-                    value != _password.text ? 'Las contraseñas no coinciden.' : null,
-              ),
-              if (_error != null) ...[
                 const SizedBox(height: Spacing.lg),
-                Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    _error!,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.tone(AppTone.danger).foreground,
-                      fontWeight: FontWeight.w600,
+                TextFormField(
+                  controller: _password,
+                  enabled: !_submitting,
+                  obscureText: true,
+                  autofillHints: const [AutofillHints.newPassword],
+                  decoration: const InputDecoration(
+                    labelText: 'Contraseña nueva',
+                    helperText: 'Mínimo 8 caracteres.',
+                    prefixIcon: Icon(Icons.lock_outline_rounded),
+                  ),
+                  validator: (value) =>
+                      (value ?? '').length < 8 ? 'Usa al menos 8 caracteres.' : null,
+                ),
+                const SizedBox(height: Spacing.lg),
+                TextFormField(
+                  controller: _confirm,
+                  enabled: !_submitting,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirma la contraseña',
+                    prefixIcon: Icon(Icons.lock_outline_rounded),
+                  ),
+                  onFieldSubmitted: (_) => _submit(),
+                  validator: (value) =>
+                      value != _password.text ? 'Las contraseñas no coinciden.' : null,
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: Spacing.lg),
+                  Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      _error!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.tone(AppTone.danger).foreground,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
+                ],
+                const SizedBox(height: Spacing.xl),
+                FilledButton(
+                  onPressed: _submitting ? null : _submit,
+                  child: _submitting
+                      ? const SizedBox.square(
+                          dimension: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : const Text('Guardar contraseña'),
+                ),
+                const SizedBox(height: Spacing.md),
+                Text(
+                  'En el prototipo, los códigos se generan desde Administración → Cuentas.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
                 ),
               ],
-              const SizedBox(height: Spacing.xl),
-              FilledButton(
-                onPressed: _submitting ? null : _submit,
-                child: _submitting
-                    ? const SizedBox.square(
-                        dimension: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2.5),
-                      )
-                    : const Text('Guardar contraseña'),
-              ),
-              const SizedBox(height: Spacing.md),
-              Text(
-                'En el prototipo, los códigos se generan desde Administración → Cuentas.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
-              ),
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

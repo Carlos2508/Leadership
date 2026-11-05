@@ -195,11 +195,13 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
             const SizedBox(height: Spacing.xs),
             Row(
               children: [
-                Text(
-                  '${_account.profileLabel} · ${_account.username}',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: colors.muted),
+                Expanded(
+                  child: Text(
+                    '${_account.profileLabel} · ${_account.username}',
+                    style: theme.textTheme.bodyMedium?.copyWith(color: colors.muted),
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: Spacing.sm),
                 StatusPill(label: _account.state.label, tone: _account.state.tone),
               ],
             ),

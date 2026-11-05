@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import '../core/theme/app_theme.dart';
 import '../core/widgets/cards.dart';
 import '../core/widgets/institution_logo.dart';
 import '../features/auth/application/auth_controller.dart';
+import 'back_navigation.dart';
 
 /// Cuerpo desplazable con ancho máximo legible y pull-to-refresh opcional.
 class PageBody extends StatelessWidget {
@@ -60,7 +62,8 @@ class PageBody extends StatelessWidget {
 }
 
 /// Página raíz de una pestaña: encabezado institucional + contenido.
-class TabPage extends ConsumerWidget {
+/// Al volver a tocar su pestaña se desplaza al inicio.
+class TabPage extends ConsumerStatefulWidget {
   const TabPage({
     required this.subtitle,
     this.children = const [],
@@ -77,18 +80,43 @@ class TabPage extends ConsumerWidget {
   final Widget? floatingActionButton;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TabPage> createState() => _TabPageState();
+}
+
+class _TabPageState extends ConsumerState<TabPage> {
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(tabReselectProvider, (_, _) {
+      // Solo la pestaña visible (las demás tienen los tickers desactivados).
+      if (!TickerMode.valuesOf(context).enabled || !_scroll.hasClients) return;
+      unawaited(
+        _scroll.animateTo(
+          0,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    });
     return Scaffold(
-      floatingActionButton: floatingActionButton,
+      floatingActionButton: widget.floatingActionButton,
       body: SafeArea(
         bottom: false,
         child: PageBody(
-          onRefresh: onRefresh,
-          bottomPadding: floatingActionButton == null ? 32 : 96,
-          slivers: slivers,
+          controller: _scroll,
+          onRefresh: widget.onRefresh,
+          bottomPadding: widget.floatingActionButton == null ? 32 : 96,
+          slivers: widget.slivers,
           children: [
-            InstitutionHeader(subtitle: subtitle),
-            ...children,
+            InstitutionHeader(subtitle: widget.subtitle),
+            ...widget.children,
           ],
         ),
       ),

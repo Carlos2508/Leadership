@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../domain/models/assignments.dart';
+import '../../../shared/back_navigation.dart';
 import '../../academics/application/academic_providers.dart';
 
 /// Hoja de entrega. En el prototipo los archivos se simulan; la app real
@@ -77,106 +78,111 @@ class _SubmitAssignmentSheetState extends ConsumerState<SubmitAssignmentSheet> {
     final theme = Theme.of(context);
     final colors = AppColors.of(context);
     final late = ref.watch(clockProvider)().isAfter(widget.assignment.dueAt);
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(Spacing.xl, 0, Spacing.xl, Spacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Entregar tarea', style: theme.textTheme.headlineSmall),
-            const SizedBox(height: Spacing.xs),
-            Text(
-              widget.assignment.title,
-              style: theme.textTheme.bodyMedium?.copyWith(color: colors.muted),
-            ),
-            if (late) ...[
-              const SizedBox(height: Spacing.md),
+    return UnsavedChangesGuard(
+      hasChanges: !_submitting && (_files.isNotEmpty || _comment.text.trim().isNotEmpty),
+      message: 'Los archivos y el comentario no se han entregado.',
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(Spacing.xl, 0, Spacing.xl, Spacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Entregar tarea', style: theme.textTheme.headlineSmall),
+              const SizedBox(height: Spacing.xs),
               Text(
-                'El plazo ya venció: tu entrega quedará marcada como tardía.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.tone(AppTone.warning).foreground,
-                  fontWeight: FontWeight.w700,
-                ),
+                widget.assignment.title,
+                style: theme.textTheme.bodyMedium?.copyWith(color: colors.muted),
               ),
-            ],
-            const SizedBox(height: Spacing.lg),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _submitting ? null : () => _addFile('photo'),
-                    icon: const Icon(Icons.photo_camera_outlined),
-                    label: const Text('Foto'),
-                  ),
-                ),
-                const SizedBox(width: Spacing.md),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _submitting ? null : () => _addFile('document'),
-                    icon: const Icon(Icons.attach_file_rounded),
-                    label: const Text('Archivo'),
+              if (late) ...[
+                const SizedBox(height: Spacing.md),
+                Text(
+                  'El plazo ya venció: tu entrega quedará marcada como tardía.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.tone(AppTone.warning).foreground,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: Spacing.md),
-            for (final file in _files)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  file.endsWith('.jpg') ? Icons.image_outlined : Icons.description_outlined,
+              const SizedBox(height: Spacing.lg),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _submitting ? null : () => _addFile('photo'),
+                      icon: const Icon(Icons.photo_camera_outlined),
+                      label: const Text('Foto'),
+                    ),
+                  ),
+                  const SizedBox(width: Spacing.md),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _submitting ? null : () => _addFile('document'),
+                      icon: const Icon(Icons.attach_file_rounded),
+                      label: const Text('Archivo'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Spacing.md),
+              for (final file in _files)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    file.endsWith('.jpg') ? Icons.image_outlined : Icons.description_outlined,
+                  ),
+                  title: Text(file, overflow: TextOverflow.ellipsis),
+                  trailing: IconButton(
+                    tooltip: 'Quitar $file',
+                    onPressed: _submitting ? null : () => setState(() => _files.remove(file)),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
                 ),
-                title: Text(file, overflow: TextOverflow.ellipsis),
-                trailing: IconButton(
-                  tooltip: 'Quitar $file',
-                  onPressed: _submitting ? null : () => setState(() => _files.remove(file)),
-                  icon: const Icon(Icons.close_rounded),
+              const SizedBox(height: Spacing.sm),
+              TextField(
+                controller: _comment,
+                onChanged: (_) => setState(() {}),
+                enabled: !_submitting,
+                maxLength: 500,
+                minLines: 2,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Comentario para tu docente (opcional)',
+                  alignLabelWithHint: true,
                 ),
               ),
-            const SizedBox(height: Spacing.sm),
-            TextField(
-              controller: _comment,
-              enabled: !_submitting,
-              maxLength: 500,
-              minLines: 2,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Comentario para tu docente (opcional)',
-                alignLabelWithHint: true,
-              ),
-            ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: Spacing.md),
-                child: Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    _error!,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.tone(AppTone.danger).foreground,
-                      fontWeight: FontWeight.w600,
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: Spacing.md),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      _error!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.tone(AppTone.danger).foreground,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
+              FilledButton(
+                onPressed: _submitting ? null : _submit,
+                child: _submitting
+                    ? const SizedBox.square(
+                        dimension: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.5),
+                      )
+                    : const Text('Confirmar entrega'),
               ),
-            FilledButton(
-              onPressed: _submitting ? null : _submit,
-              child: _submitting
-                  ? const SizedBox.square(
-                      dimension: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2.5),
-                    )
-                  : const Text('Confirmar entrega'),
-            ),
-            const SizedBox(height: Spacing.sm),
-            Text(
-              'Prototipo: los archivos son simulados y no salen del dispositivo.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
-            ),
-          ],
+              const SizedBox(height: Spacing.sm),
+              Text(
+                'Prototipo: los archivos son simulados y no salen del dispositivo.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
+              ),
+            ],
+          ),
         ),
       ),
     );

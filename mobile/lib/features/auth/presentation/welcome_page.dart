@@ -6,6 +6,7 @@ import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/institution_logo.dart';
+import '../../../shared/back_navigation.dart';
 
 class WelcomePage extends ConsumerWidget {
   const WelcomePage({super.key});
@@ -17,104 +18,106 @@ class WelcomePage extends ConsumerWidget {
     final theme = Theme.of(context);
     final headline = institution.tagline.isEmpty ? institution.displayName : institution.tagline;
 
-    return Scaffold(
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [colors.heroStart, colors.heroEnd],
+    return ExitOnDoubleBack(
+      child: Scaffold(
+        body: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [colors.heroStart, colors.heroEnd],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          children: [
-                            const SizedBox(height: Spacing.lg),
-                            InstitutionLogo(path: institution.mainLogo, size: 112),
-                            const SizedBox(height: Spacing.xxl),
-                            const _Illustration(),
-                          ],
-                        ),
-                        Column(
-                          children: [
-                            const SizedBox(height: Spacing.xxl),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: colors.accent.withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                'TU CAMPUS, MÁS CERCA',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: Colors.white,
-                                  letterSpacing: 1.2,
+          child: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 440),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            children: [
+                              const SizedBox(height: Spacing.lg),
+                              InstitutionLogo(path: institution.mainLogo, size: 112),
+                              const SizedBox(height: Spacing.xxl),
+                              const _Illustration(),
+                            ],
+                          ),
+                          Column(
+                            children: [
+                              const SizedBox(height: Spacing.xxl),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: colors.accent.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  'TU CAMPUS, MÁS CERCA',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: Colors.white,
+                                    letterSpacing: 1.2,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: Spacing.lg),
-                            Semantics(
-                              header: true,
-                              child: Text(
-                                headline,
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.headlineLarge?.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 32,
+                              const SizedBox(height: Spacing.lg),
+                              Semantics(
+                                header: true,
+                                child: Text(
+                                  headline,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.headlineLarge?.copyWith(
+                                    color: Colors.white,
+                                    fontSize: 32,
+                                  ),
                                 ),
                               ),
-                            ),
-                            if (institution.welcomeMessage.isNotEmpty) ...[
-                              const SizedBox(height: Spacing.md),
+                              if (institution.welcomeMessage.isNotEmpty) ...[
+                                const SizedBox(height: Spacing.md),
+                                Text(
+                                  institution.welcomeMessage,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.86),
+                                    height: 1.45,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: Spacing.xxl),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: colors.accent,
+                                    foregroundColor: colors.onAccent,
+                                    minimumSize: const Size.fromHeight(56),
+                                  ),
+                                  onPressed: () async {
+                                    await ref.read(welcomeSeenProvider.notifier).markSeen();
+                                    if (context.mounted) context.go('/login');
+                                  },
+                                  iconAlignment: IconAlignment.end,
+                                  icon: const Icon(Icons.arrow_forward_rounded),
+                                  label: const Text('Comenzar'),
+                                ),
+                              ),
+                              const SizedBox(height: Spacing.lg),
                               Text(
-                                institution.welcomeMessage,
+                                '${institution.displayName} · Prototipo con datos ficticios',
                                 textAlign: TextAlign.center,
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.86),
-                                  height: 1.45,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.7),
                                 ),
                               ),
                             ],
-                            const SizedBox(height: Spacing.xxl),
-                            SizedBox(
-                              width: double.infinity,
-                              child: FilledButton.icon(
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: colors.accent,
-                                  foregroundColor: colors.onAccent,
-                                  minimumSize: const Size.fromHeight(56),
-                                ),
-                                onPressed: () async {
-                                  await ref.read(welcomeSeenProvider.notifier).markSeen();
-                                  if (context.mounted) context.go('/login');
-                                },
-                                iconAlignment: IconAlignment.end,
-                                icon: const Icon(Icons.arrow_forward_rounded),
-                                label: const Text('Comenzar'),
-                              ),
-                            ),
-                            const SizedBox(height: Spacing.lg),
-                            Text(
-                              '${institution.displayName} · Prototipo con datos ficticios',
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.7),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

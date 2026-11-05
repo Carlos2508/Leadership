@@ -11,6 +11,7 @@ import '../../../core/widgets/institution_logo.dart';
 import '../../../data/repository_providers.dart';
 import '../../../domain/models/people.dart';
 import '../../../domain/repositories/auth_repository.dart';
+import '../../../shared/back_navigation.dart';
 import '../application/auth_controller.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -72,7 +73,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ExitOnDoubleBack(child: _buildPage(context));
+
+  Widget _buildPage(BuildContext context) {
     final institution = ref.watch(institutionProvider);
     final width = MediaQuery.sizeOf(context).width;
     final form = _buildForm(context);

@@ -40,14 +40,19 @@ class _StudentAgendaPageState extends ConsumerState<StudentAgendaPage> {
         ref.refresh(eventsProvider.future),
       ]),
       children: [
-        const PageIntro(eyebrow: 'Mi plan de la semana', title: 'A tu ritmo, sin olvidar nada'),
+        PageIntro(
+          eyebrow: 'Mi plan de la semana',
+          title: 'A tu ritmo, sin olvidar nada',
+          subtitle: pendingCount == null
+              ? null
+              : pendingCount == 0
+              ? 'No tienes tareas pendientes.'
+              : 'Tienes $pendingCount ${pendingCount == 1 ? 'tarea pendiente' : 'tareas pendientes'}.',
+        ),
         SegmentedButton<_AgendaView>(
           showSelectedIcon: false,
           segments: [
-            ButtonSegment(
-              value: _AgendaView.pending,
-              label: Text(pendingCount == null ? 'Pendientes' : 'Pendientes ($pendingCount)'),
-            ),
+            const ButtonSegment(value: _AgendaView.pending, label: Text('Pendientes')),
             const ButtonSegment(value: _AgendaView.done, label: Text('Terminadas')),
             const ButtonSegment(value: _AgendaView.calendar, label: Text('Calendario')),
           ],

@@ -51,11 +51,11 @@ Prototipo navegable en `mobile/` con **datos ficticios en memoria**; no se conec
 | Comprobación (Linux, Flutter 3.47.9) | Resultado |
 | --- | --- |
 | `flutter analyze` con reglas estrictas | Sin observaciones |
-| `flutter test` | 50 correctas: unitarias de configuración, formatos, solvencia, pagos idempotentes, entregas, libreta y códigos; navegación de los 5 perfiles en 390, 320 y 1024 px; flujos completos |
+| `flutter test` | 62 correctas: unitarias de configuración, formatos, solvencia, pagos idempotentes, entregas, libreta y códigos; navegación de los 5 perfiles en 390, 320 y 1024 px y con texto al 130 %; botón atrás del sistema (no cierra la app, vuelve a la primera pestaña, doble pulsación para salir, confirmación con cambios sin guardar); flujos completos |
 | `flutter build web --release --no-web-resources-cdn` | Correcto |
 | Recorrido Playwright de la build web (390×844 y 1366×860), capturas revisadas | Sin errores de consola tras corregir un desbordamiento de `1 << 32` en web y etiquetas largas de navegación |
 
-No se probó en dispositivos/emuladores Android o iOS (no disponibles en el entorno). Las capturas de QA no se versionan.
+No se probó en dispositivos/emuladores Android o iOS ni se compiló APK: el entorno bloquea la descarga del SDK de Android. El botón atrás se verificó con el canal de plataforma simulado en pruebas de widgets y el atrás del navegador en la build web. Las capturas de QA no se versionan.
 
 ## Próximo bloque
 

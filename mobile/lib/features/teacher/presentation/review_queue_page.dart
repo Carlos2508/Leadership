@@ -27,14 +27,19 @@ class _ReviewQueuePageState extends ConsumerState<ReviewQueuePage> {
       subtitle: 'Revisión de entregas',
       onRefresh: () => safeRefresh([ref.refresh(reviewQueueProvider.future)]),
       children: [
-        const PageIntro(eyebrow: 'Entregas', title: 'Retroalimenta a tiempo'),
+        PageIntro(
+          eyebrow: 'Entregas',
+          title: 'Retroalimenta a tiempo',
+          subtitle: pendingCount == null
+              ? null
+              : pendingCount == 0
+              ? 'No tienes entregas pendientes.'
+              : '$pendingCount ${pendingCount == 1 ? 'entrega espera' : 'entregas esperan'} tu revisión.',
+        ),
         SegmentedButton<bool>(
           showSelectedIcon: false,
           segments: [
-            ButtonSegment(
-              value: true,
-              label: Text(pendingCount == null ? 'Por revisar' : 'Por revisar ($pendingCount)'),
-            ),
+            const ButtonSegment(value: true, label: Text('Por revisar')),
             const ButtonSegment(value: false, label: Text('Revisadas')),
           ],
           selected: {_pending},

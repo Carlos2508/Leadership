@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/institution_logo.dart';
+import '../../shared/back_navigation.dart';
 
 class ShellDestination {
   const ShellDestination({required this.label, required this.icon, required this.selectedIcon});
@@ -25,12 +26,27 @@ class RoleShell extends ConsumerWidget {
   static const _railBreakpoint = 720.0;
   static const _extendedBreakpoint = 1180.0;
 
-  void _onSelect(int index) {
+  void _onSelect(WidgetRef ref, int index) {
+    if (index == navigationShell.currentIndex) {
+      // Volver a tocar la pestaña activa la lleva a su inicio.
+      ref.read(tabReselectProvider.notifier).reselect();
+    }
     navigationShell.goBranch(index, initialLocation: index == navigationShell.currentIndex);
+  }
+
+  /// Atrás del sistema en una pestaña secundaria vuelve a la primera.
+  bool _backToFirstTab() {
+    if (navigationShell.currentIndex == 0) return false;
+    navigationShell.goBranch(0);
+    return true;
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    return ExitOnDoubleBack(onBack: _backToFirstTab, child: _buildLayout(context, ref));
+  }
+
+  Widget _buildLayout(BuildContext context, WidgetRef ref) {
     final width = MediaQuery.sizeOf(context).width;
     if (width < _railBreakpoint) {
       return Scaffold(
@@ -41,7 +57,7 @@ class RoleShell extends ConsumerWidget {
           ),
           child: NavigationBar(
             selectedIndex: navigationShell.currentIndex,
-            onDestinationSelected: _onSelect,
+            onDestinationSelected: (index) => _onSelect(ref, index),
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
             destinations: [
               for (final d in destinations)
@@ -68,7 +84,7 @@ class RoleShell extends ConsumerWidget {
               extended: extended,
               minExtendedWidth: 220,
               selectedIndex: navigationShell.currentIndex,
-              onDestinationSelected: _onSelect,
+              onDestinationSelected: (index) => _onSelect(ref, index),
               labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
               leading: Padding(
                 padding: const EdgeInsets.only(top: 12, bottom: 20),

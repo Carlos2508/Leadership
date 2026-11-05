@@ -36,6 +36,15 @@ En la pantalla de ingreso, elige un perfil y presiona **Iniciar sesión** (cualq
 
 Las acciones se reflejan entre perfiles mientras la app esté abierta: si caja acepta el comprobante de la familia, las notas de Diego se habilitan (deslizar hacia abajo para actualizar). En **Perfil → Opciones del prototipo** se pueden simular errores de red para ver los estados de error y reintento.
 
+## Navegación y botón atrás
+
+- **Atrás del sistema (Android) en una pestaña secundaria:** vuelve a la primera pestaña del perfil.
+- **Atrás en la pestaña de inicio, la bienvenida o el ingreso:** muestra "Presiona atrás otra vez para salir"; solo una segunda pulsación dentro de 2 s cierra la app.
+- **Atrás en un detalle, hoja inferior o diálogo:** cierra solo esa capa y conserva la pestaña y su estado.
+- **Formularios con datos sin guardar** (comprobante, cobro, entrega de tarea, revisión, libreta, asistencia, anuncio, recuperación): piden confirmación antes de descartar, también con el gesto de iOS y la flecha superior.
+- **Volver a tocar la pestaña activa:** desplaza la lista al inicio.
+- Android 14+: atrás predictivo habilitado (`enableOnBackInvokedCallback`). En web, la URL refleja los detalles y el botón atrás del navegador funciona.
+
 ## Arquitectura
 
 ```
@@ -59,7 +68,7 @@ lib/
 
 ```bash
 flutter analyze            # reglas estrictas, sin advertencias
-flutter test               # unitarias + navegación por perfil en 3 tamaños + flujos
+flutter test               # unitarias, navegación por perfil (3 tamaños y texto grande), botón atrás y flujos
 flutter build web --release --no-web-resources-cdn
 ```
 

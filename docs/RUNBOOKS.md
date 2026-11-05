@@ -18,11 +18,15 @@ dotnet restore --locked-mode
 
 Abrir `http://localhost:5080`. El comando de operador pide usuario y contraseña en consola, nunca la imprime y limpia las variables del secreto al terminar. No existe contraseña predeterminada. Si el usuario ya existe, el comando rechaza modificarlo. El espacio autenticado todavía no contiene módulos escolares operativos.
 
+Ese primer operador dispone ahora de gestión de cuentas/auditoría; el procedimiento rechaza crear otro gestor inicial si ya existe uno activo. Los siguientes usuarios se invitan en `/workspace/access`. No son usuarios académicos hasta vincularlos a sus futuros expedientes y facultades. Los comandos no han creado una cuenta predeterminada en la base local.
+
 `appsettings.Development.json` utiliza `localhost`, autenticación integrada y base nueva `SchoolPlatform_Development`. Si tu instancia es otra, definir `ConnectionStrings__SchoolDatabase` en la terminal de esa instalación. No apuntar al legado ni a una base ajena. Cada copia para otro colegio debe usar un nombre de base diferente en su propia configuración de desarrollo y secretos independientes en producción.
 
 ## Interfaz
 
 `/`: bienvenida. `/Identity/Account/Login`: acceso real. `/workspace`: sesión protegida y estado inicial. `/preview` y `/preview/students`: muestra sintética solo Development.
+
+`/workspace/access`: gestión persistente de cuentas para quien tenga `accounts.manage`. `/workspace/audit`: auditoría para `audit.read`. `/Identity/Account/Activate`: formulario del titular para usar un código de activación o recuperación. Ver `IDENTITY_AND_ACCESS.md` para entrega/verificación y vigencia. No enviar códigos mediante URLs.
 
 Para editar Angular con recarga: mantener el host en 5080 y ejecutar `./scripts/Invoke-Web.ps1 start` en otra terminal; usar el puerto que indique Angular (habitualmente 4200). Su proxy dirige API, Identity y recursos al host. La revisión E2E usa el build estático servido por .NET, que es el camino de distribución.
 
@@ -37,9 +41,11 @@ dotnet test --verbosity quiet
 git diff --check
 ```
 
-Las cinco pruebas de integración SQL crean y eliminan **sus propias bases aleatorias** `SchoolPlatform_Test_*`. Si no se usa SQL local, definir `SCHOOLPLATFORM_TEST_SQL`; el fixture reemplaza siempre el catálogo de esa conexión por su nombre aleatorio. Nunca elimina el catálogo facilitado por el operador. Debe disponer de permiso de crear/eliminar bases en la instancia de pruebas. Sin SQL, ejecutar solo `dotnet test --filter 'Category!=SqlServer'` y reportar claramente que la integración no se verificó.
+Las pruebas de integración SQL crean y eliminan **sus propias bases aleatorias** `SchoolPlatform_Test_*`. Si no se usa SQL local, definir `SCHOOLPLATFORM_TEST_SQL`; el fixture reemplaza siempre el catálogo de esa conexión por su nombre aleatorio. Nunca elimina el catálogo facilitado por el operador. Debe disponer de permiso de crear/eliminar bases en la instancia de pruebas. Sin SQL, ejecutar solo `dotnet test --filter 'Category!=SqlServer'` o `Verify.ps1 -WithoutSql` y reportar claramente que SQL y E2E de cuentas se omitieron.
 
-Playwright inicia un host local de pruebas en 5085. Las capturas y trazas quedan en `web/test-results`, ignorado por Git. Axe revisa las rutas visibles en escritorio y móvil; no equivale a auditoría completa WCAG ni pruebas con lector de pantalla.
+Playwright inicia un host en 5085 con una **base separada** `SchoolPlatform_E2E_<uuid>`. `tests/SchoolPlatform.TestHarness` crea su esquema y un gestor sintético con contraseña aleatoria en memoria; la base se elimina al terminar. `SCHOOLPLATFORM_E2E_SQL` permite otra instancia de pruebas. No configura ni consulta `SchoolPlatform_Development`. El harness no se distribuye con el host. Si se interrumpe abruptamente el proceso, revisar la base exacta antes de limpiarla; no ejecutar borrados generales por prefijo.
+
+Las capturas y trazas quedan en `web/test-results`, ignorado por Git. Axe revisa las rutas visibles en escritorio y móvil; no equivale a auditoría completa WCAG ni pruebas con lector de pantalla. Se prueban altas/activación, recuperación real, denegación a cuentas básicas y auditoría contra SQL.
 
 ## Publicación técnica (todavía no lanzamiento)
 
@@ -49,5 +55,7 @@ dotnet publish src/SchoolPlatform.Host -c Release -o .local/publish
 ```
 
 Se distribuyen `config/institution.json`, recursos y web compilada. Cada colegio recibe su propio artefacto, configuración, base y secretos. Definir conexión/certificados/Data Protection y aplicar migraciones por un proceso de despliegue revisado. No usar la cuenta SQL de migración para ejecutar la web. No activar `Development` en una publicación real: habilita la muestra y cookies HTTP locales.
+
+Después de revisar/aplicar migraciones, provisionar el primer gestor mediante un comando de consola con la conexión de esa instalación: `./scripts/Provision-Owner.ps1 -Environment Production`. Pide credenciales; no modifica usuarios existentes ni migra bases. Para un artefacto ya publicado, ejecutar `dotnet SchoolPlatform.Host.dll --provision-owner` desde su directorio con `ASPNETCORE_ENVIRONMENT`, `ConnectionStrings__SchoolDatabase`, `Bootstrap__Username` y `Bootstrap__Password` suministrados por el entorno seguro, y retirar estos dos últimos al terminar. No incluirlos en argumentos, scripts versionados o logs.
 
 `/health/live` solo confirma que vive el proceso. Readiness SQL, backups/restauración y monitoreo se agregan antes del piloto. Los comandos de preparación automática se rechazan en Production.

@@ -19,7 +19,7 @@ import { GateDevice } from '../core/gate-api';
       </section>
       <section class="card detail-card"><h2>Dispositivos registrados</h2>
         <ul class="payment-list">@for (d of devices(); track d.id) {
-          <li><span class="person-copy"><strong>{{ d.name }}</strong><small>{{ d.revoked ? 'Revocado' : 'Activo' }} · Última conexión: {{ api.date(d.lastSeenAt) }}</small></span>@if (!d.revoked) { <button class="button outline compact-button" (click)="select(d)" [disabled]="busy()">Revocar {{ d.name }}</button> }</li>
+          <li><span class="person-copy"><strong>{{ d.name }}</strong><small>{{ d.revoked ? 'Revocado' : 'Activo' }} · {{ d.lastSeenAt ? 'Última lectura: ' + api.date(d.lastSeenAt) : 'Aún no se ha conectado' }}</small></span>@if (!d.revoked) { <button class="button outline compact-button" (click)="select(d)" [disabled]="busy()">Revocar<span class="sr-only"> {{ d.name }}</span></button> }</li>
         } @empty { <li>No hay teléfonos registrados.</li> }</ul>
         @if (selected(); as d) {
           <form class="access-form" (ngSubmit)="revoke()"><h3>Revocar {{ d.name }}</h3><label class="form-field">Motivo de revocación<textarea name="reason" [(ngModel)]="reason" required minlength="10" maxlength="500"></textarea></label><div class="dialog-actions"><button type="button" class="button outline" (click)="selected.set(null)" [disabled]="busy()">Cancelar</button><button class="button" [disabled]="busy()">Confirmar revocación</button></div></form>

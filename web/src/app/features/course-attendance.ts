@@ -55,12 +55,21 @@ interface Sheet {
         }
         <section class="card directory-card">
           <div class="filters">
-            <label class="select-field date-field"
-              ><span>Fecha</span><input type="date" name="date" [(ngModel)]="date" (change)="load()"
-            /></label>
+            <div class="day-picker">
+              <button type="button" class="icon-button day-step" (click)="shift(-1)" aria-label="Día anterior"><app-icon name="arrow" /></button>
+              <label class="select-field date-field"
+                ><span>Fecha</span><input type="date" name="date" [(ngModel)]="date" (change)="load()"
+              /></label>
+              <button type="button" class="icon-button day-step next" (click)="shift(1)" aria-label="Día siguiente"><app-icon name="arrow" /></button>
+            </div>
             <p class="directory-summary attendance-counts" aria-live="polite">
-              {{ counts().absent | plural: 'ausencia' : 'ausencias' }} · {{ counts().late | plural: 'tardanza' : 'tardanzas' }} · {{ counts().excused | plural: 'justificada' : 'justificadas' }} ·
-              {{ recorded() ? 'registrada' : 'sin registrar' }}
+              @if (recorded()) {
+                <span class="pill mint">Registrada</span>
+                {{ counts().present | plural: 'presente' : 'presentes' }} · {{ counts().absent | plural: 'ausencia' : 'ausencias' }} ·
+                {{ counts().late | plural: 'tardanza' : 'tardanzas' }} · {{ counts().excused | plural: 'justificada' : 'justificadas' }}
+              } @else {
+                <span class="pill gold">Sin registrar</span> Todos aparecen como presentes; marca solo las excepciones y guarda.
+              }
             </p>
           </div>
           @if (rows().length) {
@@ -90,6 +99,7 @@ interface Sheet {
               </ul>
               @if (s.canEdit) {
                 <div class="sheet-actions">
+                  <button class="button outline" type="button" (click)="allPresent()" [disabled]="busy()">Todos presentes</button>
                   <button class="button" type="submit" [disabled]="busy()">{{ busy() ? 'Guardando…' : 'Guardar asistencia' }}</button>
                 </div>
               }
@@ -119,6 +129,7 @@ export class CourseAttendance {
   readonly counts = computed(() => {
     const rows = this.rows();
     return {
+      present: rows.filter((x) => x.status === 'Present').length,
       absent: rows.filter((x) => x.status === 'Absent').length,
       late: rows.filter((x) => x.status === 'Late').length,
       excused: rows.filter((x) => x.status === 'Excused').length,
@@ -137,6 +148,20 @@ export class CourseAttendance {
   }
   formatted(value: string): string {
     return formatDateOnly(value, this.school.locale.culture);
+  }
+  allPresent(): void {
+    for (const row of this.rows()) row.draft = 'Present';
+    this.rows.set([...this.rows()]);
+  }
+  /** Previous/next school day (skips weekends). */
+  async shift(days: number): Promise<void> {
+    if (!this.date) return;
+    const value = new Date(this.date + 'T12:00:00');
+    do value.setDate(value.getDate() + days);
+    while (value.getDay() === 0 || value.getDay() === 6);
+    this.date = value.toISOString().slice(0, 10);
+    this.notice.set('');
+    await this.load();
   }
   async load(): Promise<void> {
     this.error.set('');

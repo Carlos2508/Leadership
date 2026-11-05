@@ -63,11 +63,23 @@ export class FinanceCashier {
   adjust = { kind: 'Scholarship', amount: null as number | null };
   reason = '';
 
+  readonly today = signal<PaymentSummary[]>([]);
+  readonly todayTotal = computed(() => this.today().filter((x) => !x.reversed).reduce((sum, x) => sum + x.amount, 0));
+
   constructor() {
     queueMicrotask(() => {
       const id = this.student();
       if (id) void this.loadStatement(id);
+      void this.loadToday();
     });
+  }
+  /** The day's receipts (institution date) so the cashier can reprint or review without searching. */
+  async loadToday(): Promise<void> {
+    try {
+      this.today.set(await this.api.get<PaymentSummary[]>('/api/v1/finance/payments'));
+    } catch {
+      this.today.set([]);
+    }
   }
 
   money(value: number): string {
@@ -236,6 +248,7 @@ export class FinanceCashier {
       this.dialog.nativeElement.close();
       this.notice.set(message);
       await this.loadStatement(statement.studentId);
+      void this.loadToday();
       requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
     } catch (error) {
       this.dialogError.set(this.api.message(error));

@@ -87,6 +87,15 @@ const actionLabels: Record<string, string> = {
   AnnouncementPublished: 'Aviso publicado',
   AnnouncementArchived: 'Aviso archivado',
   LegacyPeopleImported: 'Importación del legado aplicada',
+  StudentCardsIssued: 'Carnets emitidos',
+  StudentCardReissued: 'Carnet reemplazado',
+  PersonPhotoUpdated: 'Fotografía actualizada',
+  PersonPhotoRemoved: 'Fotografía quitada',
+  GateManualMark: 'Marca manual en portería',
+  GateMarkVoided: 'Marca de portería anulada',
+  GateDeviceRegistered: 'Teléfono lector registrado',
+  GateDeviceRevoked: 'Teléfono lector revocado',
+  ProfilePermissionsExtended: 'Perfil ampliado por actualización',
 };
 const typeLabels: Record<string, string> = {
   Person: 'Persona',
@@ -102,6 +111,7 @@ const typeLabels: Record<string, string> = {
   FeeConcept: 'Concepto',
   Announcement: 'Aviso',
   ImportBatch: 'Lote de importación',
+  GateDevice: 'Teléfono lector',
 };
 const detailLabels: Record<string, string> = {
   basic: 'Cuenta básica',
@@ -147,6 +157,13 @@ const detailLabels: Record<string, string> = {
   Deposit: 'Depósito',
   Card: 'Tarjeta',
   Check: 'Cheque',
+  gatekeeper: 'Portería',
+  'attendance-supervisor': 'Control de asistencia',
+  In: 'Entrada',
+  Out: 'Salida',
+  first: 'primer carnet',
+  replaced: 'reemplazo',
+  added: 'nueva',
   clearance: 'cuenta para solvencia',
   'no-clearance': 'no cuenta para solvencia',
 };
@@ -172,12 +189,14 @@ const detailLabels: Record<string, string> = {
           <label class="select-field"
             ><span>Área</span
             ><select name="area" [(ngModel)]="area" (ngModelChange)="load()">
-              <option value="all">Todas</option>
+              <option value="changes">Cambios (sin ingresos de sesión)</option>
+              <option value="all">Todo, incluidos ingresos</option>
               <option value="access">Cuentas y accesos</option>
               <option value="people">Personas y familias</option>
               <option value="academic">Académico</option>
               <option value="finance">Finanzas</option>
               <option value="communication">Avisos</option>
+              <option value="gate">Carnets y portería</option>
             </select></label
           >
         </div>
@@ -242,7 +261,7 @@ export class SecurityAudit {
   readonly data = signal<PageResult<AuditEntry> | null>(null);
   readonly loading = signal(true);
   readonly error = signal('');
-  area = 'all';
+  area = 'changes';
 
   constructor() {
     void this.load();
@@ -266,10 +285,13 @@ export class SecurityAudit {
   }
   detail(value: string): string {
     if (!value) return '';
+    // Instants inside details (e.g. the time of a voided gate mark) are shown in the school's time zone.
+    value = value.replace(/\d{4}-\d{2}-\d{2}T[\d:.]+(?:[+-]\d{2}:\d{2}|Z)/g, (instant) => '«' + this.api.date(instant) + '»');
     // Details are technical keys (statuses, kinds, faculties, codes, counts); translate known ones, shorten identifiers.
     return value
-      .split(/([:,])/)
+      .split(/(«[^»]*»|[:,])/)
       .map((token) => {
+        if (token.startsWith('«')) return token.slice(1, -1);
         if (token === ':') return ' · ';
         if (token === ',') return ', ';
         if (/^[a-f0-9]{32}$/i.test(token)) return token.slice(0, 8);

@@ -281,4 +281,37 @@ public sealed class GateSqlTests : SqlTestBase
         for (var i = 0; i < modules.Length; i++) if (modules[i]) row[i] = true;
         Assert.Equal(card, new ZXing.OneD.Code128Reader().decodeRow(0, row, null).Text);
     }
+
+    [Fact]
+    public async Task Home_figures_follow_permissions_and_audit_can_hide_sign_ins()
+    {
+        await Scan(await Token(student));
+        await Account("synthetic-gate", "gatekeeper");
+        using var staff = await SignIn(OwnerName);
+        using var gate = await SignIn("synthetic-gate");
+        using var guardian = await SignIn("synthetic-guardian");
+
+        var full = await staff.GetFromJsonAsync<JsonElement>("/api/v1/dashboard");
+        Assert.Equal((2, 1, 1), (full.GetProperty("gate").GetProperty("expected").GetInt32(), full.GetProperty("gate").GetProperty("arrived").GetInt32(),
+            full.GetProperty("gate").GetProperty("inside").GetInt32()));
+        Assert.Equal(2, full.GetProperty("academic").GetProperty("enrolled").GetInt32());
+        Assert.Equal(0m, full.GetProperty("finance").GetProperty("pending").GetDecimal());
+        Assert.True(full.GetProperty("people").GetInt32() >= 4);
+
+        // A gatekeeper reads no school figures (attendance.gate is not attendance.read); a family account reads none.
+        foreach (var client in new[] { gate, guardian })
+        {
+            var limited = await client.GetFromJsonAsync<JsonElement>("/api/v1/dashboard");
+            Assert.All(["academic", "finance", "gate", "people"], x => Assert.Equal(JsonValueKind.Null, limited.GetProperty(x).ValueKind));
+        }
+
+        var changes = await staff.GetFromJsonAsync<JsonElement>("/api/v1/audit?area=changes");
+        Assert.DoesNotContain(changes.GetProperty("items").EnumerateArray(), x => x.GetProperty("action").GetString()!.StartsWith("Login"));
+        var gateArea = await staff.GetFromJsonAsync<JsonElement>("/api/v1/audit?area=gate");
+        Assert.All(gateArea.GetProperty("items").EnumerateArray(), x => Assert.Matches("^(Gate|StudentCard|PersonPhoto)", x.GetProperty("action").GetString()));
+        Assert.Contains(gateArea.GetProperty("items").EnumerateArray(), x => x.GetProperty("action").GetString() == "StudentCardsIssued");
+
+        var session = await guardian.GetFromJsonAsync<JsonElement>("/api/v1/session");
+        Assert.Equal("Paula Encargada", session.GetProperty("displayName").GetString());
+    }
 }

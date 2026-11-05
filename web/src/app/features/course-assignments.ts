@@ -50,7 +50,10 @@ const statusLabels = { Draft: 'Borrador', Published: 'Publicada', Closed: 'Cerra
         <div class="page-heading">
           <div>
             <span class="eyebrow">TAREAS Y ACTIVIDADES</span>
-            <h1>Actividades del curso</h1>
+            <h1>{{ courseName() || 'Actividades del curso' }}</h1>
+            @if (courseLine()) {
+              <p class="course-line">{{ courseLine() }}</p>
+            }
             <p>Las publicadas llegan a los estudiantes del curso entre su publicación y la fecha de entrega.</p>
           </div>
           <button class="button" (click)="openEdit()" [disabled]="busy()"><app-icon name="book" />Nueva actividad</button>
@@ -181,6 +184,8 @@ export class CourseAssignments {
   @ViewChild('assignmentDialog') private dialog!: ElementRef<HTMLDialogElement>;
   @ViewChild('noticeRef') private noticeRef?: ElementRef<HTMLElement>;
   readonly items = signal<AssignmentView[]>([]);
+  readonly courseName = signal('');
+  readonly courseLine = signal('');
   readonly submissions = signal<SubmissionRow[]>([]);
   readonly openId = signal<string | null>(null);
   readonly editing = signal<AssignmentView | null>(null);
@@ -204,6 +209,14 @@ export class CourseAssignments {
   async load(): Promise<void> {
     try {
       this.items.set(await this.api.get<AssignmentView[]>(`${this.root()}/assignments`));
+      if (!this.courseName())
+        void this.api
+          .get<{ course: { subject: string; grade: string; section: string | null } }>(`${this.root()}/roster`)
+          .then((x) => {
+            this.courseName.set(x.course.subject);
+            this.courseLine.set(`${x.course.grade} · ${x.course.section ? 'Sección ' + x.course.section : 'Todo el grado'}`);
+          })
+          .catch(() => undefined);
       const open = this.openId();
       if (open) this.submissions.set((await this.api.get<{ rows: SubmissionRow[] }>(`${this.root()}/assignments/${open}/submissions`)).rows);
     } catch (error) {

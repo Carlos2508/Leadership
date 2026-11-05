@@ -7,6 +7,14 @@ import { firstValueFrom } from 'rxjs';
 export class SessionService {
   private readonly http = inject(HttpClient);
   readonly username = signal('');
+  /** Name of the person linked to the account, when there is one. */
+  readonly displayName = signal('');
+  /** Up to two initials for the avatar: person name first, otherwise the username. */
+  initials(): string {
+    const source = this.displayName() || this.username();
+    const parts = source.split(/[\s._-]+/).filter(Boolean);
+    return (this.displayName() && parts.length > 1 ? parts[0][0] + parts[1][0] : source.slice(0, 1)).toUpperCase();
+  }
   readonly state = signal<'loading' | 'ready' | 'denied' | 'error'>('loading');
   readonly token = signal('');
   readonly permissions = signal<string[]>([]);
@@ -47,12 +55,14 @@ export class SessionService {
           permissions: string[];
           twoFactorEnabled?: boolean;
           mfaPending?: string[];
+          displayName?: string | null;
         }>('/api/v1/session'),
       );
       if (this.userId() && this.userId() !== session.userId) this.token.set('');
       this.twoFactorEnabled.set(!!session.twoFactorEnabled);
       this.mfaPending.set(session.mfaPending ?? []);
       this.username.set(session.username);
+      this.displayName.set(session.displayName ?? '');
       this.userId.set(session.userId);
       this.permissions.set(session.permissions);
       this.state.set('ready');

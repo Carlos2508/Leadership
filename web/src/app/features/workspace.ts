@@ -8,6 +8,14 @@ import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
 import { CyclePipe } from '../shared/cycle.pipe';
 import { RouterLink } from '@angular/router';
+import { money } from '../core/finance-api';
+
+interface Dashboard {
+  academic: { year: string; enrolled: number; nextPeriod: string | null; recorded: number; expected: number } | null;
+  finance: { pending: number; studentsWithBalance: number; paymentsToday: number; collectedToday: number; currency: string } | null;
+  gate: { expected: number; arrived: number; inside: number; left: number } | null;
+  people: number | null;
+}
 @Component({
   imports: [Shell, Icon, RouterLink, CyclePipe],
   template: `
@@ -18,15 +26,6 @@ import { RouterLink } from '@angular/router';
           <h1>Te damos la bienvenida{{ greetingName() ? ', ' + greetingName() : '' }}.</h1>
           <p>Tu punto de encuentro con {{ school.displayName }}.</p>
         </div>
-        <form class="header-logout" action="/Identity/Account/Logout" method="post">
-          <input type="hidden" name="__RequestVerificationToken" [value]="session.token()" /><button
-            class="button outline"
-            type="submit"
-            [disabled]="!session.token()"
-          >
-            <app-icon name="logout" />Cerrar sesión
-          </button>
-        </form>
       </div>
       @if (session.state() === 'ready') {
         @if (session.mfaPending().length) {
@@ -36,6 +35,54 @@ import { RouterLink } from '@angular/router';
               <a routerLink="/workspace/security">Actívala ahora</a> para usarlas.</span
             >
           </div>
+        }
+        @if (stats(); as st) {
+          @if (st.academic || st.finance || st.gate || st.people !== null) {
+            <section class="kpi-grid" aria-label="Hoy en el colegio">
+              @if (st.gate; as g) {
+                <a class="kpi-card" routerLink="/workspace/gate/report">
+                  <span class="icon-tile mint"><app-icon name="clock" /></span>
+                  <span class="kpi-copy">
+                    <small>Entradas de hoy</small>
+                    <strong>{{ g.arrived }} <span>de {{ g.expected }}</span></strong>
+                    <em>{{ g.inside }} dentro · {{ g.left }} {{ g.left === 1 ? 'salió' : 'salieron' }}</em>
+                  </span>
+                  <span class="kpi-bar" aria-hidden="true"><span [style.width.%]="g.expected ? (g.arrived / g.expected) * 100 : 0"></span></span>
+                </a>
+              }
+              @if (st.academic; as a) {
+                <a class="kpi-card" routerLink="/workspace/enrollment">
+                  <span class="icon-tile blue"><app-icon name="school" /></span>
+                  <span class="kpi-copy">
+                    <small>Inscritos</small>
+                    <strong>{{ a.enrolled }}</strong>
+                    <em>{{ a.enrolled === 1 ? 'estudiante activo' : 'estudiantes activos' }} · {{ a.year | cycle }}</em>
+                  </span>
+                </a>
+                @if (a.nextPeriod) {
+                  <a class="kpi-card" routerLink="/workspace/grades">
+                    <span class="icon-tile gold"><app-icon name="star" /></span>
+                    <span class="kpi-copy">
+                      <small>Notas de {{ a.nextPeriod }}</small>
+                      <strong>{{ a.recorded }} <span>de {{ a.expected }}</span></strong>
+                      <em>{{ a.expected && a.recorded >= a.expected ? 'Lista para publicar' : 'registradas por docentes' }}</em>
+                    </span>
+                    <span class="kpi-bar gold" aria-hidden="true"><span [style.width.%]="a.expected ? (a.recorded / a.expected) * 100 : 0"></span></span>
+                  </a>
+                }
+              }
+              @if (st.finance; as f) {
+                <a class="kpi-card" routerLink="/workspace/finance/clearance">
+                  <span class="icon-tile" [class.red]="f.pending > 0" [class.mint]="f.pending <= 0"><app-icon name="wallet" /></span>
+                  <span class="kpi-copy">
+                    <small>Saldo pendiente</small>
+                    <strong>{{ money(f.pending, f.currency) }}</strong>
+                    <em>{{ f.studentsWithBalance }} {{ f.studentsWithBalance === 1 ? 'estudiante' : 'estudiantes' }} · hoy {{ f.paymentsToday }} {{ f.paymentsToday === 1 ? 'pago' : 'pagos' }} ({{ money(f.collectedToday, f.currency) }})</em>
+                  </span>
+                </a>
+              }
+            </section>
+          }
         }
         @if (shortcuts().length) {
           <section class="card quick-card" aria-labelledby="quick-title">
@@ -94,6 +141,8 @@ import { RouterLink } from '@angular/router';
         }
         @if (profile(); as me) {
           @if (me.person; as person) {
+            <!-- Staff-only accounts: their name is in the greeting and their work in «Mis cursos»; no empty profile card. -->
+            @if (person.studentCode || person.isGuardian) {
             <section class="card my-profile" aria-labelledby="my-profile-title">
               <div class="card-heading">
                 <div>
@@ -117,7 +166,9 @@ import { RouterLink } from '@angular/router';
                 </p>
               }
               @if (person.studentCode) {
-                <a class="text-button" [routerLink]="['/workspace/my/students', person.id]">Ver mi ficha</a>
+                <a class="button compact-button profile-cta" [routerLink]="['/workspace/my/students', person.id]"
+                  ><app-icon name="book" />Ver mis notas, tareas y asistencia</a
+                >
               }
               @if (person.isGuardian) {
                 <h3 class="subheading">{{ school.terms.studentPlural }} a tu cargo</h3>
@@ -151,11 +202,14 @@ import { RouterLink } from '@angular/router';
                   </p>
                 }
               }
-              <p class="muted-copy">
-                Abre cada ficha para ver calificaciones publicadas, tareas y estado de cuenta según
-                lo que el colegio haya habilitado.
-              </p>
+              @if (person.isGuardian && me.students.length) {
+                <p class="muted-copy">
+                  Abre cada ficha para ver calificaciones publicadas, tareas y estado de cuenta según
+                  lo que el colegio haya habilitado.
+                </p>
+              }
             </section>
+            }
           }
           @if (myCourses().length) {
             <section class="card my-profile" aria-labelledby="my-courses-title">
@@ -166,7 +220,7 @@ import { RouterLink } from '@angular/router';
                 </div>
                 <app-icon name="book" />
               </div>
-              <ul class="payment-list">
+              <ul class="payment-list course-rows">
                 @for (course of myCourses(); track course.id) {
                   <li>
                     <span class="person-copy"
@@ -176,21 +230,30 @@ import { RouterLink } from '@angular/router';
                         estudiantes</small
                       ></span
                     >
-                    <a class="text-button" [routerLink]="['/workspace/courses', course.id]"
-                      >Ver lista <span class="sr-only">de {{ course.subject }}</span></a
-                    >
-                    <a class="text-button" [routerLink]="['/workspace/courses', course.id, 'attendance']"
-                      >Asistencia <span class="sr-only">de {{ course.subject }}</span></a
-                    >
-                    <a class="text-button" [routerLink]="['/workspace/courses', course.id, 'assignments']"
-                      >Actividades <span class="sr-only">de {{ course.subject }}</span></a
-                    >
-                    <a class="text-button" [routerLink]="['/workspace/courses', course.id, 'grades']"
-                      >Libreta <span class="sr-only">de {{ course.subject }}</span></a
-                    >
+<span class="course-actions">
+                      <a class="button outline compact-button" [routerLink]="['/workspace/courses', course.id]"
+                        ><app-icon name="people" />Ver lista <span class="sr-only">de {{ course.subject }}</span></a
+                      >
+                      <a class="button outline compact-button" [routerLink]="['/workspace/courses', course.id, 'attendance']"
+                        ><app-icon name="check" />Asistencia <span class="sr-only">de {{ course.subject }}</span></a
+                      >
+                      <a class="button outline compact-button" [routerLink]="['/workspace/courses', course.id, 'assignments']"
+                        ><app-icon name="book" />Actividades <span class="sr-only">de {{ course.subject }}</span></a
+                      >
+                      <a class="button compact-button" [routerLink]="['/workspace/courses', course.id, 'grades']"
+                        ><app-icon name="star" />Libreta <span class="sr-only">de {{ course.subject }}</span></a
+                      >
+                    </span>
                   </li>
                 }
               </ul>
+            </section>
+          }
+          @if (me.person?.isStaff && !myCourses().length && !shortcuts().length) {
+            <section class="workspace-welcome card">
+              <div class="icon-tile purple"><app-icon name="book" /></div>
+              <h2>Aún no tienes cursos asignados</h2>
+              <p>Cuando coordinación académica te asigne un curso, aquí verás su lista, asistencia, actividades y libreta.</p>
             </section>
           }
         } @else if (profileError()) {
@@ -252,19 +315,28 @@ export class Workspace {
       { permission: 'academic.read', link: '/workspace/courses', icon: 'book', tone: 'purple', label: 'Cursos y docentes', description: 'Materias, listas y asignaciones' },
       { permission: 'academic.read', link: '/workspace/grades', icon: 'star', tone: 'gold', label: 'Publicación de notas', description: 'Avance y publicación por período' },
       { permission: 'finance.read', link: '/workspace/finance', icon: 'wallet', tone: 'mint', label: 'Caja y finanzas', description: 'Cobros, recibos y solvencia' },
-      { permission: 'accounts.manage', link: '/workspace/access', icon: 'shield', tone: 'blue', label: 'Administrar cuentas', description: 'Invitaciones, perfiles y accesos' },
+      { permission: 'attendance.gate', link: '/workspace/gate', icon: 'scan', tone: 'mint', label: 'Lector de entrada', description: 'Marca entradas y salidas con carnet' },
+      { permission: 'attendance.read', link: '/workspace/gate/report', icon: 'clock', tone: 'blue', label: 'Entradas y salidas', description: 'Reporte del día e historial' },
+      { permission: 'accounts.manage', link: '/workspace/access', icon: 'key', tone: 'gold', label: 'Administrar cuentas', description: 'Invitaciones, perfiles y accesos' },
       { permission: 'audit.read', link: '/workspace/audit', icon: 'chart', tone: 'purple', label: 'Consultar auditoría', description: 'Registro de cambios sensibles' },
     ].filter((x) => this.session.can(x.permission)),
   );
   readonly facultyLabels = facultyLabels;
   readonly relationshipLabels = relationshipLabels;
+  readonly stats = signal<Dashboard | null>(null);
   constructor() {
     void this.loadProfile();
+  }
+  money(value: number, currency: string): string {
+    return money(value, currency, this.school.locale.culture);
   }
   async loadProfile(): Promise<void> {
     if (this.session.state() !== 'ready') return;
     try {
       void this.api.get<FeedItem[]>('/api/v1/me/announcements').then((x) => this.feed.set(x)).catch(() => undefined);
+      // Figures only appear for staff with read permissions; the server returns null sections otherwise.
+      if (this.session.permissions().length)
+        void this.api.get<Dashboard>('/api/v1/dashboard').then((x) => this.stats.set(x)).catch(() => undefined);
       const profile = await this.api.get<MyProfile>('/api/v1/me');
       this.profile.set(profile);
       if (profile.person?.isStaff) this.myCourses.set(await this.api.get('/api/v1/me/courses'));

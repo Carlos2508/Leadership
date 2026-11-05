@@ -70,7 +70,7 @@ import { Icon } from '../shared/icon';
           </div>
         } @else if (report(); as r) {
           <div class="preview-summary" aria-live="polite">
-            <span class="summary-clear"><strong>{{ r.clear }}</strong> solventes</span>
+            <span class="summary-clear"><strong>{{ r.clear }}</strong> {{ r.clear === 1 ? "solvente" : "solventes" }}</span>
             <span class="summary-blocked"><strong>{{ r.blocked }}</strong> con saldo pendiente</span>
             <span><strong>{{ r.pendingSetup }}</strong> con configuración incompleta</span>
           </div>

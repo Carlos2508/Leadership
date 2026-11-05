@@ -170,3 +170,7 @@ Cerrado en código en el undécimo incremento descrito al inicio. Sustituye la l
 ## Recorrido QA desde base vacía (2026-11-05)
 
 Ver `docs/QA_DESDE_CERO_2026-11-05.md`. La base `SchoolPlatform_Development` se reinició (respaldo verificado previo) y contiene **solo datos ficticios del recorrido** (cuentas `qa-*`, credenciales DPAPI en `.local/qa/`). Flujos recorridos de punta a punta: ciclo/bimestres, materias/cursos, personas/vínculos/facultades, matrícula con cupo, cargos con vista previa, libreta (pegado, Enter, autoguardado), publicación con corte, retención por solvencia, pagos/reversión/recibos, tareas, asistencia, avisos, carnets y portería, permisos por rol y vista móvil. Incidencias QA-001 a QA-005 corregidas. Evidencias en `.local/qa/evidencia/` (Playwright vacía `web/test-results/`). Pendiente físico: impresión real de carnets, lectores USB/cámara, teléfono emparejado con HTTPS, activación de cuentas por navegador.
+
+## Ronda UI/UX (2026-11-05, posterior al recorrido QA)
+
+15 mejoras documentadas en `docs/QA_DESDE_CERO_2026-11-05.md` (UX-01…UX-15). Nuevo `GET /api/v1/dashboard` (`Common/DashboardEndpoints.cs`): cifras del día por permiso de lectura, sin caché. `/api/v1/session` devuelve `displayName` de la persona vinculada. Auditoría: áreas `changes` (predeterminada en la UI) y `gate`. Pendiente sugerido: búsqueda global de personas desde la barra superior, notificaciones externas (requieren proveedor y consentimiento), modo kiosco a pantalla completa para la portería.

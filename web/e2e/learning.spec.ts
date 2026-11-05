@@ -87,7 +87,7 @@ test('teacher publishes an activity, the student submits and receives feedback',
   await expectAccessible(teacherPage);
 
   const studentPage = await activate(browser, origin, studentInvite.code, 'stu-' + s.toLowerCase(), password);
-  await studentPage.getByRole('link', { name: 'Ver mi ficha' }).click();
+  await studentPage.getByRole('link', { name: 'Ver mis notas, tareas y asistencia' }).click();
   await expect(studentPage.getByRole('heading', { name: 'Tareas' })).toBeVisible();
   await studentPage.getByRole('button', { name: `Entregar ${title}` }).click();
   await studentPage.getByRole('dialog').getByLabel('Tu entrega').fill('El capítulo describe el viaje del protagonista.');

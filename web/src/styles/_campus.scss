@@ -353,6 +353,8 @@ h2 {
   padding: 28px 20px 22px;
   background: var(--deep);
   color: #d5e7dc;
+  overscroll-behavior: contain;
+  scrollbar-color: #ffffff2e transparent;
 }
 .sidebar .brand {
   color: white;

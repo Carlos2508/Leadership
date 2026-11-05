@@ -206,6 +206,7 @@ SchoolPlatform.Host.Attendance.AttendanceEndpoints.MapAttendance(app);
 SchoolPlatform.Host.Communication.CommunicationEndpoints.MapCommunication(app);
 SchoolPlatform.Host.Documents.DocumentEndpoints.MapDocuments(app);
 SchoolPlatform.Host.Gate.GateEndpoints.MapGate(app);
+SchoolPlatform.Host.Common.DashboardEndpoints.MapDashboard(app);
 app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
 app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
@@ -230,7 +231,7 @@ app.MapGet("/api/v1/bootstrap", (IOptions<InstitutionOptions> options, IWebHostE
     });
 }).AllowAnonymous();
 app.MapGet("/api/v1/session", async (ClaimsPrincipal user, IOptions<InstitutionOptions> options, IdentityDbContext db,
-    MfaService mfa, CancellationToken ct) =>
+    SchoolDbContext school, MfaService mfa, CancellationToken ct) =>
 {
     var userId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
     var permissions = await db.AccountPermissions.AsNoTracking().Where(x => x.UserId == userId)
@@ -238,9 +239,13 @@ app.MapGet("/api/v1/session", async (ClaimsPrincipal user, IOptions<InstitutionO
     var twoFactor = await db.Users.AsNoTracking().Where(x => x.Id == userId).Select(x => x.TwoFactorEnabled).SingleAsync(ct);
     // Permissions that stay unusable until two-step verification is enabled, so the UI can explain instead of failing.
     var mfaPending = twoFactor ? [] : await mfa.RequiredByAsync(userId, ct);
+    // Name of the linked person (if any) for the avatar and greeting; accounts without a person show their username.
+    var person = await school.AccountLinks.AsNoTracking().Where(x => x.UserId == userId && x.UnlinkedAt == null)
+        .Join(school.Persons, l => l.PersonId, p => p.Id, (l, p) => new { p.GivenNames, p.FamilyNames, p.PreferredName }).FirstOrDefaultAsync(ct);
     return Results.Ok(new
     {
         userId, username = user.Identity!.Name, schoolId = options.Value.SchoolId,
+        displayName = person is null ? null : SchoolPlatform.Host.People.PeopleService.Display(person.GivenNames, person.FamilyNames, person.PreferredName),
         permissions = permissions.Except(mfaPending).ToArray(), twoFactorEnabled = twoFactor, mfaPending
     });
 })

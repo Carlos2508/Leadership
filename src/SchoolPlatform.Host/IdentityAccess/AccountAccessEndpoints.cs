@@ -71,8 +71,13 @@ public static class AccountAccessEndpoints
                 "access" => [],
                 _ => null
             };
-            if (area is not (null or "" or "all" or "people" or "academic" or "finance" or "communication" or "access")) return Results.BadRequest();
+            if (area is not (null or "" or "all" or "changes" or "people" or "academic" or "finance" or "communication" or "access" or "gate"))
+                return Results.BadRequest();
             var query = db.AuditEvents.AsNoTracking();
+            // "changes": everything except routine sign-ins/sign-outs; "gate": ID cards, photos, gate marks and scanner devices.
+            if (area == "changes") query = query.Where(x => !x.Action.StartsWith("Login") && x.Action != "Logout");
+            if (area == "gate")
+                query = query.Where(x => x.Action.StartsWith("Gate") || x.Action.StartsWith("StudentCard") || x.Action.StartsWith("PersonPhoto"));
             if (types is { Length: 0 }) query = query.Where(x => x.TargetType == null);
             else if (types is not null) query = query.Where(x => x.TargetType != null && types.Contains(x.TargetType));
             var total = await query.CountAsync(ct);

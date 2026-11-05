@@ -94,4 +94,11 @@ export class AccessApi {
       timeZone: this.school.locale.timeZone,
     }).format(new Date(value));
   }
+  /** Time of day only, in the school's time zone (for lists already grouped by date). */
+  time(value: string | null): string {
+    if (!value) return '—';
+    return new Intl.DateTimeFormat(this.school.locale.culture, { timeStyle: 'short', timeZone: this.school.locale.timeZone }).format(
+      new Date(value),
+    );
+  }
 }

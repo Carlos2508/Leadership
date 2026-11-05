@@ -64,17 +64,6 @@ interface StudentTask {
         </div>
         <div class="detail-grid">
           <div class="detail-main">
-            @if (v.isSelf || v.faculties.includes('AcademicRecords')) {
-              <section class="card detail-card" aria-labelledby="gate-title">
-                <h2 id="gate-title">Entradas y salidas</h2><p class="muted-copy">Días con marcas en los últimos 45 días.</p>
-                @if (gateError()) { <p class="feedback error-feedback" role="alert">{{ gateError() }} <button class="text-button" (click)="loadGate()">Reintentar</button></p> }
-                @else if (gateDays(); as days) {
-                  <ul class="payment-list">@for (day of days; track day.date) {
-                    <li><span class="person-copy"><strong>{{ date(day.date) }}</strong><small>Entrada: {{ api.date(day.firstIn) }}</small><small>Salida: {{ api.date(day.lastOut) }}</small></span><span>{{ day.marks }} {{ day.marks === 1 ? 'marca' : 'marcas' }}</span></li>
-                  } @empty { <li>Aún no hay entradas o salidas registradas en este período.</li> }</ul>
-                } @else { <p role="status">Cargando entradas y salidas…</p> }
-              </section>
-            }
             <section class="card detail-card" aria-labelledby="grades-title">
               <div class="card-title-row">
                 <h2 id="grades-title">Calificaciones</h2>
@@ -182,6 +171,19 @@ interface StudentTask {
                 <p class="loading-state" role="status">Cargando tareas…</p>
               }
             </section>
+          </div>
+          <aside class="detail-side">
+            @if (v.isSelf || v.faculties.includes('AcademicRecords')) {
+              <section class="card detail-card" aria-labelledby="gate-title">
+                <h2 id="gate-title">Entradas y salidas</h2><p class="muted-copy">Días con marcas en los últimos 45 días.</p>
+                @if (gateError()) { <p class="feedback error-feedback" role="alert">{{ gateError() }} <button class="text-button" (click)="loadGate()">Reintentar</button></p> }
+                @else if (gateDays(); as days) {
+                  <ul class="payment-list">@for (day of days; track day.date) {
+                    <li><span class="person-copy"><strong>{{ date(day.date) }}</strong><small>Entrada {{ api.time(day.firstIn) }} · Salida {{ api.time(day.lastOut) }}</small></span><span>{{ day.marks }} {{ day.marks === 1 ? 'marca' : 'marcas' }}</span></li>
+                  } @empty { <li>Aún no hay entradas o salidas registradas en este período.</li> }</ul>
+                } @else { <p role="status">Cargando entradas y salidas…</p> }
+              </section>
+            }
             <section class="card detail-card" aria-labelledby="attendance-title">
               <h2 id="attendance-title">Asistencia</h2>
               @if (attendance(); as a) {
@@ -269,8 +271,6 @@ interface StudentTask {
                 <p class="loading-state" role="status">Cargando estado de cuenta…</p>
               }
             </section>
-          </div>
-          <aside class="detail-side">
             @if (!v.isSelf) {
               <section class="card detail-card" aria-labelledby="faculties-title">
                 <h2 id="faculties-title">Lo que puedes hacer</h2>

@@ -190,3 +190,27 @@ Capturas regeneradas: `14-porteria-lector.png`, `15-porteria-reporte.png`, `22-f
 - Imprimir carnets al 100 % y leerlos con lector USB y cámara reales; emparejar un teléfono físico con HTTPS.
 - Activación de cuentas por navegador con código (se usó consola en este recorrido).
 - Textos institucionales del reverso del carnet, condición de licencia QuestPDF, tiempos de portería y políticas pendientes (promedios, redondeo, acceso financiero del estudiante).
+
+## Ronda de UI/UX posterior al recorrido
+
+Revisión pantalla por pantalla (22 rutas de administración, docente, estudiante y familia; 1440 px y 390 px). Capturas en `.local/qa/ux/`.
+
+| # | Hallazgo | Cambio |
+| --- | --- | --- |
+| UX-01 | El inicio de administración solo tenía accesos; no mostraba el estado del día | Panel «Hoy en el colegio» (`GET /api/v1/dashboard`): entradas de hoy, inscritos, avance de notas del próximo período y saldo pendiente con pagos del día. Cada sección solo se calcula con su permiso de lectura (`attendance.read`, `academic.read`, `finance.read`, `people.read`); portería básica y familias no reciben cifras |
+| UX-02 | Sin accesos rápidos de portería; íconos repetidos (escudo) en el menú | Accesos «Lector de entrada» y «Entradas y salidas»; íconos propios (lector, reloj, teléfono, llave) |
+| UX-03 | Móvil: botón «Cerrar sesión» duplicado arriba del inicio y accesos en una sola columna muy larga | Cierre de sesión solo en el menú; accesos en dos columnas compactas |
+| UX-04 | Lector de portería: resultado en texto plano | Tarjeta grande por resultado (verde entrada, azul salida, ámbar repetida, rojo no reconocido/reemplazado/sin inscripción), foto o iniciales, hora destacada y tono audible corto; contraste AA |
+| UX-05 | Reporte de portería: resumen en texto, fecha+hora repetidas, sin exportación | Filtros por estado con conteos (Todos/Dentro/Salieron/Sin marcas), estados con color, solo hora en filas del día, carga al cambiar fecha y **Exportar CSV** (UTF-8 con BOM para Excel) |
+| UX-06 | Auditoría: acciones de carnets/portería sin nombre («Operación registrada») y fechas ISO crudas; inundada de ingresos de sesión | Etiquetas para carnets, fotos, marcas y teléfonos; fechas en zona del colegio; área nueva «Carnets y portería» y vista predeterminada **«Cambios (sin ingresos de sesión)»** |
+| UX-07 | Asistencia por curso: sin cambio rápido de día ni «todos presentes»; resumen confuso («· registrada») | Botones día anterior/siguiente (saltan fines de semana), «Todos presentes», estado Registrada/Sin registrar y conteo de presentes |
+| UX-08 | Actividades: el título no decía de qué curso | Título con la materia y grado/sección |
+| UX-09 | Caja vacía al entrar | «Recibos de hoy» con total vigente, revertidos tachados y acceso al recibo |
+| UX-10 | Solvencia: «1 solventes» | Plural correcto |
+| UX-11 | Avatar con la inicial del usuario («Q» para todos) | Iniciales de la persona vinculada (la sesión devuelve `displayName`); título con nombre y usuario |
+| UX-12 | Docente: tarjeta «Tu ficha» vacía con texto de familias; acciones de cursos como enlaces pequeños | Sin tarjeta vacía para personal; acciones de curso como botones con ícono; aviso si aún no tiene cursos |
+| UX-13 | Estudiante: «Ver mi ficha» poco visible y texto sobre estado de cuenta que no le aplica | Botón «Ver mis notas, tareas y asistencia»; texto de facultades solo para encargados |
+| UX-14 | Ficha del estudiante: columna derecha vacía y portería antes que las notas | Calificaciones y tareas a la izquierda; entradas/salidas, asistencia, inscripción y estado de cuenta a la derecha; horas sin fecha repetida |
+| UX-15 | Teléfonos lectores: botón «Revocar <nombre>» largo; «Última conexión: —» | «Revocar» (nombre accesible conservado) y «Aún no se ha conectado» |
+
+Comprobado: la barra lateral ya desplaza en pantallas bajas (`overflow-y: auto`), se añadió contención del desplazamiento. Prueba nueva `GateSqlTests.Home_figures_follow_permissions_and_audit_can_hide_sign_ins`.

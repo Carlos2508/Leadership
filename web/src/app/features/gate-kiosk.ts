@@ -19,13 +19,27 @@ import { GateEvent, GateStudent, ScanResult, directionLabel } from '../core/gate
         </form>
         <p class="muted-copy">En automático, una segunda lectura solo registra salida tras la estancia mínima configurada por el colegio.</p>
         @if (result(); as r) {
-          <div class="feedback" [class.success-feedback]="r.outcome === 'Recorded'" role="status">
-            <strong>{{ r.message }}</strong>
-            @if (r.student; as s) {
-              <p>{{ s.name }} · {{ s.code }} · {{ s.placement }}</p>
-              @if (s.hasPhoto) { <img class="gate-photo" [src]="'/api/v1/people/' + s.id + '/photo'" alt="Foto del estudiante" /> }
+          <div class="gate-result" [attr.data-outcome]="r.outcome" [attr.data-direction]="r.direction" role="status">
+            <div class="gate-result-photo" aria-hidden="true">
+              @if (r.student?.hasPhoto) {
+                <img [src]="'/api/v1/people/' + r.student!.id + '/photo'" alt="" />
+              } @else {
+                <span>{{ initials(r.student?.name) }}</span>
+              }
+            </div>
+            <div class="gate-result-body">
+              <span class="gate-result-badge">{{ badge(r) }}</span>
+              <strong class="gate-result-message">{{ r.message }}</strong>
+              @if (r.student; as st) {
+                <p class="gate-result-name">{{ st.name }}</p>
+                <p class="gate-result-meta">{{ st.code }} · {{ st.placement || 'Sin inscripción vigente' }}</p>
+              }
+            </div>
+            @if (r.at) {
+              <div class="gate-result-time">
+                <small>{{ r.outcome === 'Duplicate' ? 'Marcada a las' : 'Hora' }}</small><strong>{{ api.time(r.at) }}</strong>
+              </div>
             }
-            @if (r.at) { <p>{{ api.date(r.at) }}</p> }
           </div>
         }
       </section>
@@ -41,7 +55,7 @@ import { GateEvent, GateStudent, ScanResult, directionLabel } from '../core/gate
       <section class="card detail-card" aria-labelledby="recent-title">
         <div class="card-title-row"><h2 id="recent-title">Últimas marcas de hoy</h2><button class="text-button" (click)="refresh()" [disabled]="busy()">Actualizar</button></div>
         <ul class="payment-list">@for (mark of recent(); track mark.id) {
-          <li><span class="person-copy"><strong>{{ mark.studentName }}</strong><small>{{ mark.studentCode }} · {{ api.date(mark.occurredAt) }}</small></span><span>{{ direction(mark.direction) }}{{ mark.voided ? ' anulada' : '' }}</span></li>
+          <li><span class="person-copy"><strong>{{ mark.studentName }}</strong><small>{{ mark.studentCode }} · {{ api.time(mark.occurredAt) }}</small></span><span>{{ direction(mark.direction) }}{{ mark.voided ? ' anulada' : '' }}</span></li>
         } @empty { <li>Aún no hay marcas hoy.</li> }</ul>
       </section>
       <dialog #manualDialog class="access-dialog" aria-labelledby="manual-dialog-title" (cancel)="cancel($event)">
@@ -75,10 +89,42 @@ export class GateKiosk implements OnDestroy {
   async scan(): Promise<void> {
     if (this.busy() || !this.code.trim()) return;
     this.busy.set(true); this.error.set(''); this.result.set(null);
-    try { this.result.set(await this.api.post('/api/v1/gate/scan', { code: this.code, mode: this.mode })); this.code = ''; await this.refresh(); }
+    try {
+      const result = await this.api.post<ScanResult>('/api/v1/gate/scan', { code: this.code, mode: this.mode });
+      this.result.set(result); this.code = ''; this.beep(result.outcome); await this.refresh();
+    }
     catch (e) { this.error.set(this.api.message(e)); }
     finally { this.busy.set(false); this.focus(); }
   }
+  badge(r: ScanResult): string {
+    if (r.outcome === 'Recorded') return r.direction === 'Out' ? 'Salida' : 'Entrada';
+    return ({ Duplicate: 'Lectura repetida', Unknown: 'No reconocido', Revoked: 'Carnet reemplazado', NotEnrolled: 'Sin inscripción' } as Record<string, string>)[r.outcome] ?? r.outcome;
+  }
+  initials(name?: string): string {
+    return (name ?? '?').split(' ').filter(Boolean).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
+  }
+  /** Short audible confirmation for the gate operator: one high tone when marked, two low tones otherwise. */
+  private beep(outcome: string): void {
+    try {
+      const AudioCtx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      this.audio ??= new AudioCtx();
+      const ok = outcome === 'Recorded';
+      (ok ? [0] : [0, 0.18]).forEach((delay) => {
+        const osc = this.audio!.createOscillator();
+        const gain = this.audio!.createGain();
+        osc.frequency.value = ok ? 880 : 330;
+        gain.gain.value = 0.08;
+        osc.connect(gain).connect(this.audio!.destination);
+        const at = this.audio!.currentTime + delay;
+        osc.start(at);
+        osc.stop(at + 0.12);
+      });
+    } catch {
+      /* sound is optional */
+    }
+  }
+  private audio?: AudioContext;
   async search(): Promise<void> {
     if (this.busy() || this.query.trim().length < 2) return;
     this.busy.set(true); this.error.set('');

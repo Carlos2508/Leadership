@@ -169,6 +169,31 @@
       <h2>Selecciona un estudiante</h2>
       <p>Busca por nombre o código para ver su estado de cuenta.</p>
     </section>
+    <section class="card detail-card" aria-labelledby="today-title">
+      <div class="card-title-row">
+        <h2 id="today-title">Recibos de hoy</h2>
+        @if (today().length) {
+          <span class="pill mint">Total {{ money(todayTotal()) }}</span>
+        }
+      </div>
+      @if (today().length) {
+        <ul class="payment-list">
+          @for (payment of today(); track payment.id) {
+            <li [class.reversed]="payment.reversed">
+              <span class="person-copy"
+                ><strong>No. {{ payment.receiptNumber }} · {{ money(payment.amount) }}</strong
+                ><small>{{ payment.payerName }} · {{ methodLabels[payment.method] ?? payment.method }}{{ payment.reversed ? ' · Revertido' : '' }}</small></span
+              >
+              <a class="text-button" [routerLink]="['/workspace/finance/receipts', payment.id]"
+                >Ver recibo <span class="sr-only">{{ payment.receiptNumber }}</span></a
+              >
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="empty-inline">Aún no hay pagos registrados hoy.</p>
+      }
+    </section>
   }
 
   <dialog #cashDialog class="account-dialog wide-dialog" (cancel)="onCancel($event)" aria-labelledby="cash-dialog-title">

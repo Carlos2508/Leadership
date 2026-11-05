@@ -69,9 +69,9 @@ import { SessionService } from '../core/session';
           }
           @if (!preview() && (session.can('attendance.gate') || session.can('attendance.read') || session.can('attendance.manage'))) {
             <span class="nav-group" aria-hidden="true">Portería</span>
-            @if (session.can('attendance.gate')) { <a routerLink="/workspace/gate" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="shield" />Lector de entrada</a> }
-            @if (session.can('attendance.read')) { <a routerLink="/workspace/gate/report" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="calendar" />Entradas y salidas</a> }
-            @if (session.can('attendance.manage')) { <a routerLink="/workspace/gate/devices" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="shield" />Teléfonos lectores</a> }
+            @if (session.can('attendance.gate')) { <a routerLink="/workspace/gate" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="scan" />Lector de entrada</a> }
+            @if (session.can('attendance.read')) { <a routerLink="/workspace/gate/report" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="clock" />Entradas y salidas</a> }
+            @if (session.can('attendance.manage')) { <a routerLink="/workspace/gate/devices" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="phone" />Teléfonos lectores</a> }
           }
           @if (!preview() && session.can('finance.read')) {
             <span class="nav-group" aria-hidden="true">Finanzas</span>
@@ -84,7 +84,7 @@ import { SessionService } from '../core/session';
           }
           @if (!preview() && session.can('accounts.manage')) {
             <a routerLink="/workspace/access" routerLinkActive="active" ariaCurrentWhenActive="page"
-              ><app-icon name="shield" />Cuentas y accesos</a
+              ><app-icon name="key" />Cuentas y accesos</a
             >
           }
           @if (!preview() && session.can('audit.read')) {
@@ -141,9 +141,13 @@ import { SessionService } from '../core/session';
             @if (preview()) {
               <span class="avatar">D</span>
             } @else {
-              <a class="avatar avatar-link" routerLink="/workspace/security" [attr.aria-label]="'Mi seguridad: ' + session.username()">{{
-                (session.username() || school.shortName).slice(0, 1).toUpperCase()
-              }}</a>
+              <a
+                class="avatar avatar-link"
+                routerLink="/workspace/security"
+                [attr.aria-label]="'Mi seguridad: ' + (session.displayName() || session.username())"
+                [attr.title]="session.displayName() ? session.displayName() + ' · ' + session.username() : session.username()"
+                >{{ session.initials() || school.shortName.slice(0, 1) }}</a
+              >
             }
           </div>
         </header>

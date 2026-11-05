@@ -5,6 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi } from '../core/access-api';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
+import { PluralPipe } from '../shared/plural.pipe';
 
 interface AssignmentView {
   id: string;
@@ -29,13 +30,14 @@ interface SubmissionRow {
   status: 'Submitted' | 'Reviewed' | null;
   feedback: string | null;
   version: string | null;
+  files: { id: string; fileName: string; size: number }[] | null;
 }
 
 const statusLabels = { Draft: 'Borrador', Published: 'Publicada', Closed: 'Cerrada' } as const;
 
 /** Course activities for the assigned teacher (and academic staff): create, publish, close and review text submissions. */
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink],
+  imports: [Shell, Icon, FormsModule, RouterLink, PluralPipe],
   template: `
     <app-shell title="Actividades del curso">
       <a class="back-link" [routerLink]="['/workspace/courses', id()]"><app-icon name="arrow" />Volver a la lista</a>
@@ -74,7 +76,7 @@ const statusLabels = { Draft: 'Borrador', Published: 'Publicada', Closed: 'Cerra
               }
               <div class="inline-actions">
                 @if (item.status !== 'Draft') {
-                  <span class="muted-copy">{{ item.submitted }} de {{ item.recipients }} entregas</span>
+                  <span class="muted-copy">{{ item.submitted }} de {{ item.recipients | plural: 'entrega' : 'entregas' }}</span>
                   <button class="text-button" (click)="toggle(item)">
                     {{ openId() === item.id ? 'Ocultar entregas' : 'Ver entregas' }} <span class="sr-only">de {{ item.title }}</span>
                   </button>
@@ -105,6 +107,11 @@ const statusLabels = { Draft: 'Borrador', Published: 'Publicada', Closed: 'Cerra
                         >
                         @if (row.text) {
                           <span class="assignment-text">{{ row.text }}</span>
+                        }
+                        @for (file of row.files ?? []; track file.id) {
+                          <a class="file-link" [href]="'/api/v1/files/' + file.id" download
+                            ><app-icon name="receipt" />{{ file.fileName }} <small>({{ api.size(file.size) }})</small></a
+                          >
                         }
                         @if (row.feedback) {
                           <small class="feedback-note">Retroalimentación: {{ row.feedback }}</small>

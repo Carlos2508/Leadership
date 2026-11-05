@@ -96,7 +96,7 @@
                     <span class="person-copy"
                       ><strong>{{ charge.description }}</strong
                       ><small
-                        >Ciclo {{ charge.year }}{{ charge.countsForClearance ? ' · cuenta para solvencia' : '' }}</small
+                        >{{ charge.year | cycle }}{{ charge.countsForClearance ? ' · cuenta para solvencia' : '' }}</small
                       ></span
                     >
                   </td>

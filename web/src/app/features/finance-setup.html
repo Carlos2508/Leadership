@@ -143,7 +143,7 @@
               </div>
               <div class="inline-actions">
                 <button class="button" (click)="confirm()" [disabled]="busy() || p.toCreate === 0">
-                  {{ busy() ? 'Emitiendo…' : 'Confirmar emisión de ' + p.toCreate + ' cargos' }}
+                  {{ busy() ? 'Emitiendo…' : 'Confirmar emisión de ' + (p.toCreate | plural: 'cargo' : 'cargos') }}
                 </button>
               </div>
             } @else {
@@ -193,7 +193,7 @@
               <li>
                 <span class="period-number">{{ period.sequence }}</span>
                 <span class="period-copy"
-                  ><strong>{{ period.label }}</strong><small>Vence {{ date(period.dueOn) }} · {{ period.charges }} cargos</small></span
+                  ><strong>{{ period.label }}</strong><small>Vence {{ date(period.dueOn) }} · {{ period.charges | plural: 'cargo' : 'cargos' }}</small></span
                 >
                 @if (canEdit()) {
                   <button class="text-button" (click)="openPeriod(period)">Editar <span class="sr-only">{{ period.label }}</span></button>

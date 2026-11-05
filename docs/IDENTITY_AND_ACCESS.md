@@ -82,6 +82,14 @@ EF impide modificar/eliminar eventos y un trigger SQL bloquea UPDATE/DELETE incl
 
 Las respuestas de cuentas no incluyen hashes ni códigos en claro. El único retorno con secreto es la creación/emisión autorizada de un código. Las páginas Identity y API mantienen `no-store`; las páginas Identity tienen límite por IP. No hay endpoints públicos de creación arbitraria de usuarios.
 
+## Verificación en dos pasos (implementada)
+
+- Autoservicio en `/workspace/security`: QR (SVG generado por el servidor con QRCoder, sin servicios externos) y clave manual, confirmación con un código TOTP, 10 códigos de respaldo mostrados una sola vez, regeneración y desactivación con código vigente.
+- Ingreso: tras la contraseña, una cuenta con MFA recibe solo la cookie de segundo paso y pasa por `/Identity/Account/LoginWith2fa` (código de la aplicación o de respaldo, con bloqueo por intentos). Una cuenta marcada con MFA pero sin autenticador es rechazada (Identity omitiría el segundo paso).
+- Gestor: «Restablecer verificación en dos pasos» en `/workspace/access` tras verificar al titular; cierra sus sesiones.
+- `AccountAccess:RequireMfaForPermissions`: permisos que solo funcionan con MFA activo (verificado en `PermissionHandler`); `/api/v1/session` devuelve `mfaPending` y el inicio muestra el aviso. Quien tiene un permiso que lo exige no puede desactivar su MFA.
+- Auditoría: `MfaEnabled`, `MfaDisabled`, `MfaRecoveryCodesRegenerated`, `MfaReset`, `LoginSecondFactorRequired`, `LoginSecondFactorFailed`, `LoginRecoveryCodeUsed`.
+
 ## Pendiente
 
-MFA con alta y challenge para operadores sensibles, ciclo formal de revisión de acceso/retención, permisos sobre expedientes reales y despliegue/operación de producción. Una cuenta que tenga `TwoFactorEnabled` no se autentica por el formulario simple mientras no exista el desafío; no se omite el segundo factor. No activar MFA manualmente en SQL para intentar probar una UI que aún no existe.
+Ciclo formal de revisión de acceso/retención, permisos sobre expedientes reales y despliegue/operación de producción. Una cuenta que tenga `TwoFactorEnabled` no se autentica por el formulario simple mientras no exista el desafío; no se omite el segundo factor. No activar MFA manualmente en SQL para intentar probar una UI que aún no existe.

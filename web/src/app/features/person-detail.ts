@@ -22,6 +22,8 @@ import {
 import { EnrollmentHistory, enrollmentStatusLabels } from '../core/academic-api';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
+import { CyclePipe } from '../shared/cycle.pipe';
+import { PersonCard } from './person-card';
 
 type DialogMode =
   | 'edit'
@@ -35,7 +37,7 @@ type DialogMode =
   | 'status';
 
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink, NgTemplateOutlet],
+  imports: [Shell, Icon, FormsModule, RouterLink, NgTemplateOutlet, CyclePipe, PersonCard],
   templateUrl: './person-detail.html',
 })
 export class PersonDetail {

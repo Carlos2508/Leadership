@@ -238,7 +238,8 @@
         ><input name="address" [(ngModel)]="form.address" maxlength="200" autocomplete="off"
       /></label>
       <fieldset class="choice-group">
-        <legend>Perfiles escolares</legend>
+        <legend>Perfiles escolares (opcionales)</legend>
+        <p class="muted-copy">Para registrar personal, deja estas opciones sin marcar y agrega el perfil de personal desde su ficha.</p>
         <label class="checkbox-field"
           ><input type="checkbox" name="isStudent" [(ngModel)]="form.isStudent" /><span
             >Estudiante</span

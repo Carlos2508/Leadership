@@ -8,6 +8,8 @@ import { facultyLabels, formatDateOnly, relationshipLabels } from '../core/peopl
 import { Statement, chargeStatusLabels, methodLabels, money } from '../core/finance-api';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
+import { CyclePipe } from '../shared/cycle.pipe';
+import { MyGateDay } from '../core/gate-api';
 
 interface StudentAccessView {
   student: { id: string; displayName: string; studentCode: string; relationship: string };
@@ -35,7 +37,7 @@ interface StudentTask {
 
 /** Self-service view of one student for the student or a linked guardian; each section depends on a faculty. */
 @Component({
-  imports: [Shell, Icon, RouterLink, FormsModule],
+  imports: [Shell, Icon, RouterLink, FormsModule, CyclePipe],
   template: `
     <app-shell [title]="view()?.student?.displayName ?? 'Estudiante'">
       <a class="back-link" routerLink="/workspace"><app-icon name="arrow" />Volver a mi espacio</a>
@@ -62,8 +64,26 @@ interface StudentTask {
         </div>
         <div class="detail-grid">
           <div class="detail-main">
+            @if (v.isSelf || v.faculties.includes('AcademicRecords')) {
+              <section class="card detail-card" aria-labelledby="gate-title">
+                <h2 id="gate-title">Entradas y salidas</h2><p class="muted-copy">Días con marcas en los últimos 45 días.</p>
+                @if (gateError()) { <p class="feedback error-feedback" role="alert">{{ gateError() }} <button class="text-button" (click)="loadGate()">Reintentar</button></p> }
+                @else if (gateDays(); as days) {
+                  <ul class="payment-list">@for (day of days; track day.date) {
+                    <li><span class="person-copy"><strong>{{ date(day.date) }}</strong><small>Entrada: {{ api.date(day.firstIn) }}</small><small>Salida: {{ api.date(day.lastOut) }}</small></span><span>{{ day.marks }} {{ day.marks === 1 ? 'marca' : 'marcas' }}</span></li>
+                  } @empty { <li>Aún no hay entradas o salidas registradas en este período.</li> }</ul>
+                } @else { <p role="status">Cargando entradas y salidas…</p> }
+              </section>
+            }
             <section class="card detail-card" aria-labelledby="grades-title">
-              <h2 id="grades-title">Calificaciones</h2>
+              <div class="card-title-row">
+                <h2 id="grades-title">Calificaciones</h2>
+                @if (grades()?.periods?.length) {
+                  <a class="button outline compact-button" [href]="'/api/v1/me/students/' + id() + '/grades.pdf'" target="_blank" rel="noopener"
+                    >Descargar PDF</a
+                  >
+                }
+              </div>
               @if (grades(); as g) {
                 @for (period of g.periods; track period.periodId) {
                   <div class="grade-period">
@@ -166,10 +186,10 @@ interface StudentTask {
               <h2 id="attendance-title">Asistencia</h2>
               @if (attendance(); as a) {
                 <div class="attendance-summary">
-                  <span><strong>{{ a.present }}</strong> presentes</span>
-                  <span><strong>{{ a.absent }}</strong> ausencias</span>
-                  <span><strong>{{ a.late }}</strong> tardanzas</span>
-                  <span><strong>{{ a.excused }}</strong> justificadas</span>
+                  <span><strong>{{ a.present }}</strong> {{ a.present === 1 ? 'presente' : 'presentes' }}</span>
+                  <span><strong>{{ a.absent }}</strong> {{ a.absent === 1 ? 'ausencia' : 'ausencias' }}</span>
+                  <span><strong>{{ a.late }}</strong> {{ a.late === 1 ? 'tardanza' : 'tardanzas' }}</span>
+                  <span><strong>{{ a.excused }}</strong> {{ a.excused === 1 ? 'justificada' : 'justificadas' }}</span>
                 </div>
                 @if (a.incidents.length) {
                   <ul class="payment-list">
@@ -197,7 +217,7 @@ interface StudentTask {
             <section class="card detail-card" aria-labelledby="school-title">
               <h2 id="school-title">Inscripción</h2>
               @if (v.placement; as p) {
-                <p class="placement-line">Ciclo {{ p.year }} · {{ p.grade }} {{ p.section ? '· Sección ' + p.section : '' }}</p>
+                <p class="placement-line">{{ p.year | cycle }} · {{ p.grade }} {{ p.section ? '· Sección ' + p.section : '' }}</p>
               } @else if (v.isSelf || v.faculties.includes('AcademicRecords')) {
                 <p class="muted-copy">Sin inscripción registrada.</p>
               } @else {
@@ -281,12 +301,35 @@ interface StudentTask {
           <label class="form-field"
             ><span>Tu entrega</span><textarea name="submission" [(ngModel)]="submission" required maxlength="8000" rows="8"></textarea
           ></label>
+          @if (selectedTask()?.submissionStatus) {
+            <fieldset class="choice-group">
+              <legend>Archivos adjuntos</legend>
+              @for (file of files(); track file.id) {
+                <div class="file-row">
+                  <app-icon name="receipt" />
+                  <a [href]="'/api/v1/files/' + file.id" download>{{ file.fileName }}</a>
+                  <small>{{ api.size(file.size) }}</small>
+                  <button type="button" class="text-button danger-text" (click)="removeFile(file.id)" [disabled]="busy()">
+                    Quitar <span class="sr-only">{{ file.fileName }}</span>
+                  </button>
+                </div>
+              } @empty {
+                <p class="muted-copy">Sin archivos. Puedes adjuntar PDF, imágenes, documentos de Office o texto (máx. 10 MB).</p>
+              }
+              <label class="file-picker"
+                ><span class="button outline compact-button">Adjuntar archivo</span
+                ><input type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.pptx,.txt" (change)="uploadFile($event)" [disabled]="busy()"
+              /></label>
+            </fieldset>
+          } @else {
+            <p class="muted-copy">Después de enviar el texto podrás adjuntar archivos.</p>
+          }
           @if (submitError()) {
             <p class="feedback error-feedback" role="alert">{{ submitError() }}</p>
           }
           <div class="dialog-actions">
-            <button class="button outline" type="button" (click)="closeSubmit()" [disabled]="busy()">Cancelar</button
-            ><button class="button" type="submit" [disabled]="busy()">{{ busy() ? 'Enviando…' : 'Enviar entrega' }}</button>
+            <button class="button outline" type="button" (click)="closeSubmit()" [disabled]="busy()">Cerrar</button
+            ><button class="button" type="submit" [disabled]="busy()">{{ busy() ? 'Enviando…' : selectedTask()?.submissionStatus ? 'Actualizar texto' : 'Enviar entrega' }}</button>
           </div>
         </form>
       </dialog>
@@ -294,6 +337,13 @@ interface StudentTask {
   `,
 })
 export class MyStudent {
+  readonly gateDays = signal<MyGateDay[] | null>(null);
+  readonly gateError = signal('');
+  async loadGate(): Promise<void> {
+    this.gateError.set('');
+    try { this.gateDays.set(await this.api.get('/api/v1/me/students/' + this.id() + '/gate')); }
+    catch (e) { this.gateError.set(this.api.message(e)); }
+  }
   readonly id = input.required<string>();
   readonly api = inject(AccessApi);
   readonly school = inject(InstitutionService).current;
@@ -313,6 +363,7 @@ export class MyStudent {
   readonly busy = signal(false);
   readonly submitError = signal('');
   readonly taskNotice = signal('');
+  readonly files = signal<{ id: string; fileName: string; size: number }[]>([]);
   submission = '';
   readonly grades = signal<{
     year: string | null;
@@ -347,7 +398,44 @@ export class MyStudent {
     this.selectedTask.set(task);
     this.submission = task.text ?? '';
     this.submitError.set('');
+    this.files.set([]);
+    if (task.submissionStatus) void this.loadFiles(task.id);
     this.submitDialog?.nativeElement.showModal();
+  }
+  async loadFiles(taskId: string): Promise<void> {
+    this.files.set(await this.api.get(`/api/v1/me/assignments/${taskId}/files`));
+  }
+  async uploadFile(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    const task = this.selectedTask();
+    if (!file || !task || this.busy()) return;
+    this.busy.set(true);
+    this.submitError.set('');
+    try {
+      const data = new FormData();
+      data.append('file', file);
+      await this.api.upload(`/api/v1/me/assignments/${task.id}/files`, data);
+      await this.loadFiles(task.id);
+    } catch (error) {
+      this.submitError.set(this.api.message(error));
+    } finally {
+      input.value = '';
+      this.busy.set(false);
+    }
+  }
+  async removeFile(fileId: string): Promise<void> {
+    const task = this.selectedTask();
+    if (!task || this.busy()) return;
+    this.busy.set(true);
+    try {
+      await this.api.post(`/api/v1/me/assignments/${task.id}/files/${fileId}/remove`, {});
+      await this.loadFiles(task.id);
+    } catch (error) {
+      this.submitError.set(this.api.message(error));
+    } finally {
+      this.busy.set(false);
+    }
   }
   closeSubmit(): void {
     if (!this.busy()) this.submitDialog?.nativeElement.close();
@@ -364,10 +452,18 @@ export class MyStudent {
     this.submitError.set('');
     try {
       await this.api.post(`/api/v1/me/assignments/${task.id}/submission`, { text: this.submission, version: task.version });
-      this.busy.set(false);
-      this.submitDialog?.nativeElement.close();
       this.taskNotice.set('Tu entrega quedó registrada.');
       await this.loadTasks(view.student.id);
+      const updated = this.tasks()?.find((x) => x.id === task.id) ?? null;
+      this.selectedTask.set(updated);
+      if (updated?.submissionStatus && !task.submissionStatus) {
+        // First submission: stay in the dialog so the student can attach files.
+        void this.loadFiles(updated.id);
+        this.submitError.set('');
+      } else {
+        this.busy.set(false);
+        this.submitDialog?.nativeElement.close();
+      }
     } catch (error) {
       this.submitError.set(this.api.message(error));
     } finally {
@@ -381,6 +477,7 @@ export class MyStudent {
     try {
       const view = await this.api.get<StudentAccessView>(`/api/v1/me/students/${encodeURIComponent(this.id())}`);
       this.view.set(view);
+      if (view.isSelf || view.faculties.includes('AcademicRecords')) void this.loadGate();
       if (view.isSelf || view.faculties.includes('AcademicRecords')) {
         void this.loadTasks(view.student.id);
         void this.api.get<NonNullable<ReturnType<typeof this.attendance>>>(`/api/v1/me/students/${view.student.id}/attendance`)

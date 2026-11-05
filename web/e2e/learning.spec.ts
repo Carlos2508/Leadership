@@ -93,10 +93,21 @@ test('teacher publishes an activity, the student submits and receives feedback',
   await studentPage.getByRole('dialog').getByLabel('Tu entrega').fill('El capítulo describe el viaje del protagonista.');
   await studentPage.getByRole('button', { name: 'Enviar entrega' }).click();
   await expect(studentPage.locator('.task-list')).toContainText('Entregada');
+  // The dialog stays open after the first submission so the student can attach evidence.
+  await studentPage.getByRole('dialog').locator('input[type=file]').setInputFiles({
+    name: 'evidencia.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4]),
+  });
+  await expect(studentPage.getByRole('dialog').getByRole('link', { name: 'evidencia.png' })).toBeVisible();
+  await expectAccessible(studentPage);
+  await studentPage.screenshot({ path: test.info().outputPath('student-attachment.png'), fullPage: true });
+  await studentPage.getByRole('dialog').getByRole('button', { name: 'Cerrar', exact: true }).click();
   await expectAccessible(studentPage);
 
   await teacherPage.getByRole('button', { name: `Ver entregas de ${title}` }).click();
   await expect(teacherPage.locator('.submission-list')).toContainText('viaje del protagonista');
+  await expect(teacherPage.locator('.submission-list').getByRole('link', { name: /evidencia\.png/ })).toBeVisible();
   await teacherPage.getByRole('button', { name: `Retroalimentar a Iris Sintética ${s}` }).click();
   await teacherPage.getByRole('dialog').getByLabel('Comentario para el estudiante').fill('Buen resumen; agrega una cita.');
   await teacherPage.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click();
@@ -117,7 +128,7 @@ test('teacher publishes an activity, the student submits and receives feedback',
   await expectAccessible(teacherPage);
   await teacherPage.screenshot({ path: test.info().outputPath('attendance.png'), fullPage: true });
   await studentPage.reload();
-  await expect(studentPage.locator('.attendance-summary')).toContainText('1 tardanzas');
+  await expect(studentPage.locator('.attendance-summary')).toContainText('1 tardanza');
   await expect(studentPage.getByText('Llegó 10 minutos tarde')).toBeVisible();
   await expectAccessible(studentPage);
   await teacherPage.context().close();

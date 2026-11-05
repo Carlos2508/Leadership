@@ -16,11 +16,12 @@ import {
 } from '../core/academic-api';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
+import { CyclePipe } from '../shared/cycle.pipe';
 
 type Mode = 'enroll' | 'placement' | 'withdraw' | 'reactivate';
 
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink],
+  imports: [Shell, Icon, FormsModule, RouterLink, CyclePipe],
   templateUrl: './enrollment-roster.html',
 })
 export class EnrollmentRoster {

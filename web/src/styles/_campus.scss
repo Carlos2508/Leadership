@@ -1258,3 +1258,7 @@ tr:last-child td {
     scroll-behavior: auto !important;
   }
 }
+.disabled-link {
+  pointer-events: none;
+  opacity: 0.5;
+}

@@ -15,11 +15,12 @@ import {
 } from '../core/finance-api';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
+import { PluralPipe } from '../shared/plural.pipe';
 
 type Mode = 'concept' | 'period' | 'cutoff';
 
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink],
+  imports: [Shell, Icon, FormsModule, RouterLink, PluralPipe],
   templateUrl: './finance-setup.html',
 })
 export class FinanceSetup {

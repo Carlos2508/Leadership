@@ -93,10 +93,6 @@ export class PeopleDirectory {
 
   async create(confirmDuplicate = false): Promise<void> {
     if (this.busy()) return;
-    if (!this.form.isStudent && !this.form.isGuardian) {
-      this.dialogError.set('Selecciona al menos un perfil: estudiante o encargado.');
-      return;
-    }
     this.busy.set(true);
     this.dialogError.set('');
     try {

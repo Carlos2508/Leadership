@@ -50,9 +50,22 @@ test('organize courses by section, assign a teacher and show the teacher only th
   const section = (await post(page, `/api/v1/academic/years/${year}/sections`, { gradeLevelId: grade, name: 'A', shift: null, capacity: null })).id;
   const student = (await post(page, '/api/v1/people', { givenNames: 'Tomás', familyNames: 'Sintético ' + suffix, contacts: [], studentCode: 'CUR-' + suffix, isGuardian: false, confirmDuplicate: true })).id;
   await post(page, '/api/v1/enrollments', { studentId: student, academicYearId: year, gradeLevelId: grade, sectionId: section, enrolledOn: `${calendarYear}-01-10` });
-  const teacher = (await post(page, '/api/v1/people', { givenNames: 'Marta', familyNames: 'Docente ' + suffix, contacts: [], studentCode: null, isGuardian: false, confirmDuplicate: true })).id;
+  // Regression QA-001: staff must be registerable without inventing a student or guardian profile.
+  await page.goto('/workspace/people');
+  await page.getByRole('button', { name: 'Registrar persona', exact: true }).click();
+  await page.getByLabel('Nombres', { exact: true }).fill('Marta');
+  await page.getByLabel('Apellidos', { exact: true }).fill('Docente ' + suffix);
+  await page.getByRole('button', { name: 'Registrar', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Marta Docente ' + suffix, exact: true })).toBeVisible();
+  const teacher = new URL(page.url()).pathname.split('/').at(-1)!;
+  await page.getByRole('listitem').filter({ hasText: 'Personal del colegio' }).getByRole('button', { name: 'Agregar', exact: true }).click();
+  await page.getByLabel('Cargo').fill('Docente');
+  await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page.getByText('Se agregó el perfil de personal.', { exact: true })).toBeVisible();
   const teacherDetail = await (await page.request.get(`/api/v1/people/${teacher}`)).json();
-  await post(page, `/api/v1/people/${teacher}/roles`, { version: teacherDetail.version, role: 'staff', position: 'Docente' });
+  expect(teacherDetail.staffPosition).toBe('Docente');
+  expect(teacherDetail.isGuardian).toBe(false);
+  expect(teacherDetail.studentCode).toBeNull();
   const invite = await post(page, '/api/v1/access/invitations', { username: teacherUser, profile: 'basic', reason });
   const linked = await (await page.request.get(`/api/v1/people/${teacher}`)).json();
   await post(page, `/api/v1/people/${teacher}/account`, { version: linked.version, userId: invite.userId, reason });
@@ -70,7 +83,7 @@ test('organize courses by section, assign a teacher and show the teacher only th
   await page.getByRole('dialog').getByRole('combobox', { name: 'Alcance' }).selectOption({ label: 'Sección A' });
   await page.getByRole('dialog').getByRole('checkbox', { name: subject }).check();
   await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click();
-  await expect(page.locator('p.success-feedback')).toContainText('Se crearon 1 cursos');
+  await expect(page.locator('p.success-feedback')).toContainText('Se creó 1 curso');
 
   await page.getByRole('button', { name: `+ Docente para ${subject}` }).click();
   await page.getByRole('dialog').getByLabel('Buscar personal').fill('Docente ' + suffix);

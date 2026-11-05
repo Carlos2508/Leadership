@@ -1,6 +1,6 @@
-import { Component, ElementRef, ViewChild, computed, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, ViewChild, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi } from '../core/access-api';
 import { InstitutionService } from '../core/institution';
@@ -8,7 +8,10 @@ import { formatDateOnly } from '../core/people-api';
 import { CourseView } from './courses';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
+import { CyclePipe } from '../shared/cycle.pipe';
+import { UpperCasePipe } from '@angular/common';
 
+type ScoreState = 'Scored' | 'Missing' | 'Excused';
 interface SheetPeriod {
   id: string;
   sequence: number;
@@ -22,7 +25,7 @@ interface SheetRow {
   name: string;
   code: string;
   score: number | null;
-  status: 'Scored' | 'Missing' | 'Excused' | null;
+  status: ScoreState | null;
   version: string | null;
 }
 interface GradeSheet {
@@ -34,13 +37,30 @@ interface GradeSheet {
   rows: SheetRow[];
 }
 interface EditableRow extends SheetRow {
-  draftScore: number | null;
-  draftStatus: 'Scored' | 'Missing' | 'Excused' | '';
+  draftText: string;
+  draftStatus: ScoreState | '';
+}
+interface SaveResult {
+  changed: number;
+  rows: { studentId: string; score: number | null; status: ScoreState; version: string }[];
 }
 
-/** Period grade sheet of a course: capture by the assigned teacher, corrections after publication by coordination. */
+/** Parses a typed score: number, null when empty, undefined when invalid (accepts a decimal comma). */
+export function parseScore(text: string): number | null | undefined {
+  const value = text.trim().replace(',', '.');
+  if (value === '') return null;
+  if (!/^\d{1,3}(\.\d{1,2})?$/.test(value)) return undefined;
+  const score = Number(value);
+  return score >= 0 && score <= 100 ? score : undefined;
+}
+
+/**
+ * Period grade sheet of a course: spreadsheet-like capture by the assigned teacher (Enter moves down, a pasted
+ * column fills consecutive students, debounced autosave with row versions), and corrections after publication by
+ * coordination, which always need a reason and are never autosaved.
+ */
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink],
+  imports: [Shell, Icon, FormsModule, RouterLink, CyclePipe, UpperCasePipe],
   template: `
     <app-shell [title]="sheet()?.course?.subject ?? 'Libreta'">
       <a class="back-link" [routerLink]="['/workspace/courses', id()]"><app-icon name="arrow" />Volver a la lista</a>
@@ -53,10 +73,13 @@ interface EditableRow extends SheetRow {
       } @else if (sheet(); as s) {
         <div class="page-heading">
           <div>
-            <span class="eyebrow">LIBRETA · CICLO {{ s.course.year }}</span>
+            <span class="eyebrow">LIBRETA · {{ s.course.year | cycle | uppercase }}</span>
             <h1>{{ s.course.subject }}</h1>
             <p>{{ s.course.grade }} · {{ s.course.section ? 'Sección ' + s.course.section : 'Todo el grado' }}</p>
           </div>
+          <a class="button outline" [href]="'/api/v1/courses/' + s.course.id + '/grades.pdf?periodId=' + s.period.id" target="_blank" rel="noopener"
+            >Libreta en PDF</a
+          >
         </div>
         @if (notice()) {
           <p class="feedback success-feedback" role="status" tabindex="-1" #noticeRef>{{ notice() }}</p>
@@ -71,7 +94,7 @@ interface EditableRow extends SheetRow {
               [queryParams]="{ period: period.id }"
               [class.active]="period.id === s.period.id"
               [attr.aria-current]="period.id === s.period.id ? 'page' : null"
-              (click)="select(period.id)"
+              (click)="selectPeriod(period.id)"
               >{{ period.name }}
               @if (period.published) {
                 <span class="pill mint">Publicado</span>
@@ -87,7 +110,16 @@ interface EditableRow extends SheetRow {
             }
           </p>
           @if (rows().length) {
-            <form (ngSubmit)="save()">
+            @if (s.canEdit) {
+              <p class="sheet-hint" id="sheet-hint">
+                <app-icon name="info" />
+                <span
+                  >Escribe la nota y pulsa <kbd>Enter</kbd> para pasar al siguiente estudiante. Puedes pegar una columna copiada de
+                  Excel (E = exonerado, P = pendiente).{{ s.requiresReason ? '' : ' Los cambios se guardan solos.' }}</span
+                >
+              </p>
+            }
+            <form (ngSubmit)="save(false)">
               <div class="table-scroll" tabindex="0" role="region" aria-label="Notas del período">
                 <table class="stack-table grade-table">
                   <caption class="sr-only">Nota del período por estudiante</caption>
@@ -99,8 +131,8 @@ interface EditableRow extends SheetRow {
                     </tr>
                   </thead>
                   <tbody>
-                    @for (row of rows(); track row.studentId) {
-                      <tr>
+                    @for (row of rows(); track row.studentId; let i = $index) {
+                      <tr [class.row-invalid]="invalid(row)" [class.row-pending]="changed(row)">
                         <td>
                           <span class="person-copy"><strong>{{ row.name }}</strong><small>{{ row.code }}</small></span>
                         </td>
@@ -111,7 +143,7 @@ interface EditableRow extends SheetRow {
                               class="inline-select"
                               [name]="'status-' + row.studentId"
                               [(ngModel)]="row.draftStatus"
-                              (ngModelChange)="row.draftStatus !== 'Scored' ? (row.draftScore = null) : null"
+                              (ngModelChange)="statusChanged(row)"
                               [disabled]="!s.canEdit"
                             >
                               <option value="">Sin registrar</option>
@@ -126,16 +158,24 @@ interface EditableRow extends SheetRow {
                             ><span class="sr-only">Nota de {{ row.name }}</span
                             ><input
                               class="score-input"
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.01"
+                              type="text"
                               inputmode="decimal"
+                              autocomplete="off"
+                              enterkeyhint="next"
+                              [attr.data-row]="i"
+                              [attr.aria-invalid]="invalid(row) ? 'true' : null"
+                              [attr.aria-describedby]="s.canEdit ? 'sheet-hint' : null"
                               [name]="'score-' + row.studentId"
-                              [(ngModel)]="row.draftScore"
-                              (ngModelChange)="row.draftScore !== null && row.draftStatus === '' ? (row.draftStatus = 'Scored') : null"
-                              [disabled]="!s.canEdit || row.draftStatus !== 'Scored' && row.draftStatus !== ''"
+                              [(ngModel)]="row.draftText"
+                              (ngModelChange)="scoreChanged(row)"
+                              (keydown)="move($event, i)"
+                              (paste)="paste($event, i)"
+                              (focus)="selectText($event)"
+                              [disabled]="!s.canEdit || (row.draftStatus !== 'Scored' && row.draftStatus !== '')"
                           /></label>
+                          @if (invalid(row)) {
+                            <small class="field-error">Entre 0 y 100, hasta dos decimales.</small>
+                          }
                         </td>
                       </tr>
                     }
@@ -144,6 +184,7 @@ interface EditableRow extends SheetRow {
               </div>
               @if (s.canEdit) {
                 <div class="sheet-actions">
+                  <p class="save-state" role="status" aria-live="polite">{{ saveState() }}</p>
                   @if (s.requiresReason) {
                     <label class="form-field"
                       ><span>Motivo de la corrección</span
@@ -166,12 +207,12 @@ interface EditableRow extends SheetRow {
     </app-shell>
   `,
 })
-export class CourseGrades {
+export class CourseGrades implements OnDestroy {
   readonly id = input.required<string>();
   readonly period = input<string | undefined>();
   readonly api = inject(AccessApi);
   readonly school = inject(InstitutionService).current;
-  private readonly router = inject(Router);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   @ViewChild('noticeRef') private noticeRef?: ElementRef<HTMLElement>;
   readonly sheet = signal<GradeSheet | null>(null);
   readonly rows = signal<EditableRow[]>([]);
@@ -179,11 +220,19 @@ export class CourseGrades {
   readonly busy = signal(false);
   readonly error = signal('');
   readonly notice = signal('');
+  readonly saveState = signal('');
   readonly recorded = computed(() => this.rows().filter((x) => x.status).length);
   reason = '';
+  private timer: ReturnType<typeof setTimeout> | undefined;
+  private queued = false;
 
   constructor() {
     queueMicrotask(() => void this.load(this.period()));
+  }
+  ngOnDestroy(): void {
+    clearTimeout(this.timer);
+    // Leaving the sheet keeps what was typed: flush the pending autosave (corrections need a reason and are never autosaved).
+    if (this.autosaves() && this.dirty()) void this.save(true);
   }
   date(value: string): string {
     return formatDateOnly(value, this.school.locale.culture);
@@ -191,54 +240,168 @@ export class CourseGrades {
   dirty(): boolean {
     return this.rows().some((x) => this.changed(x));
   }
-  private changed(row: EditableRow): boolean {
-    return row.draftStatus !== '' && (row.draftStatus !== row.status || (row.draftScore ?? null) !== (row.score ?? null));
+  changed(row: EditableRow): boolean {
+    if (row.draftStatus === '') return false;
+    const score = row.draftStatus === 'Scored' ? parseScore(row.draftText) : null;
+    return row.draftStatus !== row.status || score !== (row.score ?? null);
   }
-  async select(periodId: string): Promise<void> {
+  invalid(row: EditableRow): boolean {
+    return parseScore(row.draftText) === undefined;
+  }
+  private ready(row: EditableRow): boolean {
+    if (!this.changed(row) || this.invalid(row)) return false;
+    return row.draftStatus !== 'Scored' || parseScore(row.draftText) !== null;
+  }
+  private autosaves(): boolean {
+    const s = this.sheet();
+    return !!s && s.canEdit && !s.requiresReason;
+  }
+  statusChanged(row: EditableRow): void {
+    if (row.draftStatus !== 'Scored') row.draftText = '';
+    this.touch();
+  }
+  scoreChanged(row: EditableRow): void {
+    if (row.draftText.trim() !== '' && row.draftStatus === '') row.draftStatus = 'Scored';
+    this.touch();
+  }
+  private touch(): void {
+    this.rows.set([...this.rows()]);
+    this.notice.set('');
+    if (!this.autosaves()) return;
+    this.saveState.set('Cambios sin guardar…');
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => void this.save(true), 1200);
+  }
+  selectText(event: FocusEvent): void {
+    (event.target as HTMLInputElement).select();
+  }
+  /** Enter/↓ go to the next student, Shift+Enter/↑ to the previous one, like a spreadsheet column. */
+  move(event: KeyboardEvent, index: number): void {
+    const down = (event.key === 'Enter' && !event.shiftKey) || event.key === 'ArrowDown';
+    const up = (event.key === 'Enter' && event.shiftKey) || event.key === 'ArrowUp';
+    if (!down && !up) return;
+    event.preventDefault();
+    const inputs = Array.from(this.host.nativeElement.querySelectorAll<HTMLInputElement>('input.score-input')).filter((x) => !x.disabled);
+    const target = down
+      ? inputs.find((x) => Number(x.dataset['row']) > index)
+      : inputs.reverse().find((x) => Number(x.dataset['row']) < index);
+    if (target) target.focus();
+    else if (down && event.key === 'Enter' && this.autosaves() && this.dirty()) void this.save(true);
+  }
+  /** Pasting a column (Excel/Sheets) fills consecutive students from this row; E/P mark exonerated/pending. */
+  paste(event: ClipboardEvent, index: number): void {
+    const text = event.clipboardData?.getData('text/plain') ?? '';
+    const lines = text.replace(/\r/g, '').split('\n');
+    if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
+    if (lines.length < 2) return;
+    event.preventDefault();
+    const rows = this.rows();
+    let filled = 0;
+    lines.forEach((line, offset) => {
+      const row = rows[index + offset];
+      const cell = line.split('\t')[0].trim();
+      if (!row || cell === '') return;
+      const upper = cell.toUpperCase();
+      if (upper === 'E' || upper.startsWith('EXON')) {
+        row.draftStatus = 'Excused';
+        row.draftText = '';
+      } else if (upper === 'P' || upper.startsWith('PEND')) {
+        row.draftStatus = 'Missing';
+        row.draftText = '';
+      } else {
+        row.draftStatus = 'Scored';
+        row.draftText = cell;
+      }
+      filled++;
+    });
+    const extra = Math.max(0, lines.length - (rows.length - index));
+    this.touch();
+    this.saveState.set(
+      `Se pegaron ${filled} ${filled === 1 ? 'valor' : 'valores'}` +
+        (extra ? `; ${extra} ${extra === 1 ? 'fila sobraba' : 'filas sobraban'}.` : '.') +
+        (this.autosaves() ? ' Guardando…' : ''),
+    );
+  }
+  async selectPeriod(periodId: string): Promise<void> {
+    if (this.autosaves() && this.dirty()) await this.save(true);
     this.notice.set('');
     await this.load(periodId);
   }
   async load(periodId?: string): Promise<void> {
     this.error.set('');
+    clearTimeout(this.timer);
     try {
       const query = periodId ? `?periodId=${periodId}` : '';
       const sheet = await this.api.get<GradeSheet>(`/api/v1/courses/${encodeURIComponent(this.id())}/grades${query}`);
       this.sheet.set(sheet);
-      this.rows.set(sheet.rows.map((x) => ({ ...x, draftScore: x.score, draftStatus: x.status ?? '' })));
+      this.rows.set(sheet.rows.map((x) => ({ ...x, draftText: x.score === null ? '' : String(x.score), draftStatus: x.status ?? '' })));
       this.reason = '';
+      this.saveState.set('');
     } catch (error) {
       if (error instanceof HttpErrorResponse && (error.status === 404 || error.status === 400)) this.notFound.set(true);
       else this.error.set(this.api.message(error));
     }
   }
-  async save(): Promise<void> {
+  async save(auto: boolean): Promise<void> {
     const sheet = this.sheet();
-    if (!sheet || this.busy()) return;
-    const changed = this.rows().filter((x) => this.changed(x));
-    if (changed.some((x) => x.draftStatus === 'Scored' && (x.draftScore === null || x.draftScore === undefined))) {
-      this.error.set('Escribe la nota de cada estudiante marcado «Con nota».');
+    if (!sheet) return;
+    if (this.busy()) {
+      this.queued = true;
+      return;
+    }
+    clearTimeout(this.timer);
+    const pending = this.rows().filter((x) => this.changed(x) || (x.draftStatus === 'Scored' && this.invalid(x)));
+    if (!auto && pending.some((x) => !this.ready(x))) {
+      this.error.set('Revisa las notas marcadas: cada estudiante «Con nota» necesita un valor entre 0 y 100.');
+      return;
+    }
+    const changed = pending.filter((x) => this.ready(x));
+    if (!changed.length) {
+      if (auto) this.saveState.set(pending.length ? 'Completa o corrige las notas marcadas para guardarlas.' : '');
       return;
     }
     this.busy.set(true);
     this.error.set('');
+    if (auto) this.saveState.set('Guardando…');
     try {
-      const result = await this.api.post<{ changed: number }>(`/api/v1/courses/${sheet.course.id}/grades`, {
+      const result = await this.api.post<SaveResult>(`/api/v1/courses/${sheet.course.id}/grades`, {
         periodId: sheet.period.id,
         reason: this.reason || null,
         entries: changed.map((x) => ({
           studentId: x.studentId,
-          score: x.draftStatus === 'Scored' ? Number(x.draftScore) : null,
+          score: x.draftStatus === 'Scored' ? parseScore(x.draftText) : null,
           status: x.draftStatus,
           version: x.version,
         })),
       });
-      this.notice.set(`Se guardaron ${result.changed} notas.`);
-      await this.load(sheet.period.id);
-      requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
+      // Apply saved values and new versions in place: anything typed meanwhile stays as a pending change.
+      const saved = new Map(result.rows.map((x) => [x.studentId, x]));
+      for (const row of this.rows()) {
+        const done = saved.get(row.studentId);
+        if (!done) continue;
+        row.status = done.status;
+        row.score = done.score;
+        row.version = done.version;
+      }
+      this.rows.set([...this.rows()]);
+      if (auto) {
+        const time = new Intl.DateTimeFormat(this.school.locale.culture, { hour: '2-digit', minute: '2-digit' }).format(new Date());
+        this.saveState.set(`Guardado a las ${time} · ${result.changed === 1 ? '1 nota' : `${result.changed} notas`}.`);
+      } else {
+        this.saveState.set('');
+        this.notice.set(result.changed === 1 ? 'Se guardó 1 nota.' : `Se guardaron ${result.changed} notas.`);
+        if (sheet.requiresReason) this.reason = '';
+        requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
+      }
     } catch (error) {
-      this.error.set(this.api.message(error));
+      this.saveState.set('');
+      this.error.set(this.api.message(error) + (auto ? ' Los cambios siguen en pantalla; inténtalo de nuevo con «Guardar notas».' : ''));
     } finally {
       this.busy.set(false);
+    }
+    if (this.queued) {
+      this.queued = false;
+      if (this.dirty()) this.touch();
     }
   }
 }

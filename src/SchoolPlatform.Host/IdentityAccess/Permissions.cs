@@ -17,6 +17,13 @@ public static class Permissions
     public const string FinanceCharges = "finance.charges";
     public const string FinanceCollect = "finance.collect";
     public const string FinanceReverse = "finance.reverse";
+    public const string CommunicationPublish = "communication.publish";
+    /// <summary>Operate the school gate: scan ID cards and mark entries/exits manually.</summary>
+    public const string AttendanceGate = "attendance.gate";
+    /// <summary>Read gate attendance reports of any student.</summary>
+    public const string AttendanceRead = "attendance.read";
+    /// <summary>Register/revoke scanner devices and void gate marks.</summary>
+    public const string AttendanceManage = "attendance.manage";
 }
 
 public sealed record AccessProfile(string Key, string Label, string[] Permissions);
@@ -32,17 +39,21 @@ public static class AccessProfiles
         new("people-reader", "Consulta de personas y familias", [Permissions.PeopleRead]),
         new("registrar", "Secretaría: personas, familias e inscripciones",
             [Permissions.PeopleRead, Permissions.PeopleManage, Permissions.AcademicRead, Permissions.EnrollmentManage]),
-        new("academic-coordinator", "Coordinación académica: ciclos, grados y secciones",
-            [Permissions.PeopleRead, Permissions.AcademicRead, Permissions.AcademicManage]),
+        new("academic-coordinator", "Coordinación académica: ciclos, grados, secciones y avisos",
+            [Permissions.PeopleRead, Permissions.AcademicRead, Permissions.AcademicManage, Permissions.CommunicationPublish]),
         new("cashier", "Caja: cobros y recibos",
             [Permissions.PeopleRead, Permissions.AcademicRead, Permissions.FinanceRead, Permissions.FinanceCollect]),
         new("finance-manager", "Administración financiera",
             [Permissions.PeopleRead, Permissions.AcademicRead, Permissions.FinanceRead, Permissions.FinanceCharges,
              Permissions.FinanceCollect, Permissions.FinanceReverse]),
+        new("gatekeeper", "Portería: entradas y salidas con carnet", [Permissions.AttendanceGate]),
+        new("attendance-supervisor", "Control de asistencia: portería, reportes y dispositivos",
+            [Permissions.PeopleRead, Permissions.AttendanceGate, Permissions.AttendanceRead, Permissions.AttendanceManage]),
         new("administrator", "Administración institucional",
             [Permissions.ManageAccounts, Permissions.ReadAudit, Permissions.PeopleRead, Permissions.PeopleManage,
              Permissions.AcademicRead, Permissions.AcademicManage, Permissions.EnrollmentManage,
-             Permissions.FinanceRead, Permissions.FinanceCharges, Permissions.FinanceCollect, Permissions.FinanceReverse])
+             Permissions.FinanceRead, Permissions.FinanceCharges, Permissions.FinanceCollect, Permissions.FinanceReverse,
+             Permissions.CommunicationPublish, Permissions.AttendanceGate, Permissions.AttendanceRead, Permissions.AttendanceManage])
     ];
 
     public const string Custom = "custom";
@@ -69,12 +80,18 @@ public sealed class PermissionRequirement(string permission) : IAuthorizationReq
     public string Permission { get; } = permission;
 }
 
-public sealed class PermissionHandler(IdentityDbContext db) : AuthorizationHandler<PermissionRequirement>
+public sealed class PermissionHandler(IdentityDbContext db, Microsoft.Extensions.Options.IOptions<AccountAccessOptions> options)
+    : AuthorizationHandler<PermissionRequirement>
 {
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
     {
-        if (Guid.TryParse(context.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) &&
-            await db.AccountPermissions.AsNoTracking().AnyAsync(x => x.UserId == userId && x.Permission == requirement.Permission))
-            context.Succeed(requirement);
+        if (!Guid.TryParse(context.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) ||
+            !await db.AccountPermissions.AsNoTracking().AnyAsync(x => x.UserId == userId && x.Permission == requirement.Permission))
+            return;
+        // Sensitive permissions configured by the installation only work with two-step verification enabled.
+        if (options.Value.RequireMfaForPermissions.Contains(requirement.Permission) &&
+            !await db.Users.AsNoTracking().AnyAsync(x => x.Id == userId && x.TwoFactorEnabled))
+            return;
+        context.Succeed(requirement);
     }
 }

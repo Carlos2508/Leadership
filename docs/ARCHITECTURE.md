@@ -35,11 +35,21 @@ El tercer incremento agrega `SchoolDbContext` (carpetas `People/` y `SchoolData/
 | `/api/v1/courses/{id}/grades`, `/api/v1/years/{id}/publications`, `/api/v1/me/students/{id}/grades` | Docente asignado o `academic.manage` / `academic.read` / facultad `AcademicRecords` + solvencia | Libreta, publicación y consulta (ver ADR-007) |
 | `/api/v1/courses/{id}/assignments*`, `/api/v1/me/students/{id}/assignments`, `/api/v1/me/assignments/{id}/submission` | Docente asignado / estudiante / facultad | Tareas y entregas (ver `LEARNING.md`) |
 | `/api/v1/courses/{id}/attendance`, `/api/v1/me/students/{id}/attendance` | Docente asignado / facultad `AcademicRecords` | Asistencia (ver `ATTENDANCE.md`) |
+| `/api/v1/announcements*`, `/api/v1/me/announcements*` | `communication.publish` o docente del curso; lectura por audiencia | Avisos (ver `COMMUNICATION.md`) |
+| `/api/v1/me/mfa*`, `/api/v1/access/accounts/{id}/reset-mfa` | Cuenta activa / `accounts.manage` | Verificación en dos pasos |
+| `/api/v1/me/assignments/{id}/files*`, `/api/v1/files/{id}` | Estudiante propio / personal del curso | Adjuntos privados |
+| GET `/health/ready` | Público, sin detalles | SQL y migraciones al día |
 | `/api/v1/finance/*` | `finance.read` / `finance.charges` / `finance.collect` / `finance.reverse` | Conceptos, cuotas, cortes, cargos, pagos, recibos y solvencia (ver `BILLING_AND_CLEARANCE.md`) |
 | GET `/api/v1/me`, `/api/v1/me/students/{id}` | Cuenta activa + vínculo vigente | Autoservicio por recurso; 404 sin acceso |
 
 Las API desconocidas devuelven 404, las privadas 401/403 sin HTML de login. La SPA puede descargar su shell anónimamente, pero no obtiene datos privados sin autorización del servidor. La muestra no se usa en `/workspace` y su API no se registra en Production. Las rutas Angular se cargan por funcionalidad.
 
-Los perfiles actuales administran cuentas/auditoría; no hay todavía permisos académicos/financieros, personas, matrícula ni worker. No se expusieron endpoints ficticios para esos módulos. Redis, OpenIddict y Flutter se posponen hasta contar con casos y contratos reales. El contrato detallado de gestión y sus límites están en `IDENTITY_AND_ACCESS.md`.
+Los perfiles actuales incluyen permisos de personas, académico, finanzas, avisos y portería; la autorización se comprueba por recurso en servidor. No hay worker ni Redis. Flutter conserva perfiles ficticios y añade un lector real de portería con autenticación de dispositivo (ADR-009); la integración de identidad móvil general sigue pendiente. El contrato detallado de gestión y sus límites están en `IDENTITY_AND_ACCESS.md`.
 
 Se fijaron SDK estable 10.0.302, paquetes .NET/EF 10.0.14, Angular 22.2.4/CLI 22.2.6, Node 24.15.0 y TypeScript 6.0.2 según los paquetes disponibles y [compatibilidad oficial de Angular](https://angular.dev/reference/versions). El host local tenía runtime 10.0.10; para producción se debe usar un runtime mantenido compatible, elegido al preparar ese ambiente. La configuración usa el [patrón Options de ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/configuration/options?view=aspnetcore-10.0).
+
+## Documentos, portería y rendimiento
+
+Ver ADR-009 y `GATE.md`. `Documents/` genera PDFs autorizados; `Gate/` administra carnets, fotos, eventos y teléfonos. Los eventos/carnets permanecen en la base de esta instalación. Los únicos endpoints con esquema bearer de dispositivo son `/api/v1/gate/device/whoami` y `/api/v1/gate/device/scan`; el resto requiere cuenta activa y permisos/facultad. La credencial de dispositivo no es una cuenta ni abre otros módulos.
+
+Los bundles con hash se precomprimen y cachean, el shell se revalida y las API privadas siguen `no-store`. La reutilización breve de sesión en guards no sustituye autorización del backend. No se añade Redis sin una necesidad medida.

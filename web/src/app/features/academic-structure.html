@@ -66,7 +66,7 @@
         <div class="detail-main">
           <section class="card detail-card" aria-labelledby="year-detail-title">
             <div class="section-heading">
-              <h2 id="year-detail-title">Ciclo {{ d.year.label }}</h2>
+              <h2 id="year-detail-title">{{ d.year.label | cycle }}</h2>
               <span class="role-list">
                 <span class="pill">{{ statusLabels[d.year.status] }}</span>
               </span>
@@ -141,7 +141,7 @@
           </section>
 
           <section class="card detail-card" aria-labelledby="sections-title">
-            <h2 id="sections-title">Secciones del ciclo {{ d.year.label }}</h2>
+            <h2 id="sections-title">Secciones · {{ d.year.label | cycle: true }}</h2>
             <p class="muted-copy">
               Las secciones son opcionales: un estudiante puede inscribirse en el grado sin sección.
             </p>

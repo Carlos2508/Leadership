@@ -322,6 +322,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
             const SizedBox(height: Spacing.md),
             TextButton(
+              onPressed: _submitting ? null : () => context.push('/gate-reader'),
+              child: const Text('Lector de portería'),
+            ),
+            TextButton(
               onPressed: _submitting ? null : () => context.push('/recover'),
               child: const Text('¿Olvidaste tu contraseña o tienes un código?'),
             ),

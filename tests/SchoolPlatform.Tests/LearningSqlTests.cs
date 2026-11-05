@@ -13,6 +13,8 @@ public sealed class LearningSqlTests : SqlTestBase
     // The year spans "today" so publication dates fall inside it.
     private static readonly DateOnly Start = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-90);
     private Guid year, grade, course, student, leaver, relationship, teacherUser, otherUser;
+    private readonly string storage = Path.Combine(Path.GetTempPath(), "SchoolPlatform_TestFiles_" + Guid.NewGuid().ToString("N"));
+    protected override Dictionary<string, string?> ExtraConfiguration => new() { ["Storage:Root"] = storage };
 
     public override async Task InitializeAsync()
     {
@@ -119,5 +121,57 @@ public sealed class LearningSqlTests : SqlTestBase
         await Use<LearningService>(x => x.SetStatusAsync(teacherUser, course, lenient, AssignmentStatus.Closed, new(version), default));
         Assert.Equal(HttpStatusCode.Conflict, (await Post(self, $"/api/v1/me/assignments/{lenient}/submission",
             new SubmitRequest("Después del cierre", (await Mine(self)).EnumerateArray().Single(x => x.GetProperty("id").GetGuid() == lenient).GetProperty("version").GetString()))).StatusCode);
+    }
+
+    private static async Task<HttpResponseMessage> Upload(HttpClient client, Guid assignment, string name, byte[] content)
+    {
+        var token = (await client.GetFromJsonAsync<JsonElement>("/api/v1/antiforgery")).GetProperty("token").GetString();
+        using var form = new MultipartFormDataContent { { new ByteArrayContent(content), "file", name } };
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/me/assignments/{assignment}/files") { Content = form };
+        request.Headers.Add("X-XSRF-TOKEN", token);
+        return await client.SendAsync(request);
+    }
+
+    [Fact]
+    public async Task Private_files_are_type_checked_and_downloaded_only_by_the_student_or_course_staff()
+    {
+        try
+        {
+            var id = await Published(DateTimeOffset.UtcNow.AddDays(5));
+            using var self = await SignIn("synthetic-student");
+            var png = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3 };
+            Assert.Equal(HttpStatusCode.NotFound, (await Upload(self, id, "foto.png", png)).StatusCode);
+            await Post(self, $"/api/v1/me/assignments/{id}/submission", new SubmitRequest("Adjunto mi evidencia.", null));
+            Assert.Equal(HttpStatusCode.BadRequest, (await Upload(self, id, "virus.exe", [0x4D, 0x5A, 0x90])).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, (await Upload(self, id, "renombrado.pdf", [0x4D, 0x5A, 0x90])).StatusCode);
+            var uploaded = await Upload(self, id, "../../foto final.png", png);
+            Assert.Equal(HttpStatusCode.OK, uploaded.StatusCode);
+            var file = await uploaded.Content.ReadFromJsonAsync<JsonElement>();
+            var fileId = file.GetProperty("id").GetGuid();
+            Assert.Equal("foto final.png", file.GetProperty("fileName").GetString());
+            Assert.Single(Directory.GetFiles(storage, "*", SearchOption.AllDirectories));
+
+            var download = await self.GetAsync($"/api/v1/files/{fileId}");
+            Assert.Equal(HttpStatusCode.OK, download.StatusCode);
+            Assert.Equal(png, await download.Content.ReadAsByteArrayAsync());
+            Assert.Equal("attachment", download.Content.Headers.ContentDisposition?.DispositionType);
+            var row = (await Use<LearningService, AssignmentSubmissions?>(x => x.SubmissionsAsync(teacherUser, course, id, default)))!.Rows.Single();
+            Assert.Equal(fileId, Assert.Single(row.Files!).Id);
+
+            using var guardian = await SignIn("synthetic-guardian");
+            Assert.Equal(HttpStatusCode.NotFound, (await guardian.GetAsync($"/api/v1/files/{fileId}")).StatusCode);
+            var other = await SignIn("synthetic-other");
+            Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/v1/files/{fileId}")).StatusCode);
+            var teacher = await SignIn("synthetic-teacher");
+            Assert.Equal(HttpStatusCode.OK, (await teacher.GetAsync($"/api/v1/files/{fileId}")).StatusCode);
+
+            Assert.Equal(HttpStatusCode.NoContent, (await Post(self, $"/api/v1/me/assignments/{id}/files/{fileId}/remove", new { })).StatusCode);
+            Assert.Empty(await self.GetFromJsonAsync<JsonElement[]>($"/api/v1/me/assignments/{id}/files") ?? []);
+            Assert.Equal(HttpStatusCode.NotFound, (await teacher.GetAsync($"/api/v1/files/{fileId}")).StatusCode);
+        }
+        finally
+        {
+            if (Directory.Exists(storage)) Directory.Delete(storage, recursive: true);
+        }
     }
 }

@@ -1,0 +1,39 @@
+@page "/Identity/Account/LoginWith2fa"
+@model SchoolPlatform.Host.Pages.Identity.Account.LoginWith2faModel
+@inject IOptions<InstitutionOptions> Institution
+@{ ViewData["Title"] = "Verificación en dos pasos"; }
+<div class="login-content">
+  <a class="back" href="/Identity/Account/Login">← Volver al ingreso</a>
+  <img class="login-logo" src="@Institution.Value.Assets.LoginLogo" alt="@Institution.Value.DisplayName" />
+  <div class="eyebrow">VERIFICACIÓN EN DOS PASOS</div>
+  <h2>@(Model.UseRecovery ? "Usa un código de respaldo." : "Confirma que eres tú.")</h2>
+  <p class="muted">@(Model.UseRecovery
+      ? "Escribe uno de los códigos de respaldo que guardaste al activar la verificación. Cada código sirve una sola vez."
+      : "Abre tu aplicación de autenticación y escribe el código de 6 dígitos que muestra para este colegio.")</p>
+  <form method="post" autocomplete="off">
+    <div asp-validation-summary="All" class="error" role="alert"></div>
+    <input type="hidden" asp-for="ReturnUrl" />
+    <input type="hidden" asp-for="UseRecovery" />
+    <label asp-for="Input.Code">@(Model.UseRecovery ? "Código de respaldo" : "Código de verificación")</label>
+    @if (Model.UseRecovery)
+    {
+      <input asp-for="Input.Code" autocomplete="off" required maxlength="32" spellcheck="false" autocapitalize="none" autofocus />
+    }
+    else
+    {
+      <input asp-for="Input.Code" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9 ]{6,7}" required maxlength="7" autofocus />
+    }
+    <button type="submit">Verificar e ingresar <span aria-hidden="true">→</span></button>
+  </form>
+  <div class="help">
+    @if (Model.UseRecovery)
+    {
+      <p><a href="/Identity/Account/LoginWith2fa?ReturnUrl=@Uri.EscapeDataString(Model.ReturnUrl ?? "/workspace")">Usar el código de la aplicación</a></p>
+    }
+    else
+    {
+      <p><a href="/Identity/Account/LoginWith2fa?UseRecovery=true&amp;ReturnUrl=@Uri.EscapeDataString(Model.ReturnUrl ?? "/workspace")">No tengo mi teléfono: usar un código de respaldo</a></p>
+    }
+    <p>Si perdiste el acceso a tu aplicación y a tus códigos, la administración puede restablecer la verificación después de confirmar tu identidad.</p>
+  </div>
+</div>

@@ -8,12 +8,13 @@
     "Tagline": "¡Piensa en grande!",
     "WelcomeMessage": "Tu espacio para aprender, conectar y crecer.",
     "Contact": { "Phone": "", "Email": "", "Address": "", "Website": "" },
-    "Documents": { "TaxId": "", "ReceiptFooter": "", "ReportCardFooter": "" },
+    "Documents": { "TaxId": "", "ReceiptFooter": "", "ReportCardFooter": "", "CardRules": [], "CardNotice": "" },
     "Assets": {
       "MainLogo": "/branding/main.png",
       "LoginLogo": "/branding/main.png",
       "ReceiptLogo": "/branding/receipt.png",
       "ReportCardLogo": "/branding/report.png",
+      "CardLogo": "/branding/main.png",
       "Favicon": "/branding/favicon.png"
     },
     "Theme": { "Deep": "#073B25", "Primary": "#0B5835", "Accent": "#ECA42E", "Surface": "#F7F9F5" },

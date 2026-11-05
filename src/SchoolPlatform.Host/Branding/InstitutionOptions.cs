@@ -34,6 +34,10 @@ public sealed class DocumentOptions
     public string TaxId { get; set; } = "";
     public string ReceiptFooter { get; set; } = "";
     public string ReportCardFooter { get; set; } = "";
+    /// <summary>Back of the student ID card: short institutional rules (optional, from this installation's config).</summary>
+    public string[] CardRules { get; set; } = [];
+    /// <summary>Back of the student ID card: e.g. what to do if found (optional).</summary>
+    public string CardNotice { get; set; } = "";
 }
 
 public sealed class AssetOptions
@@ -42,6 +46,7 @@ public sealed class AssetOptions
     public string LoginLogo { get; set; } = "";
     public string ReceiptLogo { get; set; } = "";
     public string ReportCardLogo { get; set; } = "";
+    public string CardLogo { get; set; } = "";
     public string Favicon { get; set; } = "";
 }
 
@@ -79,7 +84,7 @@ public sealed class InstitutionValidator(IWebHostEnvironment environment) : IVal
             if (string.IsNullOrWhiteSpace(value)) errors.Add("Falta un nombre, mensaje o término institucional obligatorio.");
 
         foreach (var path in new[] { options.Assets.MainLogo, options.Assets.LoginLogo, options.Assets.ReceiptLogo,
-                     options.Assets.ReportCardLogo, options.Assets.Favicon })
+                     options.Assets.ReportCardLogo, options.Assets.CardLogo, options.Assets.Favicon })
         {
             if (!Regex.IsMatch(path, @"^/branding/[a-zA-Z0-9_-]+\.(png|svg|ico|webp)$") ||
                 !File.Exists(Path.Combine(environment.WebRootPath, path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar))))

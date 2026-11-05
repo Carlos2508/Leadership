@@ -63,6 +63,8 @@ test('teacher captures, coordination publishes and the family sees grades only o
   const course = (await (await page.request.get(`/api/v1/years/${year}/courses?gradeId=${grade}`)).json())[0].id;
   const student = (await post(page, '/api/v1/people', { givenNames: 'Ema', familyNames: 'Sintética ' + s, contacts: [], studentCode: 'NOT-' + s, isGuardian: false, confirmDuplicate: true })).id;
   await post(page, '/api/v1/enrollments', { studentId: student, academicYearId: year, gradeLevelId: grade, sectionId: null, enrolledOn: `${calendarYear}-01-10` });
+  const classmate = (await post(page, '/api/v1/people', { givenNames: 'Iván', familyNames: 'Zeta ' + s, contacts: [], studentCode: 'NOU-' + s, isGuardian: false, confirmDuplicate: true })).id;
+  await post(page, '/api/v1/enrollments', { studentId: classmate, academicYearId: year, gradeLevelId: grade, sectionId: null, enrolledOn: `${calendarYear}-01-10` });
 
   const teacher = (await post(page, '/api/v1/people', { givenNames: 'Raúl', familyNames: 'Docente ' + s, contacts: [], studentCode: null, isGuardian: false, confirmDuplicate: true })).id;
   await post(page, `/api/v1/people/${teacher}/roles`, { version: (await (await page.request.get(`/api/v1/people/${teacher}`)).json()).version, role: 'staff', position: 'Docente' });
@@ -86,16 +88,38 @@ test('teacher captures, coordination publishes and the family sees grades only o
   const teacherPage = await activate(browser, origin, teacherInvite.code, 'tch-' + s.toLowerCase(), password);
   await teacherPage.getByRole('link', { name: `Libreta de ${subject}` }).click();
   await expect(teacherPage.getByRole('heading', { name: subject, level: 1 })).toBeVisible();
-  await teacherPage.getByRole('spinbutton', { name: 'Nota de Ema Sintética ' + s }).fill('91.5');
-  await teacherPage.getByRole('button', { name: 'Guardar notas' }).click();
-  await expect(teacherPage.locator('p.success-feedback')).toContainText('Se guardaron 1 notas');
+  // Spreadsheet-like capture: paste a column from Excel, autosave, Enter moves to the next student.
+  const ema = teacherPage.getByRole('textbox', { name: 'Nota de Ema Sintética ' + s });
+  const ivan = teacherPage.getByRole('textbox', { name: 'Nota de Iván Zeta ' + s });
+  await ema.focus();
+  await ema.evaluate((input) => {
+    const data = new DataTransfer();
+    data.setData('text/plain', '91,5\r\n80\r\n70\r\n');
+    input.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  });
+  await expect(ema).toHaveValue('91,5');
+  await expect(ivan).toHaveValue('80');
+  await expect(teacherPage.locator('.save-state')).toContainText('Guardado a las');
+  await expect(teacherPage.locator('.save-state')).toContainText('2 notas');
+  await expect(teacherPage.locator('.directory-summary')).toContainText('2 de 2 registradas');
+  await ema.focus();
+  await ema.press('Enter');
+  await expect(ivan).toBeFocused();
+  await ivan.pressSequentially('1000');
+  await expect(teacherPage.locator('.field-error')).toContainText('Entre 0 y 100');
+  await ivan.fill('88');
+  await expect(teacherPage.locator('.field-error')).toHaveCount(0);
+  await expect(teacherPage.locator('.save-state')).toContainText('1 nota');
+  await teacherPage.reload();
+  await expect(ivan).toHaveValue('88');
+  await expect(ema).toHaveValue('91.5');
   await expectAccessible(teacherPage);
   await teacherPage.screenshot({ path: testInfo.outputPath('gradebook.png'), fullPage: true });
   await teacherPage.context().close();
 
   // Coordination publishes with the cutoff
   await page.goto(`/workspace/grades?year=${year}`);
-  await expect(page.locator('.publication-list')).toContainText('1 de 1 notas');
+  await expect(page.locator('.publication-list')).toContainText('2 de 2 notas');
   await page.getByRole('button', { name: /Publicar Bimestre 1/ }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Publicar' }).click();
   await expect(page.locator('p.success-feedback')).toContainText('quedó publicado');

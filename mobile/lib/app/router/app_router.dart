@@ -25,6 +25,7 @@ import '../../features/finance/presentation/payments_page.dart';
 import '../../features/finance/presentation/receipt_page.dart';
 import '../../features/finance/presentation/register_payment_page.dart';
 import '../../features/finance/presentation/student_account_page.dart';
+import '../../features/gate/gate_reader_page.dart';
 import '../../features/guardian/presentation/guardian_agenda_page.dart';
 import '../../features/guardian/presentation/guardian_grades_page.dart';
 import '../../features/guardian/presentation/guardian_home_page.dart';
@@ -103,6 +104,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final session = ref.read(authControllerProvider);
       final location = state.matchedLocation;
+      if (location == '/gate-reader') return null;
       if (session == null) {
         if (_publicPaths.contains(location)) {
           if (location == '/welcome' && ref.read(welcomeSeenProvider)) return '/login';
@@ -119,6 +121,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(path: '/gate-reader', builder: (_, _) => const GateReaderPage()),
       GoRoute(path: '/', redirect: (_, _) => '/welcome'),
       GoRoute(path: '/welcome', builder: (_, _) => const WelcomePage()),
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),

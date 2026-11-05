@@ -11,22 +11,55 @@ export class SessionService {
   readonly token = signal('');
   readonly permissions = signal<string[]>([]);
   readonly userId = signal('');
+  readonly twoFactorEnabled = signal(false);
+  /** Permissions the account holds but cannot use until two-step verification is enabled. */
+  readonly mfaPending = signal<string[]>([]);
   can(permission: string): boolean {
     return this.permissions().includes(permission);
   }
-  async load(returnUrl = '/workspace'): Promise<boolean> {
+  private loadedAt = 0;
+  private pending: Promise<boolean> | null = null;
+  /**
+   * Validates the session against the server. Route guards reuse a validation younger than a few seconds so moving
+   * between pages does not wait on it; explicit refreshes (after changing permissions or MFA) pass force. The server
+   * still authorizes every API call, so this only affects what the interface shows.
+   */
+  load(returnUrl = '/workspace', force = false): Promise<boolean> {
+    if (!force && this.state() === 'ready' && Date.now() - this.loadedAt < 15000) return Promise.resolve(true);
+    if (!force && this.pending) return this.pending;
+    const run = this.fetch(returnUrl, force).finally(() => (this.pending = null));
+    this.pending = run;
+    return run;
+  }
+  private async fetch(returnUrl: string, force: boolean): Promise<boolean> {
+    // The antiforgery token is requested in parallel the first time; it stays valid for this sign-in.
+    const tokenRequest = this.token() && !force
+      ? null
+      : firstValueFrom(this.http.get<{ token: string }>('/api/v1/antiforgery')).then(
+          (x) => x.token,
+          () => '',
+        );
     try {
       const session = await firstValueFrom(
-        this.http.get<{ userId: string; username: string; permissions: string[] }>(
-          '/api/v1/session',
-        ),
+        this.http.get<{
+          userId: string;
+          username: string;
+          permissions: string[];
+          twoFactorEnabled?: boolean;
+          mfaPending?: string[];
+        }>('/api/v1/session'),
       );
+      if (this.userId() && this.userId() !== session.userId) this.token.set('');
+      this.twoFactorEnabled.set(!!session.twoFactorEnabled);
+      this.mfaPending.set(session.mfaPending ?? []);
       this.username.set(session.username);
       this.userId.set(session.userId);
       this.permissions.set(session.permissions);
       this.state.set('ready');
+      this.loadedAt = Date.now();
     } catch (error) {
       this.permissions.set([]);
+      this.loadedAt = 0;
       if (error instanceof HttpErrorResponse && error.status === 401) {
         window.location.assign(
           '/Identity/Account/Login?ReturnUrl=' + encodeURIComponent(returnUrl),
@@ -37,12 +70,15 @@ export class SessionService {
         error instanceof HttpErrorResponse && error.status === 403 ? 'denied' : 'error',
       );
     }
-    try {
-      this.token.set(
-        (await firstValueFrom(this.http.get<{ token: string }>('/api/v1/antiforgery'))).token,
-      );
-    } catch {
-      /* Logout remains disabled until an antiforgery token can be loaded. */
+    // Logout and writes stay disabled until an antiforgery token can be loaded.
+    const token = tokenRequest ? await tokenRequest : '';
+    if (token) this.token.set(token);
+    else if (!this.token()) {
+      try {
+        this.token.set((await firstValueFrom(this.http.get<{ token: string }>('/api/v1/antiforgery'))).token);
+      } catch {
+        /* retried on the next validation */
+      }
     }
     return true;
   }

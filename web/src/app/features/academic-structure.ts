@@ -17,11 +17,12 @@ import {
 } from '../core/academic-api';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
+import { CyclePipe } from '../shared/cycle.pipe';
 
 type Mode = 'year' | 'status' | 'period' | 'grade' | 'section';
 
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink],
+  imports: [Shell, Icon, FormsModule, RouterLink, CyclePipe],
   templateUrl: './academic-structure.html',
 })
 export class AcademicStructure {

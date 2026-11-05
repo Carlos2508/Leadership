@@ -11,7 +11,7 @@ public sealed record VersionBody(string Version);
 public sealed record AssignmentView(Guid Id, Guid CourseId, string Title, string Instructions, DateTimeOffset DueAt, bool AllowLate,
     string Status, DateTimeOffset? PublishedAt, int Recipients, int Submitted, string Version);
 public sealed record SubmissionRow(Guid StudentId, string Name, string Code, Guid? SubmissionId, string? Text, DateTimeOffset? SubmittedAt,
-    bool Late, int Attempts, string? Status, string? Feedback, string? Version);
+    bool Late, int Attempts, string? Status, string? Feedback, string? Version, FileView[]? Files = null);
 public sealed record AssignmentSubmissions(AssignmentView Assignment, SubmissionRow[] Rows);
 public sealed record FeedbackRequest(string Feedback, string Version);
 public sealed record SubmitRequest(string Text, string? Version);
@@ -81,9 +81,13 @@ public sealed class LearningService(SchoolDbContext db, SchoolAudit audit, TimeP
         if (assignment is null) return null;
         var recipients = await RecipientsAsync(assignment, ct);
         var submissions = await db.Submissions.AsNoTracking().Where(x => x.AssignmentId == id).ToDictionaryAsync(x => x.StudentId, ct);
+        var submissionIds = submissions.Values.Select(x => x.Id).ToArray();
+        var files = (await db.SubmissionFiles.AsNoTracking().Where(f => submissionIds.Contains(f.SubmissionId) && f.DeletedAt == null)
+            .OrderBy(f => f.UploadedAt).ToArrayAsync(ct))
+            .ToLookup(f => f.SubmissionId, f => new FileView(f.Id, f.FileName, f.ContentType, f.Size, f.UploadedAt));
         return new(await ViewAsync(assignment, ct), recipients.Select(r => submissions.TryGetValue(r.Id, out var s)
             ? new SubmissionRow(r.Id, r.Name, r.Code, s.Id, s.Text, s.SubmittedAt, s.SubmittedAt > assignment.DueAt, s.Attempts, s.Status,
-                s.Feedback, Versions.Encode(s.Version))
+                s.Feedback, Versions.Encode(s.Version), files[s.Id].ToArray())
             : new SubmissionRow(r.Id, r.Name, r.Code, null, null, null, false, 0, null, null, null)).ToArray());
     }
 
@@ -168,6 +172,14 @@ public sealed class LearningService(SchoolDbContext db, SchoolAudit audit, TimeP
         audit.Record("AssignmentSubmitted", userId, "Assignment", assignmentId);
         await db.SaveChangesAsync(ct);
     }
+
+    /// <summary>The caller's own submission to an assignment, when the caller is that student.</summary>
+    public async Task<Guid?> OwnSubmissionIdAsync(Guid userId, Guid assignmentId, CancellationToken ct) =>
+        await (from l in db.AccountLinks
+               where l.UserId == userId && l.UnlinkedAt == null
+               join s in db.Submissions on l.PersonId equals s.StudentId
+               where s.AssignmentId == assignmentId
+               select (Guid?)s.Id).SingleOrDefaultAsync(ct);
 
     // ---- helpers
 

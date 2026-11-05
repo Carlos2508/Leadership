@@ -52,6 +52,7 @@
     }
     <div class="detail-grid">
       <div class="detail-main">
+        <app-person-card [personId]="p.id" [student]="!!p.studentCode" />
         <section class="card detail-card" aria-labelledby="personal-title">
           <h2 id="personal-title">Datos personales</h2>
           <dl class="data-list">
@@ -138,7 +139,7 @@
             @for (item of enrollments(); track item.id) {
               <div class="enrollment-block">
                 <div class="section-heading">
-                  <strong>Ciclo {{ item.year }}</strong>
+                  <strong>{{ item.year | cycle }}</strong>
                   <span
                     class="pill"
                     [class.mint]="item.status === 'Active'"

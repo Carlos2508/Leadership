@@ -29,6 +29,10 @@ Implementado en el octavo incremento (LRN-001, sin archivos).
 
 `LearningSqlTests` (2): borrador invisible, entrega y reenvío con versión, facultad del encargado sin texto, entrega solo propia, revisión que bloquea reenvío; plazo estricto, tardías marcadas, cierre y audiencia sin estudiantes retirados. `e2e/learning.spec.ts`: actividad publicada, entrega del estudiante y retroalimentación en escritorio y móvil.
 
+## Archivos (LRN-002, implementado)
+
+Adjuntos privados de la entrega: PDF, PNG, JPG, DOCX, XLSX, PPTX y TXT validados por firma, máx. 10 MB y 5 por entrega, guardados fuera de la web con clave aleatoria y SHA-256. Solo después de guardar el texto; se pueden quitar (borrado lógico) mientras la entrega sea editable. Descarga (`GET /api/v1/files/{id}`) para el propio estudiante o personal que pueda ver el curso; el encargado no descarga trabajos. Ver `OPERATIONS.md`.
+
 ## Pendiente
 
-Archivos privados con antivirus/retención, rúbricas y vínculo con componentes de la libreta, plazos individuales, notificaciones.
+Antivirus y retención de archivos, rúbricas y vínculo con componentes de la libreta, plazos individuales, notificaciones.

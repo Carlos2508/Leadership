@@ -9,6 +9,8 @@ import { formatDateOnly } from '../core/people-api';
 import { CourseView } from './courses';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
+import { CyclePipe } from '../shared/cycle.pipe';
+import { UpperCasePipe } from '@angular/common';
 
 interface Roster {
   course: CourseView;
@@ -18,7 +20,7 @@ interface Roster {
 
 /** Course roster on a chosen date, for academic staff and for the teacher with an active assignment. */
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink],
+  imports: [Shell, Icon, FormsModule, RouterLink, CyclePipe, UpperCasePipe],
   template: `
     <app-shell [title]="roster()?.course?.subject ?? 'Curso'">
       <a class="back-link" [routerLink]="session.can('academic.read') ? '/workspace/courses' : '/workspace'"
@@ -35,7 +37,7 @@ interface Roster {
       } @else if (roster(); as r) {
         <div class="page-heading">
           <div>
-            <span class="eyebrow">CICLO {{ r.course.year }}</span>
+            <span class="eyebrow">{{ r.course.year | cycle | uppercase }}</span>
             <h1>{{ r.course.subject }}</h1>
             <p>
               {{ r.course.grade }} · {{ r.course.section ? 'Sección ' + r.course.section : 'Todo el grado' }}

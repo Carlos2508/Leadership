@@ -1,0 +1,82 @@
+# Continuous integration for this installation's repository.
+# Uses a disposable SQL Server container: tests create and drop only their own random databases.
+# No secrets, no deployment and no publication happen here.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    services:
+      sql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          # Throwaway password for the CI container only; it never reaches an installation.
+          MSSQL_SA_PASSWORD: Ci-Only-Throwaway!2026
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Ci-Only-Throwaway!2026' -C -Q 'SELECT 1'"
+          --health-interval 10s --health-timeout 5s --health-retries 20
+    env:
+      DOTNET_NOLOGO: true
+      SCHOOLPLATFORM_TEST_SQL: Server=localhost,1433;User ID=sa;Password=Ci-Only-Throwaway!2026;Encrypt=true;TrustServerCertificate=true
+      SCHOOLPLATFORM_E2E_SQL: Server=localhost,1433;User ID=sa;Password=Ci-Only-Throwaway!2026;Encrypt=true;TrustServerCertificate=true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore (.NET, locked)
+        run: |
+          dotnet tool restore
+          dotnet restore --locked-mode
+
+      - name: Build (.NET, warnings as errors)
+        run: dotnet build --no-restore -c Release
+
+      - name: Test (.NET with SQL Server)
+        run: dotnet test --no-build -c Release --logger "trx;LogFileName=dotnet.trx"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Build web (production)
+        working-directory: web
+        run: npm run build
+
+      - name: Install Playwright Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests (desktop and mobile)
+        working-directory: web
+        run: npx playwright test
+
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-evidence
+          path: |
+            tests/**/TestResults/*.trx
+            web/test-results/
+          retention-days: 7

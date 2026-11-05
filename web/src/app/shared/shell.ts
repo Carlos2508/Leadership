@@ -32,6 +32,14 @@ import { SessionService } from '../core/session';
             ariaCurrentWhenActive="page"
             ><app-icon name="home" />Vista general</a
           >
+          @if (!preview()) {
+            <a routerLink="/workspace/announcements" routerLinkActive="active" ariaCurrentWhenActive="page"
+              ><app-icon name="mail" />Avisos</a
+            >
+            <a routerLink="/workspace/security" routerLinkActive="active" ariaCurrentWhenActive="page"
+              ><app-icon name="shield" />Mi seguridad</a
+            >
+          }
           @if (preview()) {
             <a routerLink="/preview/students" routerLinkActive="active" ariaCurrentWhenActive="page"
               ><app-icon name="people" />{{ school.terms.studentPlural }}</a
@@ -59,6 +67,12 @@ import { SessionService } from '../core/session';
               ><app-icon name="calendar" />Ciclos y grados</a
             >
           }
+          @if (!preview() && (session.can('attendance.gate') || session.can('attendance.read') || session.can('attendance.manage'))) {
+            <span class="nav-group" aria-hidden="true">Portería</span>
+            @if (session.can('attendance.gate')) { <a routerLink="/workspace/gate" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="shield" />Lector de entrada</a> }
+            @if (session.can('attendance.read')) { <a routerLink="/workspace/gate/report" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="calendar" />Entradas y salidas</a> }
+            @if (session.can('attendance.manage')) { <a routerLink="/workspace/gate/devices" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="shield" />Teléfonos lectores</a> }
+          }
           @if (!preview() && session.can('finance.read')) {
             <span class="nav-group" aria-hidden="true">Finanzas</span>
             <a routerLink="/workspace/finance" routerLinkActive="active" ariaCurrentWhenActive="page"
@@ -83,6 +97,12 @@ import { SessionService } from '../core/session';
           <div class="nav-label">MUESTRA DEL DISEÑO</div>
           <p class="sidebar-note">Explora la navegación con información ficticia.</p>
           <a class="sidebar-home" routerLink="/"><app-icon name="arrow" />Volver al inicio</a>
+        }
+        @if (!preview() && session.token()) {
+          <form class="sidebar-logout" action="/Identity/Account/Logout" method="post">
+            <input type="hidden" name="__RequestVerificationToken" [value]="session.token()" />
+            <button type="submit"><app-icon name="logout" />Cerrar sesión</button>
+          </form>
         }
         <div class="sidebar-bottom">
           <span class="icon-tile gold"><app-icon name="star" /></span>
@@ -118,9 +138,13 @@ import { SessionService } from '../core/session';
             @if (preview()) {
               <span class="pill gold">Ciclo de muestra 2026</span>
             }
-            <span class="avatar" [attr.title]="session.username() || null">{{
-              preview() ? 'D' : (session.username() || school.shortName).slice(0, 1).toUpperCase()
-            }}</span>
+            @if (preview()) {
+              <span class="avatar">D</span>
+            } @else {
+              <a class="avatar avatar-link" routerLink="/workspace/security" [attr.aria-label]="'Mi seguridad: ' + session.username()">{{
+                (session.username() || school.shortName).slice(0, 1).toUpperCase()
+              }}</a>
+            }
           </div>
         </header>
         @if (preview()) {

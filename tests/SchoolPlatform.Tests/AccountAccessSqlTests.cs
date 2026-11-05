@@ -275,6 +275,7 @@ public sealed class AccountAccessSqlTests : IAsyncLifetime
         await Use(x => x.RedeemAsync(ticket.Code, Password));
         await Read(db => db.Users.Where(x => x.Id == ticket.UserId).ExecuteUpdateAsync(x => x.SetProperty(u => u.TwoFactorEnabled, true)));
         using var browser = app.Browser();
+        // Flagged in SQL without an authenticator: Identity would skip the second step, so the login is refused.
         Assert.Equal(HttpStatusCode.OK, (await Login(browser, "synthetic-student", Password)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await browser.GetAsync("/api/v1/session")).StatusCode);
     }

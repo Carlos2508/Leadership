@@ -232,4 +232,25 @@ public sealed class AcademicSqlTests : SqlTestBase
         Assert.Equal("invalid-request", problem.GetProperty("code").GetString());
         Assert.DoesNotContain("DateOnly", await response.Content.ReadAsStringAsync());
     }
+
+    [Fact]
+    public async Task Readiness_reports_a_migrated_database_without_details()
+    {
+        var response = await App.Browser().GetAsync("/health/ready");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("Healthy", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Audit_can_be_filtered_by_area()
+    {
+        await Year();
+        using var admin = await SignIn(OwnerName);
+        var academic = await admin.GetFromJsonAsync<JsonElement>("/api/v1/audit?area=academic");
+        Assert.True(academic.GetProperty("total").GetInt32() >= 3);
+        Assert.All(academic.GetProperty("items").EnumerateArray(), x => Assert.Equal("AcademicYear", x.GetProperty("targetType").GetString()));
+        var access = await admin.GetFromJsonAsync<JsonElement>("/api/v1/audit?area=access");
+        Assert.All(access.GetProperty("items").EnumerateArray(), x => Assert.Equal(JsonValueKind.Null, x.GetProperty("targetType").ValueKind));
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/v1/audit?area=unknown")).StatusCode);
+    }
 }

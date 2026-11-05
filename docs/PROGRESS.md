@@ -2,11 +2,39 @@
 
 Actualizado: 5 de noviembre de 2026, America/Guatemala.
 
+## Consolidación en Git (5 de noviembre de 2026)
+
+Por solicitud explícita del propietario, este commit reúne todos los cambios pendientes, incluidos los incrementos décimo y undécimo y las correcciones del recorrido QA. Se solicitó también su push a `origin/main`. Las menciones históricas a «sin commit» describen el cierre de aquellas sesiones. Los archivos locales, credenciales, respaldos y evidencias ignoradas permanecen fuera de Git. En esta consolidación se comprobó `git diff --check`; no se repitieron las suites y se conservan sus resultados previos documentados. Los pendientes físicos, de licencia, políticas y producción siguen vigentes.
+
 ## Alcance vigente
 
 **Un proyecto y una base independientes por colegio.** El propietario aclaró expresamente que copiará este proyecto para otro colegio y cambiará su nombre/configuración. No construir SaaS, selección de clientes, tenants ni membresías entre instituciones. La marca está en un único `config/institution.json`, editable por el desarrollador, sin panel administrativo.
 
 ## Implementado
+
+### Undécimo incremento: libreta ágil, rendimiento, PDFs, carnets y portería (estado vigente)
+
+- Libreta con navegación Enter/↓, pegado desde Excel (E/P), autoguardado con rowversion y correcciones publicadas con motivo.
+- Bundles Brotli/Gzip e inmutables, API comprimida, sesión breve en guards y precarga. Medición local final: páginas 101–145 ms; API más lenta observada 11 ms. Sin Redis, solvencia y permisos se verifican en servidor.
+- PDFs reales: recibo interno/familiar (sin usuario emisor en familia), notas familiares con solvencia, libreta docente e informes de período publicado por grado/sección con retención. QuestPDF Community: elegibilidad del colegio pendiente de confirmación; ver ADR-009.
+- Carnets CR80 con QR/Code 128, impresión individual y por grado/sección (tarjeta/carta), foto privada opcional, reemplazo transaccional y revocación del carnet anterior. **Imprimir conserva el carnet activo; reemplazar lo invalida.**
+- Portería persistente y UI Angular: lector USB/teclado, modos, duplicados concurrentes, registro manual, reporte diario/historial, anulaciones con motivo, registro/revocación de teléfonos y consulta familiar por facultad académica. `attendance.gate/read/manage` en SQL, más perfiles Portería y Control de asistencia.
+- Flutter: lector `/gate-reader` conectado a la API con credencial de dispositivo (QR, HTTPS, cámara/entrada manual, almacenamiento seguro nativo y revocación). Los demás módulos siguen siendo prototipo ficticio. No se declara terminada la integración móvil.
+- `StudentCardsAndGate` aplicada y verificada en `SchoolPlatform_Development`; datos sintéticos previos conservados. Ver ADR-009 y `GATE.md`.
+
+Validación del servidor: **79 pruebas .NET correctas, 0 omitidas** (SQL Server real). Build Angular correcto. **31 E2E correctos y 1 omitido previsto** (rendimiento móvil, medido en escritorio); recorridos nuevos con Axe. Flutter: **68 pruebas correctas**, análisis sin observaciones y build web correctos, incluida navegación/emparejamiento/revocación del lector con dobles HTTP. Revisión de PDF renderizado y capturas de escritorio/móvil; pendiente la impresión y cámara físicas. Sin commit, PR, publicación ni datos del legado.
+
+### Décimo incremento: avisos, MFA, archivos privados, operación y pulido (estado más reciente)
+
+- **Avisos internos** con audiencia por colegio/grado/curso, facultad `Communications` y lecturas (`COMMUNICATION.md`).
+- **MFA TOTP** con QR, códigos de respaldo, desafío en el ingreso, restablecimiento por gestor y exigencia configurable por permiso. Se corrigió un caso en que una cuenta marcada con MFA sin autenticador entraba solo con contraseña.
+- **Adjuntos privados** en entregas, validados por firma, fuera de la web, con descarga autorizada por recurso.
+- **Operación**: `/health/ready`, `Backup-Database.ps1 -VerifyRestore` (probado contra la base de desarrollo) y workflow de CI (sin ejecutar aún). Ver `OPERATIONS.md`.
+- **Importador MIG-001a** (plan/apply desde staging revisado, idempotente, sin facultades ni cuentas). Ver `MIGRATION.md`.
+- **UX**: auditoría con etiquetas legibles y filtro por área, plurales correctos, nombre de ciclo sin duplicar «Ciclo», cierre de sesión en la barra lateral, avatar hacia «Mi seguridad», resumen de validación vacío oculto en las páginas de acceso.
+
+Validación: **71 pruebas .NET (57 SQL) y 28 E2E** correctas en escritorio y móvil con Axe, sin errores del servidor. Migraciones `CommunicationAnnouncements` y `SubmissionFiles` aplicadas a `SchoolPlatform_Development`.
+
 
 ### Noveno incremento: asistencia (estado más reciente)
 
@@ -156,6 +184,4 @@ No se probó en dispositivos/emuladores Android o iOS ni se compiló APK: el ent
 
 ## Próximo bloque
 
-ACA-001/ENR-001: ciclos escolares con estados, períodos, grados/niveles, secciones opcionales y matrícula anual canónica con ubicaciones de vigencia (sin sección ficticia, sin ciclo global en sesión). Después, finanzas y solvencia antes de liberar consulta de notas. Personas/familias e IAM ya están implementados; no reconstruirlos.
-
-La fase operativa sigue **parcial** por MFA completo, CI, despliegue/endurecimiento, backups/restauración y preparación de producción. No existen todavía matrícula, cobros, tareas, notas publicadas, boletas/PDF, promoción, importador ni Redis. Flutter existe solo como prototipo con datos ficticios (`mobile/`), sin integración con la API. La muestra del directorio no reemplaza el directorio real implementado en `/workspace/people`.
+Pruebas físicas de portería/carnets en Android/iOS e impresora, confirmación de licencia y procedimientos del colegio; luego piloto con respaldos y restauración, conciliación, capacitación y endurecimiento. Persisten pendientes de políticas académicas, recuperaciones/promoción, notificaciones externas, antivirus y extracción/conciliación del legado. Los módulos persistentes descritos arriba existen; el prototipo Flutter general y las muestras de diseño no los reemplazan.

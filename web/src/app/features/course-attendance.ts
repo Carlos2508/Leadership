@@ -8,6 +8,7 @@ import { formatDateOnly } from '../core/people-api';
 import { CourseView } from './courses';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
+import { PluralPipe, plural } from '../shared/plural.pipe';
 
 type Status = 'Present' | 'Absent' | 'Late' | 'Excused';
 interface Row {
@@ -29,7 +30,7 @@ interface Sheet {
 
 /** Daily attendance of a course for the assigned teacher; everyone starts as present until changed. */
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink],
+  imports: [Shell, Icon, FormsModule, RouterLink, PluralPipe],
   template: `
     <app-shell title="Asistencia">
       <a class="back-link" [routerLink]="['/workspace/courses', id()]"><app-icon name="arrow" />Volver a la lista</a>
@@ -58,7 +59,7 @@ interface Sheet {
               ><span>Fecha</span><input type="date" name="date" [(ngModel)]="date" (change)="load()"
             /></label>
             <p class="directory-summary attendance-counts" aria-live="polite">
-              {{ counts().absent }} ausencias · {{ counts().late }} tardanzas · {{ counts().excused }} justificadas ·
+              {{ counts().absent | plural: 'ausencia' : 'ausencias' }} · {{ counts().late | plural: 'tardanza' : 'tardanzas' }} · {{ counts().excused | plural: 'justificada' : 'justificadas' }} ·
               {{ recorded() ? 'registrada' : 'sin registrar' }}
             </p>
           </div>
@@ -165,7 +166,7 @@ export class CourseAttendance {
           version: x.version,
         })),
       });
-      this.notice.set(result.changed ? `Asistencia guardada (${result.changed} cambios).` : 'No había cambios.');
+      this.notice.set(result.changed ? `Asistencia guardada (${plural(result.changed, 'cambio', 'cambios')}).` : 'No había cambios.');
       await this.load();
       requestAnimationFrame(() => this.noticeRef?.nativeElement.focus());
     } catch (error) {

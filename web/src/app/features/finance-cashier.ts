@@ -19,11 +19,12 @@ import {
 } from '../core/finance-api';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
+import { CyclePipe } from '../shared/cycle.pipe';
 
 type Mode = 'pay' | 'adjust' | 'void' | 'reverse';
 
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink],
+  imports: [Shell, Icon, FormsModule, RouterLink, CyclePipe],
   templateUrl: './finance-cashier.html',
 })
 export class FinanceCashier {

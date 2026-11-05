@@ -20,3 +20,6 @@ src/SchoolPlatform.Host/appsettings.*.local.json
 exports/
 staging/
 backups/
+
+# Private uploaded files of this installation (never versioned)
+**/App_Data/

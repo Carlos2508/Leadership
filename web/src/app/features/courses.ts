@@ -219,7 +219,7 @@ export class Courses {
             sectionId: this.createForm.sectionId || null,
             subjectIds,
           });
-          message = result.created ? `Se crearon ${result.created} cursos.` : 'Esos cursos ya existían.';
+          message = result.created ? result.created === 1 ? 'Se creó 1 curso.' : `Se crearon ${result.created} cursos.` : 'Esos cursos ya existían.';
           break;
         }
         case 'assign': {

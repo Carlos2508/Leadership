@@ -78,11 +78,18 @@
           Limpiar filtros
         </button>
       </form>
+      @if (gradeId && yearId && session.can('people.manage')) {
+        <div class="card-title-row">
+          <p class="muted-copy">Carnets del grado o sección seleccionados, con ubicación vigente en el ciclo.</p>
+          <a class="button outline compact-button" [href]="'/api/v1/years/' + yearId + '/cards.pdf?gradeId=' + gradeId + (sectionId ? '&sectionId=' + sectionId : '') + '&layout=sheet'" target="_blank" rel="noopener">Carnets en carta</a>
+          <a class="button outline compact-button" [href]="'/api/v1/years/' + yearId + '/cards.pdf?gradeId=' + gradeId + (sectionId ? '&sectionId=' + sectionId : '') + '&layout=card'" target="_blank" rel="noopener">Carnets en tarjeta</a>
+        </div>
+      }
       @if (detail(); as d) {
         @if (!open()) {
           <p class="year-notice">
             <app-icon name="info" /><span
-              >El ciclo {{ d.year.label }} está {{ yearLabels[d.year.status].toLowerCase() }}:
+              >El {{ d.year.label | cycle: true }} está {{ yearLabels[d.year.status].toLowerCase() }}:
               {{
                 d.year.status === 'Draft'
                   ? 'abre las inscripciones en Ciclos y grados para registrar estudiantes.'
@@ -209,7 +216,7 @@
       </button>
     </div>
     <form class="access-form" (ngSubmit)="submit()">
-      <p class="muted-copy">Ciclo {{ detail()?.year?.label }}</p>
+      <p class="muted-copy">{{ detail()?.year?.label | cycle }}</p>
       @if (mode() === 'enroll') {
         <div class="candidate-search">
           <label class="form-field"

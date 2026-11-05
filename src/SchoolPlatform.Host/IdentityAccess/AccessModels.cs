@@ -24,6 +24,11 @@ public sealed class AccountAccessOptions
 {
     public int ActivationMinutes { get; set; } = 1440;
     public int RecoveryMinutes { get; set; } = 30;
+    /// <summary>
+    /// Permissions that only work while the account has two-step verification enabled. Empty by default so a new
+    /// installation can bootstrap; production should list at least accounts.manage, audit.read and finance.reverse.
+    /// </summary>
+    public string[] RequireMfaForPermissions { get; set; } = [];
 }
 
 public sealed record IssueCodeResult(Guid UserId, string Code, string Purpose, DateTimeOffset ExpiresAt);
@@ -31,7 +36,7 @@ public sealed record InviteRequest(string Username, string Profile, string Reaso
 public sealed record AccountChangeRequest(string Version, string Reason, string? Profile = null, bool? IsActive = null);
 public sealed record IssueCodeRequest(string Version, string Purpose, string VerificationNote, bool IdentityVerified);
 public sealed record AccountSummary(Guid Id, string Username, string Status, string Profile, string Version,
-    DateTimeOffset? CodeExpiresAt, string? CodePurpose);
+    DateTimeOffset? CodeExpiresAt, string? CodePurpose, bool TwoFactorEnabled = false);
 public sealed record PageResult<T>(T[] Items, int Total, int Page, int PageSize);
 
 public sealed class AccessOperationException(int status, string code, string message)

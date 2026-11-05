@@ -1,5 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import { randomBytes, randomUUID } from 'node:crypto';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 // Set once in the coordinator; workers inherit these values when they load this configuration.
 process.env['SCHOOLPLATFORM_E2E_DATABASE'] ??=
   'SchoolPlatform_E2E_' + randomUUID().replaceAll('-', '');
@@ -41,6 +43,8 @@ export default defineConfig({
       ASPNETCORE_ENVIRONMENT: 'Development',
       Logging__LogLevel__Default: 'Warning',
       ConnectionStrings__SchoolDatabase: connection,
+      // Uploaded files of the browser tests go to a private temporary folder, never to the installation storage.
+      Storage__Root: join(tmpdir(), process.env['SCHOOLPLATFORM_E2E_DATABASE']! + '_files'),
     },
   },
 });

@@ -83,7 +83,7 @@ test('charge tuition by preview, collect with a receipt and show clearance and t
   await expect(page.locator('.preview-summary')).toContainText('1 por emitir');
   await expectAccessible(page);
   await page.screenshot({ path: testInfo.outputPath('finance-setup.png'), fullPage: true });
-  await page.getByRole('button', { name: /Confirmar emisión de 1 cargos/ }).click();
+  await page.getByRole('button', { name: /Confirmar emisión de 1 cargo/ }).click();
   await expect(page.locator('p.success-feedback')).toContainText('Cargos emitidos: 1');
 
   // Clearance before payment

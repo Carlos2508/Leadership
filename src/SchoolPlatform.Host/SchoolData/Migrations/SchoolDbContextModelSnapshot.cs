@@ -519,6 +519,103 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.ToTable("Sessions", "attendance");
                 });
 
+            modelBuilder.Entity("SchoolPlatform.Host.Communication.Announcement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AcademicYearId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AudienceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AudienceKind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("ForGuardians")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ForStaff")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ForStudents")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("PublishedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("PublishedBy");
+
+                    b.HasIndex("Status", "PublishedAt");
+
+                    b.ToTable("Announcements", "communication", t =>
+                        {
+                            t.HasCheckConstraint("CK_Announcements_Audience", "[AudienceKind] IN ('School','Grade','Course')");
+
+                            t.HasCheckConstraint("CK_Announcements_Status", "[Status] IN ('Draft','Published','Archived')");
+                        });
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Communication.AnnouncementRead", b =>
+                {
+                    b.Property<Guid>("AnnouncementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ReadAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("AnnouncementId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AnnouncementReads", "communication");
+                });
+
             modelBuilder.Entity("SchoolPlatform.Host.Finance.BillingPeriod", b =>
                 {
                     b.Property<Guid>("Id")
@@ -934,6 +1031,219 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SchoolPlatform.Host.Gate.GateDevice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("LastSeenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("RevokedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("RevokedBy");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("GateDevices", "attendance");
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Gate.GateEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CardId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(3)");
+
+                    b.Property<DateOnly>("LocalDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("RecordedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("VoidReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset?>("VoidedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("VoidedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CardId");
+
+                    b.HasIndex("DeviceId");
+
+                    b.HasIndex("OccurredAt");
+
+                    b.HasIndex("RecordedBy");
+
+                    b.HasIndex("VoidedBy");
+
+                    b.HasIndex("LocalDate", "StudentId");
+
+                    b.HasIndex("StudentId", "OccurredAt");
+
+                    b.ToTable("GateEvents", "attendance", t =>
+                        {
+                            t.HasCheckConstraint("CK_GateEvents_Actor", "[RecordedBy] IS NOT NULL OR [DeviceId] IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_GateEvents_Direction", "[Direction] IN ('In','Out')");
+
+                            t.HasCheckConstraint("CK_GateEvents_Source", "[Source] IN ('Scanner','Manual','Mobile')");
+
+                            t.HasCheckConstraint("CK_GateEvents_Void", "([VoidedAt] IS NULL AND [VoidedBy] IS NULL AND [VoidReason] IS NULL) OR ([VoidedAt] IS NOT NULL AND [VoidedBy] IS NOT NULL AND [VoidReason] IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Gate.PersonPhoto", b =>
+                {
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("UploadedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("PersonId");
+
+                    b.HasIndex("UploadedBy");
+
+                    b.ToTable("Photos", "people", t =>
+                        {
+                            t.HasCheckConstraint("CK_Photos_Type", "[ContentType] IN ('image/jpeg','image/png')");
+                        });
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Gate.StudentCard", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("IssuedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RevokeReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("RevokedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IssuedBy");
+
+                    b.HasIndex("RevokedBy");
+
+                    b.HasIndex("StudentId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_StudentCards_ActivePerStudent")
+                        .HasFilter("[RevokedAt] IS NULL");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("StudentCards", "people");
+                });
+
             modelBuilder.Entity("SchoolPlatform.Host.Grades.GradePublication", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1251,6 +1561,103 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.ToTable("Submissions", "learning", t =>
                         {
                             t.HasCheckConstraint("CK_Submissions_Status", "[Status] IN ('Submitted','Reviewed')");
+                        });
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Learning.SubmissionFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<Guid>("SubmissionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("UploadedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique();
+
+                    b.HasIndex("UploadedBy");
+
+                    b.HasIndex("SubmissionId", "DeletedAt");
+
+                    b.ToTable("SubmissionFiles", "learning", t =>
+                        {
+                            t.HasCheckConstraint("CK_SubmissionFiles_Size", "[Size] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.LegacyImport.LegacyIdentity", b =>
+                {
+                    b.Property<string>("Source")
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<string>("Entity")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("LegacyId")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<string>("FileSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTimeOffset>("ImportedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Source", "Entity", "LegacyId");
+
+                    b.HasIndex("PersonId");
+
+                    b.ToTable("LegacyIdentities", "people", t =>
+                        {
+                            t.HasCheckConstraint("CK_LegacyIdentities_Entity", "[Entity] IN ('student','guardian')");
                         });
                 });
 
@@ -1741,6 +2148,40 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SchoolPlatform.Host.Communication.Announcement", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.Academic.AcademicYear", null)
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("PublishedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Communication.AnnouncementRead", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.Communication.Announcement", null)
+                        .WithMany()
+                        .HasForeignKey("AnnouncementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SchoolPlatform.Host.Finance.BillingPeriod", b =>
                 {
                     b.HasOne("SchoolPlatform.Host.Academic.AcademicYear", null)
@@ -1852,6 +2293,84 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SchoolPlatform.Host.Gate.GateDevice", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("RevokedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Gate.GateEvent", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.Gate.StudentCard", null)
+                        .WithMany()
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SchoolPlatform.Host.Gate.GateDevice", null)
+                        .WithMany()
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("RecordedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SchoolPlatform.Host.People.StudentProfile", null)
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("VoidedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Gate.PersonPhoto", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.People.Person", null)
+                        .WithOne()
+                        .HasForeignKey("SchoolPlatform.Host.Gate.PersonPhoto", "PersonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("UploadedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Gate.StudentCard", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("IssuedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("RevokedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SchoolPlatform.Host.People.StudentProfile", null)
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SchoolPlatform.Host.Grades.GradePublication", b =>
                 {
                     b.HasOne("SchoolPlatform.Host.Academic.AcademicYear", null)
@@ -1958,6 +2477,30 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
                         .WithMany()
                         .HasForeignKey("SubmittedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Learning.SubmissionFile", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.Learning.Submission", null)
+                        .WithMany()
+                        .HasForeignKey("SubmissionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("UploadedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.LegacyImport.LegacyIdentity", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.People.Person", null)
+                        .WithMany()
+                        .HasForeignKey("PersonId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

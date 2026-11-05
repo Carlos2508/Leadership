@@ -80,7 +80,20 @@ th.numeric {
   padding: 12px 0;
   border-bottom: 1px solid var(--border);
   font-size: 13px;
+  flex-wrap: wrap;
 }
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+  margin: 16px 0;
+}
+.filter-bar label { flex: 1 1 200px; min-width: 0; }
+.gate-report-list .person-copy { flex: 1 1 240px; }
+.filter-bar input, .filter-bar select { width: 100%; }
+.gate-photo { width: 100px; height: 125px; object-fit: cover; border-radius: 12px; margin: 12px 0; }
+.pairing-qr { display: block; width: 280px; max-width: 100%; height: auto; margin: 16px 0; background: white; }
 .payment-list li.reversed .person-copy strong {
   text-decoration: line-through;
   color: var(--muted);
@@ -294,4 +307,9 @@ th.numeric {
     border: none;
     padding: 0;
   }
+}
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }

@@ -38,6 +38,20 @@ public static class LearningEndpoints
         });
         api.MapGet("/me/students/{studentId:guid}/assignments", async (Guid studentId, ClaimsPrincipal user, LearningService service, CancellationToken ct) =>
             await service.StudentAssignmentsAsync(Actor(user), studentId, ct) is { } items ? Results.Ok(items) : Results.NotFound());
+        api.MapGet("/me/assignments/{id:guid}/files", async (Guid id, ClaimsPrincipal user, LearningService learning, SubmissionFileService files, CancellationToken ct) =>
+            await learning.OwnSubmissionIdAsync(Actor(user), id, ct) is { } submission ? Results.Ok(await files.ListAsync(submission, ct)) : Results.Ok(Array.Empty<FileView>()));
+        api.MapPost("/me/assignments/{id:guid}/files", async (Guid id, IFormFile file, ClaimsPrincipal user, SubmissionFileService files, CancellationToken ct) =>
+            Results.Ok(await files.UploadAsync(Actor(user), id, file, ct)))
+            .WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(12 * 1024 * 1024));
+        api.MapPost("/me/assignments/{id:guid}/files/{fileId:guid}/remove", async (Guid id, Guid fileId, ClaimsPrincipal user, SubmissionFileService files, CancellationToken ct) =>
+        {
+            await files.DeleteAsync(Actor(user), id, fileId, ct);
+            return Results.NoContent();
+        });
+        api.MapGet("/files/{id:guid}", async (Guid id, ClaimsPrincipal user, SubmissionFileService files, CancellationToken ct) =>
+            await files.DownloadAsync(Actor(user), id, ct) is { } download
+                ? Results.File(download.Path, download.ContentType, download.FileName)
+                : Results.NotFound());
         api.MapPost("/me/assignments/{id:guid}/submission", async (Guid id, SubmitRequest request, ClaimsPrincipal user, LearningService service, CancellationToken ct) =>
         {
             await service.SubmitAsync(Actor(user), id, request, ct);

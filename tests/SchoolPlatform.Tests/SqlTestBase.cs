@@ -22,19 +22,30 @@ public abstract class SqlTestBase : IAsyncLifetime
     protected const string Password = "Synthetic-Only!12345";
     protected const string Reason = "Verificación institucional sintética de prueba.";
 
+    /// <summary>Additional host configuration for a test class (e.g. security policies).</summary>
+    protected virtual Dictionary<string, string?> ExtraConfiguration => [];
+
+    /// <summary>Service overrides for a test class (e.g. a controllable clock).</summary>
+    protected virtual void ConfigureServices(IServiceCollection services) { }
+
     public virtual async Task InitializeAsync()
     {
         var connection = new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable("SCHOOLPLATFORM_TEST_SQL") ??
             "Server=localhost;Integrated Security=true;Encrypt=true;TrustServerCertificate=true") { InitialCatalog = database };
-        App = new TestApplication(configuration: new() { ["ConnectionStrings:SchoolDatabase"] = connection.ConnectionString },
-            configureServices: services => services.AddSingleton<Microsoft.Extensions.Logging.ILoggerProvider>(new ErrorCapture(Errors)));
+        App = new TestApplication(configuration: new Dictionary<string, string?> { ["ConnectionStrings:SchoolDatabase"] = connection.ConnectionString }
+                .Concat(ExtraConfiguration).ToDictionary(x => x.Key, x => x.Value),
+            configureServices: services =>
+            {
+                services.AddSingleton<Microsoft.Extensions.Logging.ILoggerProvider>(new ErrorCapture(Errors));
+                ConfigureServices(services);
+            });
         await App.MigrateOwnedDatabaseAsync(database);
         Owner = await Use<AccountAccessService, Guid>(x => x.ProvisionOwnerAsync(OwnerName, Password));
         var version = await Use<IdentityDbContext, string>(db => db.Users.Where(x => x.Id == Owner).Select(x => x.ConcurrencyStamp!).SingleAsync());
         await Use<AccountAccessService>(x => x.ChangeProfileAsync(Owner, Owner, new(version, Reason, "administrator")));
     }
 
-    public async Task DisposeAsync()
+    public virtual async Task DisposeAsync()
     {
         if (App is null) return;
         await using (var scope = App.Services.CreateAsyncScope())

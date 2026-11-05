@@ -62,6 +62,10 @@ public sealed partial class CourseService(SchoolDbContext db, SchoolAudit audit,
         return await ViewsAsync(ids, ct);
     }
 
+    /// <summary>One course view without loading every course of its year.</summary>
+    public async Task<CourseView> CourseAsync(Guid courseId, CancellationToken ct) =>
+        (await ViewsAsync([courseId], ct)).SingleOrDefault() ?? throw OperationException.NotFound("No encontramos ese curso.");
+
     public async Task<int> CreateCoursesAsync(Guid actor, Guid yearId, CreateCoursesRequest request, CancellationToken ct)
     {
         await audit.RequireAsync(actor, ct, Permissions.AcademicManage);

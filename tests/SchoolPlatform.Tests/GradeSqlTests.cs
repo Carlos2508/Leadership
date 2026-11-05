@@ -14,7 +14,7 @@ namespace SchoolPlatform.Tests;
 public sealed class GradeSqlTests : SqlTestBase
 {
     private static readonly DateOnly Start = new(2026, 1, 12);
-    private Guid year, period, course, student, outsider, cutoff, relationship, teacherUser, otherTeacherUser;
+    private Guid year, period, grade, course, student, outsider, cutoff, relationship, teacherUser, otherTeacherUser;
 
     public override async Task InitializeAsync()
     {
@@ -22,7 +22,7 @@ public sealed class GradeSqlTests : SqlTestBase
         year = await Use<AcademicService, Guid>(x => x.CreateYearAsync(Owner, new("2026", Start, new(2026, 10, 30)), default));
         period = await Use<AcademicService, Guid>(x => x.AddPeriodAsync(Owner, year, new(null, Start, Start.AddDays(60)), default));
         await Use<AcademicService>(async x => await x.SetYearStatusAsync(Owner, year, new((await x.YearAsync(year, default)).Year.Version, YearStatus.EnrollmentOpen, Reason), default));
-        var grade = await Use<AcademicService, Guid>(x => x.SaveGradeAsync(Owner, null, new("3B", "Tercero básico", "Básico", 1), default));
+        grade = await Use<AcademicService, Guid>(x => x.SaveGradeAsync(Owner, null, new("3B", "Tercero básico", "Básico", 1), default));
         var other = await Use<AcademicService, Guid>(x => x.SaveGradeAsync(Owner, null, new("1P", "Primero primaria", "Primaria", 2), default));
         var subject = await Use<CourseService, Guid>(x => x.SaveSubjectAsync(Owner, null, new("MAT", "Matemática"), default));
         await Use<CourseService, int>(x => x.CreateCoursesAsync(Owner, year, new(grade, null, [subject]), default));
@@ -68,7 +68,7 @@ public sealed class GradeSqlTests : SqlTestBase
     }
 
     private Task<int> Capture(Guid user, decimal? score, string status = ScoreStatus.Scored, string? version = null, string? reason = null) =>
-        Use<GradeService, int>(x => x.SaveAsync(user, course, new(period, [new(student, score, status, version)], reason), default));
+        Use<GradeService, int>(async x => (await x.SaveAsync(user, course, new(period, [new(student, score, status, version)], reason), default)).Changed);
     private async Task<string?> Version() =>
         (await Use<GradeService, GradeSheet?>(x => x.SheetAsync(Owner, course, period, default)))!.Rows.Single(r => r.StudentId == student).Version;
     private Task Publish() => Use<GradeService>(x => x.PublishAsync(Owner, year, new(period, cutoff, "Entrega del primer período"), default));
@@ -84,7 +84,7 @@ public sealed class GradeSqlTests : SqlTestBase
         await Assert.ThrowsAsync<OperationException>(() => Capture(otherTeacherUser, 80));
         await Assert.ThrowsAsync<OperationException>(() => Capture(teacherUser, 100.5m));
         await Assert.ThrowsAsync<OperationException>(() => Capture(teacherUser, 70.555m));
-        await Assert.ThrowsAsync<OperationException>(() => Use<GradeService, int>(x =>
+        await Assert.ThrowsAsync<OperationException>(() => Use<GradeService, SaveScoresResult>(x =>
             x.SaveAsync(teacherUser, course, new(period, [new(outsider, 90, ScoreStatus.Scored, null)], null), default)));
 
         Assert.Equal(1, await Capture(teacherUser, 0));
@@ -148,5 +148,75 @@ public sealed class GradeSqlTests : SqlTestBase
         var paymentVersion = (await Use<ChargeService, Statement>(x => x.StatementAsync(student, year, default))).Payments.Single().Version;
         await Use<PaymentService>(x => x.ReverseAsync(Owner, receipt.PaymentId, new(paymentVersion, Reason), default));
         Assert.Equal("Blocked", (await Grades(guardian)).GetProperty("periods")[0].GetProperty("status").GetString());
+    }
+
+    private static async Task<string> PdfText(HttpClient client, string path)
+    {
+        var response = await client.GetAsync(path);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);
+        Assert.StartsWith("inline", response.Content.Headers.ContentDisposition?.ToString());
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        // Optional visual review: SCHOOLPLATFORM_PDF_DUMP=<folder> keeps a copy of every generated document.
+        if (Environment.GetEnvironmentVariable("SCHOOLPLATFORM_PDF_DUMP") is { Length: > 0 } dump)
+            await File.WriteAllBytesAsync(Path.Combine(dump, $"{DateTime.Now:HHmmssfff}-{response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"')}"), bytes);
+        using var document = UglyToad.PdfPig.PdfDocument.Open(bytes);
+        return string.Join('\n', document.GetPages().Select(x => x.Text));
+    }
+
+    [Fact]
+    public async Task Printed_documents_follow_the_same_access_and_clearance_rules()
+    {
+        await Capture(teacherUser, 93);
+        using var staff = await SignIn(OwnerName);
+        using var guardian = await SignIn("synthetic-guardian");
+        using var teacher = await SignIn("synthetic-teacher");
+        using var other = await SignIn("synthetic-other");
+        var cards = $"/api/v1/years/{year}/periods/{period}/report-cards.pdf?gradeId={grade}";
+        Assert.Equal(HttpStatusCode.Conflict, (await staff.GetAsync(cards)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await teacher.GetAsync(cards)).StatusCode);
+
+        // The teacher's working sheet: only for those who can see the course.
+        Assert.Contains("Notas N-1", await PdfText(teacher, $"/api/v1/courses/{course}/grades.pdf"));
+        Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/v1/courses/{course}/grades.pdf")).StatusCode);
+
+        await Publish();
+        var version = (await Use<PeopleService, PersonDetail>(x => x.GetAsync(student, default))).Guardians.Single().Version;
+        await Use<PeopleService>(x => x.UpdateRelationshipAsync(Owner, relationship, new(version, "Mother",
+            [Faculties.AcademicRecords, Faculties.Finance], Reason), default));
+
+        // Not cleared: neither the family copy nor the staff report card prints the score.
+        var family = await PdfText(guardian, $"/api/v1/me/students/{student}/grades.pdf");
+        Assert.Contains("no disponibles", family);
+        Assert.DoesNotContain("93", family);
+        var withheld = await PdfText(staff, cards);
+        Assert.Contains("Informe retenido", withheld);
+        Assert.DoesNotContain("93", withheld);
+        Assert.Equal(HttpStatusCode.NotFound, (await teacher.GetAsync($"/api/v1/me/students/{student}/grades.pdf")).StatusCode);
+
+        var charge = (await Use<ChargeService, Statement>(x => x.StatementAsync(student, year, default))).Charges.Single();
+        var receipt = await Use<PaymentService, ReceiptView>(x => x.RecordAsync(Owner, new(Guid.NewGuid().ToString("N"), "Gloria Encargada", "Cash", null,
+            Start.AddDays(5), null, 400m, [new(charge.Id, 400m)]), default));
+        Assert.Contains("93", await PdfText(guardian, $"/api/v1/me/students/{student}/grades.pdf"));
+        var printed = await PdfText(staff, cards);
+        Assert.Contains("93", printed);
+        Assert.Contains("Matemática", printed);
+
+        var receiptText = await PdfText(staff, $"/api/v1/finance/payments/{receipt.PaymentId}/receipt.pdf");
+        Assert.Contains("Recibo de pago", receiptText);
+        Assert.Contains(OwnerName, receiptText);
+        Assert.Contains("Gloria Encargada", receiptText);
+        Assert.Contains($"No. {receipt.Receipt.Number}", receiptText);
+        var familyReceipt = await PdfText(guardian, $"/api/v1/me/students/{student}/receipts/{receipt.PaymentId}/receipt.pdf");
+        Assert.Contains("Gloria Encargada", familyReceipt);
+        Assert.DoesNotContain(OwnerName, familyReceipt);
+        Assert.Equal(HttpStatusCode.Forbidden, (await teacher.GetAsync($"/api/v1/finance/payments/{receipt.PaymentId}/receipt.pdf")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await teacher.GetAsync($"/api/v1/me/students/{student}/receipts/{receipt.PaymentId}/receipt.pdf")).StatusCode);
+
+        var paymentVersion = (await Use<ChargeService, Statement>(x => x.StatementAsync(student, year, default))).Payments.Single().Version;
+        await Use<PaymentService>(x => x.ReverseAsync(Owner, receipt.PaymentId, new(paymentVersion, Reason), default));
+        Assert.Contains("ANULADO", await PdfText(staff, $"/api/v1/finance/payments/{receipt.PaymentId}/receipt.pdf"));
+        Assert.DoesNotContain("93", await PdfText(guardian, $"/api/v1/me/students/{student}/grades.pdf"));
+        Assert.Empty(Errors);
     }
 }

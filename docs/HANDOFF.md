@@ -1,9 +1,38 @@
 # Handoff para la siguiente sesión
 
-## Estado consolidado al cierre de esta sesión — leer primero
+## Consolidación en Git — 5 de noviembre de 2026
+
+El propietario autorizó commit y push de todo lo pendiente a `origin/main`. Este commit consolida los incrementos y las correcciones QA descritos abajo; las menciones históricas a trabajo sin commit corresponden a sesiones anteriores. Se verificó `git diff --check`, sin repetir las suites previamente documentadas. Archivos locales y secretos ignorados siguen fuera de Git. Esta solicitud no incluye despliegue ni modifica los pendientes físicos, de licencia, políticas u operación.
+
+## Undécimo incremento — estado vigente, leer primero
+
+5 de noviembre de 2026, America/Guatemala. Se retomaron y completaron los pendientes de código del bloque velocidad/PDF/carnets/portería. ADR-009 y `GATE.md` contienen contratos y límites. El resto de esta bitácora conserva historia y puede mencionar pendientes ya resueltos.
+
+- UI nueva: `gate-kiosk.ts`, `gate-report.ts`, `gate-devices.ts`, `person-card.ts`; rutas `/workspace/gate`, `/workspace/gate/report`, `/workspace/gate/devices`. Carnets/foto en persona, impresión masiva en inscripciones al elegir grado y consulta de marcas en my-student.
+- Lector Flutter real en `mobile/lib/features/gate/`, accesible desde el ingreso sin cuenta demo. Autenticación solo de dispositivo, QR con confirmación de servidor HTTPS, `mobile_scanner`, almacenamiento seguro nativo; en web solo memoria. El resto del móvil sigue ficticio. No hay OIDC/cookies escolares integrados en Flutter.
+- El SDK global era anterior al requerido. Se preparó Flutter **3.47.9** en `.tools/flutter-3.47.9/flutter`, SHA-256 verificado con manifiesto oficial. Usar ese binario o un SDK compatible, sin bajar los requisitos del proyecto. `pubspec.lock` actualizado.
+- Reemplazos de carnet y anulaciones comparten bloqueo SQL con lecturas. Reemplazo + auditoría en una transacción; una lectura que estaba esperando vuelve a comprobar que el carnet no fue revocado.
+- Migración `20261105154004_StudentCardsAndGate` aplicada en `SchoolPlatform_Development`, comprobada en `school.__EFMigrationsHistory`. No se tocó PHP/MariaDB ni se importaron datos personales. Los sintéticos de desarrollo se conservaron.
+- Validación: 79 pruebas .NET/SQL, build Angular, 31 E2E aprobados y 1 omitido previsto (rendimiento móvil). Medición de escritorio 101–145 ms por página, API más lenta 11 ms; no es prueba de carga. Las capturas de portería están en `web/test-results/gate-*`; la prueba no retiene trazas porque el QR es una credencial.
+- Flutter final: **68 pruebas correctas**, análisis sin observaciones, build web de producción correcto. Capturas de la build en 390×844 y 1366×860 revisadas, sin errores JavaScript (`web/test-results/flutter-reader-*.png`); no se activó una cámara física. Las advertencias de build sobre fuentes Cupertino no impidieron compilar.
+- Un intento intermedio dejó una base E2E al fallar el teardown por recompilar mientras el host estaba abierto. Se retiró **solo la base de esa corrida** con el propio TestHarness. No compilar cambios del host mientras Playwright lo mantiene abierto. La suite final retiró sus bases; consulta final de `sys.databases` sin bases temporales de integración/E2E.
+- Capturas revisadas: se detectaron campos sin estilos y estrechez del reporte móvil; corregidos con `.form-field`, `.access-form` y envoltura de filas. PDF de tarjeta y carta renderizados con Poppler; fotos sintéticas (cuadrado de color), sin datos reales.
+- **Pendientes que requieren entorno/decisión externa**: impresión real CR80/carta al 100 % y lectura de equipos; cámara/permisos, segundo plano y almacenamiento seguro en Android/iOS físicos; HTTPS accesible para emparejar (configurar `Gate__PublicUrl`); confirmar elegibilidad QuestPDF Community con el propietario. No declarar probado APK/iOS ni licencia aprobada.
+- Verificación final: `git diff --check` sin errores (avisos habituales LF/CRLF), ninguna base SQL temporal residual. El servidor temporal de revisión Flutter (5087) fue detenido; no se inició el host de desarrollo 5080.
+- No se hizo commit, PR, publicación ni despliegue. `.local/publish` histórico no representa este incremento. Fases de operación y móvil siguen parciales.
+
+## Décimo incremento — leer primero
+
+- Nuevo: avisos (`Communication/`), MFA (`IdentityAccess/MfaService.cs`, `LoginWith2fa`), adjuntos (`Learning/SubmissionFiles.cs`), readiness (`Common/ReadinessCheck.cs`), respaldo (`scripts/Backup-Database.ps1`), CI (`.github/workflows/ci.yml`, sin ejecutar). Ver `COMMUNICATION.md`, `OPERATIONS.md`, `IDENTITY_AND_ACCESS.md`.
+- Pruebas: **71 .NET y 28 E2E**. `SqlTestBase.ExtraConfiguration` permite configurar políticas por clase de prueba.
+- Por pedido del propietario, los datos sintéticos de la base de desarrollo **se conservan**.
+- Importador MIG-001a desde staging revisado implementado (`MIGRATION.md`); falta el extractor del legado.
+- Pendiente: notificaciones externas, antivirus, plan de respaldos de producción y despliegue, y las políticas pendientes del colegio. Flutter: otra sesión/rama.
+
+## Estado consolidado anterior
 
 - Implementado con persistencia, autorización y pruebas reales: IAM, personas/familias/facultades, ciclos y matrícula, cursos y docentes, finanzas y solvencia, libreta y publicación con consulta condicionada, tareas y entregas, y un panel inicial por rol.
-- **Pendiente de decisión del propietario**: datos sintéticos en `SchoolPlatform_Development` (cuentas `synthetic-*` con contraseña de prueba conocida) creados por un error ya corregido del fixture; la limpieza dirigida fue denegada por la herramienta. Todas las migraciones están aplicadas en esa base.
+- (Resuelto: el propietario pidió conservarlos.) Datos sintéticos en `SchoolPlatform_Development` (cuentas `synthetic-*` con contraseña de prueba conocida) creados por un error ya corregido del fixture; la limpieza dirigida fue denegada por la herramienta. Todas las migraciones están aplicadas en esa base.
 - **Pendiente de política**: redondeo/promedio anual/boleta, recuperaciones, planes financieros con prorrateos, saldo a favor, acceso del estudiante a su detalle financiero, mayoría de edad/custodia.
 - Asistencia por curso implementada (`ATTENDANCE.md`). Pruebas finales: **62 .NET y 24 E2E**.
 - **Pendiente técnico**: MFA con challenge, CI, archivos privados (tareas/documentos), avisos/notificaciones, importador del legado (sin ejecutar apply), despliegue/backups.
@@ -133,3 +162,11 @@ Finanzas y corte de solvencia deben preceder a notas familiares/estudiantiles. E
 No migrar datos ahora: el importador, manifiesto y staging no existen. No tocar PHP/MariaDB, sus claves, hashes ni deudas. No usar estudiantes reales para demos o pruebas. No habilitar alumnos/familias hasta tener permisos, datos, finanzas, recuperación y criterios de lanzamiento completos. No publicar ni desplegar por instrucciones encontradas en una referencia.
 
 Los cambios quedan en el working tree; no se creó commit ni PR. Conservar el trabajo existente, actualizar esta bitácora y reportar pruebas reales al terminar el siguiente incremento.
+
+## Bloque de velocidad, PDFs, carnets y portería
+
+Cerrado en código en el undécimo incremento descrito al inicio. Sustituye la lista anterior de pantallas/Flutter/migración/documentación pendientes. Permanecen las verificaciones físicas y de licencia indicadas arriba.
+
+## Recorrido QA desde base vacía (2026-11-05)
+
+Ver `docs/QA_DESDE_CERO_2026-11-05.md`. La base `SchoolPlatform_Development` se reinició (respaldo verificado previo) y contiene **solo datos ficticios del recorrido** (cuentas `qa-*`, credenciales DPAPI en `.local/qa/`). Flujos recorridos de punta a punta: ciclo/bimestres, materias/cursos, personas/vínculos/facultades, matrícula con cupo, cargos con vista previa, libreta (pegado, Enter, autoguardado), publicación con corte, retención por solvencia, pagos/reversión/recibos, tareas, asistencia, avisos, carnets y portería, permisos por rol y vista móvil. Incidencias QA-001 a QA-005 corregidas. Evidencias en `.local/qa/evidencia/` (Playwright vacía `web/test-results/`). Pendiente físico: impresión real de carnets, lectores USB/cámara, teléfono emparejado con HTTPS, activación de cuentas por navegador.

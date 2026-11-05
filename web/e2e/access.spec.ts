@@ -88,7 +88,7 @@ test('manage an invitation, activate without email, recover access and inspect d
   await studentContext.close();
 
   await page.goto('/workspace/audit');
-  await expect(page.getByRole('heading', { name: 'Auditoría de accesos' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Auditoría', level: 1 })).toBeVisible();
   await expect(page.locator('tbody')).toContainText('Contraseña recuperada');
   expect(
     (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())

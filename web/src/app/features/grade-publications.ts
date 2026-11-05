@@ -5,10 +5,11 @@ import { AccessApi } from '../core/access-api';
 import { SessionService } from '../core/session';
 import { InstitutionService } from '../core/institution';
 import { formatDateOnly } from '../core/people-api';
-import { YearSummary, yearStatusLabels } from '../core/academic-api';
+import { GradeView, SectionView, YearDetail, YearSummary, yearStatusLabels } from '../core/academic-api';
 import { FinanceSetup } from '../core/finance-api';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
+import { PluralPipe } from '../shared/plural.pipe';
 
 interface PublicationView {
   periodId: string;
@@ -25,7 +26,7 @@ interface PublicationView {
 
 /** Publication of period results, each tied to the clearance cutoff the school chooses for that release. */
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink],
+  imports: [Shell, Icon, FormsModule, RouterLink, PluralPipe],
   template: `
     <app-shell title="Publicación de notas">
       <div class="page-heading">
@@ -68,10 +69,13 @@ interface PublicationView {
                   <span class="progress-bar" aria-hidden="true"
                     ><span [style.width.%]="item.expected ? (item.recorded / item.expected) * 100 : 0"></span
                   ></span>
-                  <small>{{ item.recorded }} de {{ item.expected }} notas</small>
+                  <small>{{ item.recorded }} de {{ item.expected | plural: 'nota' : 'notas' }}</small>
                 </span>
                 @if (item.published) {
                   <span class="pill mint">Publicado · {{ item.cutoff }}</span>
+                  <button class="button outline compact-button" (click)="openReports(item)">
+                    Informes PDF <span class="sr-only">de {{ item.name }}</span>
+                  </button>
                 } @else if (canPublish()) {
                   <button class="button outline compact-button" (click)="openPublish(item)" [disabled]="!cutoffs().length">
                     Publicar <span class="sr-only">{{ item.name }}</span>
@@ -126,6 +130,42 @@ interface PublicationView {
           </div>
         </form>
       </dialog>
+
+      <dialog #reportsDialog class="account-dialog" aria-labelledby="reports-title" (cancel)="reportsDialog.close()">
+        <div class="dialog-heading">
+          <h2 id="reports-title">Informes de {{ reportPeriod()?.name }}</h2>
+          <button class="icon-button" (click)="reportsDialog.close()" aria-label="Cerrar ventana"><app-icon name="close" /></button>
+        </div>
+        <div class="access-form">
+          <p class="action-explanation">
+            Un informe por estudiante con el resultado de cada materia en el período. Quien no esté solvente con el corte
+            «{{ reportPeriod()?.cutoff }}» aparece con el informe retenido, sin notas.
+          </p>
+          <label class="form-field"
+            ><span>Grado</span
+            ><select name="reportGrade" [(ngModel)]="reportGrade" (ngModelChange)="reportSection = ''">
+              @for (grade of grades(); track grade.id) {
+                <option [value]="grade.id">{{ grade.name }}</option>
+              }
+            </select></label
+          >
+          <label class="form-field"
+            ><span>Sección</span
+            ><select name="reportSection" [(ngModel)]="reportSection">
+              <option value="">Todo el grado</option>
+              @for (section of sectionsOf(reportGrade); track section.id) {
+                <option [value]="section.id">Sección {{ section.name }}</option>
+              }
+            </select></label
+          >
+          <div class="dialog-actions">
+            <button class="button outline" type="button" (click)="reportsDialog.close()">Cerrar</button
+            ><a class="button" [class.disabled-link]="!reportGrade" [attr.aria-disabled]="!reportGrade" [href]="reportUrl()" target="_blank" rel="noopener"
+              >Abrir PDF</a
+            >
+          </div>
+        </div>
+      </dialog>
     </app-shell>
   `,
 })
@@ -137,6 +177,12 @@ export class GradePublications {
   private readonly router = inject(Router);
   @ViewChild('publishDialog') private dialog!: ElementRef<HTMLDialogElement>;
   @ViewChild('noticeRef') private noticeRef?: ElementRef<HTMLElement>;
+  @ViewChild('reportsDialog') private reportsDialog!: ElementRef<HTMLDialogElement>;
+  readonly grades = signal<GradeView[]>([]);
+  readonly sections = signal<SectionView[]>([]);
+  readonly reportPeriod = signal<PublicationView | null>(null);
+  reportGrade = '';
+  reportSection = '';
   readonly years = signal<YearSummary[]>([]);
   readonly items = signal<PublicationView[]>([]);
   readonly cutoffs = signal<FinanceSetup['cutoffs']>([]);
@@ -180,6 +226,27 @@ export class GradePublications {
   async load(): Promise<void> {
     this.items.set(await this.api.get<PublicationView[]>(`/api/v1/years/${this.yearId}/publications`));
     this.cutoffs.set(await this.api.get<FinanceSetup['cutoffs']>(`/api/v1/years/${this.yearId}/clearance-cutoffs`));
+  }
+  sectionsOf(gradeId: string): SectionView[] {
+    return this.sections().filter((x) => x.gradeLevelId === gradeId);
+  }
+  reportUrl(): string | null {
+    const period = this.reportPeriod();
+    if (!period || !this.reportGrade) return null;
+    const section = this.reportSection ? `&sectionId=${this.reportSection}` : '';
+    return `/api/v1/years/${this.yearId}/periods/${period.periodId}/report-cards.pdf?gradeId=${this.reportGrade}${section}`;
+  }
+  async openReports(item: PublicationView): Promise<void> {
+    this.reportPeriod.set(item);
+    try {
+      if (!this.grades().length) this.grades.set((await this.api.get<GradeView[]>('/api/v1/academic/grades')).filter((x) => x.isActive));
+      this.sections.set((await this.api.get<YearDetail>(`/api/v1/academic/years/${this.yearId}`)).sections);
+    } catch (error) {
+      this.error.set(this.api.message(error));
+      return;
+    }
+    this.reportGrade ||= this.grades()[0]?.id ?? '';
+    this.reportsDialog.nativeElement.showModal();
   }
   openPublish(item: PublicationView): void {
     this.selected.set(item);

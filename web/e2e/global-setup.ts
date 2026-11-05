@@ -1,5 +1,7 @@
 import { execFileSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
+import { rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 
 export default function setup(): () => void {
   const root = resolve(__dirname, '../..');
@@ -20,5 +22,11 @@ export default function setup(): () => void {
     }
   };
   run('prepare');
-  return () => run('cleanup');
+  return () => {
+    run('cleanup');
+    // Remove only the private upload folder of this run's own E2E database.
+    const database = process.env['SCHOOLPLATFORM_E2E_DATABASE']!;
+    if (/^SchoolPlatform_E2E_[a-f0-9]{32}$/.test(database))
+      rmSync(join(tmpdir(), database + '_files'), { recursive: true, force: true });
+  };
 }

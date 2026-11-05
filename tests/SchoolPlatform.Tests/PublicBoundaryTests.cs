@@ -6,6 +6,20 @@ namespace SchoolPlatform.Tests;
 public sealed class PublicBoundaryTests
 {
     [Fact]
+    public async Task Liveness_is_up_while_readiness_reports_an_unreachable_database_without_details()
+    {
+        await using var app = new TestApplication(configuration: new()
+        {
+            ["ConnectionStrings:SchoolDatabase"] = "Server=127.0.0.1,1;Database=SchoolPlatform_Unused;Integrated Security=true;Encrypt=true;TrustServerCertificate=true;Connect Timeout=2"
+        });
+        using var browser = app.Browser();
+        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync("/health/live")).StatusCode);
+        var ready = await browser.GetAsync("/health/ready");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, ready.StatusCode);
+        Assert.Equal("Unhealthy", await ready.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task Public_configuration_has_branding_without_internal_settings()
     {
         await using var app = new TestApplication(configuration: new()

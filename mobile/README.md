@@ -1,6 +1,6 @@
 # App móvil (prototipo Flutter)
 
-Prototipo navegable de la app para estudiantes, familias, docentes, administración y caja. **Todos los datos son ficticios** y viven en memoria: no hay conexión con la API ni con SQL Server, y nada se guarda al cerrar la app. No representa módulos implementados en el backend (ver `docs/PROGRESS.md`). Decisión y límites: [ADR-008](../docs/adr/ADR-008-PROTOTIPO-FLUTTER.md).
+Prototipo navegable de la app para estudiantes, familias, docentes, administración y caja. Los cinco perfiles usan datos ficticios en memoria. **Excepción: el lector de portería usa la API real con una credencial de dispositivo**, independiente de las cuentas demo; no conecta directamente con SQL Server. No representa módulos implementados en el backend (ver `docs/PROGRESS.md`). Decisión y límites: [ADR-008](../docs/adr/ADR-008-PROTOTIPO-FLUTTER.md).
 
 ## Requisitos
 
@@ -77,3 +77,11 @@ Las pruebas usan una configuración institucional neutra y un reloj fijo; no dep
 ## Pendiente para una app real
 
 Autenticación OIDC con PKCE y tokens en almacenamiento seguro, cliente HTTP con contratos de la API, carga real de archivos/cámara, notificaciones push, caché por usuario con borrado al cerrar sesión, pruebas en dispositivos Android/iOS físicos y accesibilidad con lector de pantalla.
+
+## Lector de portería conectado
+
+Desde el ingreso, abrir «Lector de portería». Registrar teléfono en la web `/workspace/gate/devices`, escanear su QR y confirmar el origen HTTPS del colegio. Cámara mediante `mobile_scanner` (QR/Code 128), entrada manual alternativa, modos entrada/salida/automático; no hay cola offline ni reintentos automáticos. Un fallo de conexión no se presenta como marca confirmada. Credencial en almacenamiento seguro nativo; en web solo en memoria. `Desvincular` borra localmente; para revocar el acceso usar la web. Ver [GATE.md](../docs/GATE.md) y [ADR-009](../docs/adr/ADR-009-RENDIMIENTO-PDF-Y-PORTERIA.md).
+
+Se añadieron permisos de cámara/red en Android y motivo de cámara en iOS. Se validaron cliente HTTP, navegación y widgets con dobles de prueba; falta probar cámara, segundo plano y almacenamiento seguro en equipos Android/iOS reales. El build web no equivale a un APK probado.
+
+Validación del incremento de portería (Windows, Flutter 3.47.9): 68 pruebas correctas, análisis sin observaciones y build web release correcto. Pantalla de lector revisada en 390×844 y 1366×860 sin errores JavaScript; las pruebas del escáner usan respuestas HTTP y plataforma simuladas, sin cámara real.

@@ -17,6 +17,7 @@ export interface AccountSummary {
   version: string;
   codeExpiresAt: string | null;
   codePurpose: string | null;
+  twoFactorEnabled: boolean;
 }
 export interface AccessCode {
   userId: string;
@@ -59,6 +60,17 @@ export class AccessApi {
     return firstValueFrom(
       this.http.post<T>(path, body, { headers: { 'X-XSRF-TOKEN': this.session.token() } }),
     );
+  }
+  /** Multipart upload with the antiforgery header; the browser sets the multipart boundary. */
+  async upload<T>(path: string, data: FormData): Promise<T> {
+    if (!this.session.token()) {
+      const result = await this.get<{ token: string }>('/api/v1/antiforgery');
+      this.session.token.set(result.token);
+    }
+    return firstValueFrom(this.http.post<T>(path, data, { headers: { 'X-XSRF-TOKEN': this.session.token() } }));
+  }
+  size(bytes: number): string {
+    return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   }
   message(error: unknown): string {
     if (error instanceof HttpErrorResponse) {

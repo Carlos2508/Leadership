@@ -139,7 +139,7 @@ public sealed class AttendanceService(SchoolDbContext db, SchoolAudit audit, Tim
     {
         var yearId = await db.Courses.AsNoTracking().Where(x => x.Id == courseId).Select(x => (Guid?)x.AcademicYearId).SingleOrDefaultAsync(ct)
             ?? throw OperationException.NotFound("No encontramos ese curso.");
-        var course = (await courses.CoursesAsync(yearId, null, ct)).Single(x => x.Id == courseId);
+        var course = await courses.CourseAsync(courseId, ct);
         var year = await db.Years.AsNoTracking().SingleAsync(x => x.Id == yearId, ct);
         var today = courses.LocalDate(time.GetUtcNow());
         var day = date ?? (today < year.StartsOn ? year.StartsOn : today > year.EndsOn ? year.EndsOn : today);

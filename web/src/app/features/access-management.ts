@@ -130,6 +130,7 @@ export class AccessManagement {
           sessions: 'Cerrar todas las sesiones',
           issue: 'Generar código de acceso',
           cancel: 'Anular códigos vigentes',
+          'reset-mfa': 'Restablecer verificación',
         } as Record<string, string>
       )[this.operation] ?? 'Guardar'
     );
@@ -157,6 +158,7 @@ export class AccessManagement {
             state: 'state',
             sessions: 'revoke-sessions',
             cancel: 'cancel-codes',
+            'reset-mfa': 'reset-mfa',
           } as Record<string, string>
         )[this.operation];
         await this.api.post<void>(root + '/' + route, {
@@ -169,7 +171,7 @@ export class AccessManagement {
         this.closeDialog();
         this.notice.set('El cambio se guardó y quedó registrado.');
         if (account.id === this.session.userId() && this.operation !== 'cancel') {
-          await this.session.load('/workspace/access');
+          await this.session.load('/workspace/access', true);
           return;
         }
       }

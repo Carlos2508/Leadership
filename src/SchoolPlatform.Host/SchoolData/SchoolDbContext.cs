@@ -31,6 +31,7 @@ public sealed partial class SchoolDbContext(DbContextOptions<SchoolDbContext> op
     public DbSet<StudentProfile> Students => Set<StudentProfile>();
     public DbSet<GuardianProfile> Guardians => Set<GuardianProfile>();
     public DbSet<StaffProfile> Staff => Set<StaffProfile>();
+    public DbSet<SchoolPlatform.Host.LegacyImport.LegacyIdentity> LegacyIdentities => Set<SchoolPlatform.Host.LegacyImport.LegacyIdentity>();
     public DbSet<GuardianRelationship> Relationships => Set<GuardianRelationship>();
     public DbSet<RelationshipFaculty> RelationshipFaculties => Set<RelationshipFaculty>();
     public DbSet<AccountLink> AccountLinks => Set<AccountLink>();
@@ -69,6 +70,8 @@ public sealed partial class SchoolDbContext(DbContextOptions<SchoolDbContext> op
         ConfigureGradesModel(builder);
         ConfigureLearningModel(builder);
         ConfigureAttendanceModel(builder);
+        ConfigureCommunicationModel(builder);
+        ConfigureGateModel(builder);
     }
 
     // Implemented by the academic/enrollment and finance parts of this context.
@@ -77,6 +80,8 @@ public sealed partial class SchoolDbContext(DbContextOptions<SchoolDbContext> op
     partial void ConfigureGradesModel(ModelBuilder builder);
     partial void ConfigureLearningModel(ModelBuilder builder);
     partial void ConfigureAttendanceModel(ModelBuilder builder);
+    partial void ConfigureCommunicationModel(ModelBuilder builder);
+    partial void ConfigureGateModel(ModelBuilder builder);
 
     private static void ConfigurePeople(ModelBuilder builder)
     {
@@ -112,6 +117,17 @@ public sealed partial class SchoolDbContext(DbContextOptions<SchoolDbContext> op
             entity.HasKey(x => x.PersonId);
             entity.Property(x => x.StudentCode).HasMaxLength(30).IsUnicode(false);
             entity.HasIndex(x => x.StudentCode).IsUnique();
+        });
+        builder.Entity<SchoolPlatform.Host.LegacyImport.LegacyIdentity>(entity =>
+        {
+            entity.ToTable("LegacyIdentities", "people", table => table.HasCheckConstraint("CK_LegacyIdentities_Entity", "[Entity] IN ('student','guardian')"));
+            entity.HasKey(x => new { x.Source, x.Entity, x.LegacyId });
+            entity.Property(x => x.Source).HasMaxLength(40).IsUnicode(false);
+            entity.Property(x => x.Entity).HasMaxLength(20).IsUnicode(false);
+            entity.Property(x => x.LegacyId).HasMaxLength(60);
+            entity.Property(x => x.FileSha256).HasMaxLength(64).IsUnicode(false);
+            entity.HasOne<Person>().WithMany().HasForeignKey(x => x.PersonId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => x.PersonId);
         });
         builder.Entity<StaffProfile>(entity =>
         {

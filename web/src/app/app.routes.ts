@@ -7,11 +7,24 @@ import { Router } from '@angular/router';
 const previewGuard = () =>
   inject(InstitutionService).current.previewEnabled || inject(Router).createUrlTree(['/']);
 export const routes: Routes = [
+  { path: 'workspace/gate', canActivate: [permissionGuard('attendance.gate')], loadComponent: () => import('./features/gate-kiosk').then(x => x.GateKiosk) },
+  { path: 'workspace/gate/report', canActivate: [permissionGuard('attendance.read')], loadComponent: () => import('./features/gate-report').then(x => x.GateReport) },
+  { path: 'workspace/gate/devices', canActivate: [permissionGuard('attendance.manage')], loadComponent: () => import('./features/gate-devices').then(x => x.GateDevices) },
   { path: '', loadComponent: () => import('./features/welcome').then((x) => x.Welcome) },
   {
     path: 'workspace',
     canActivate: [sessionGuard],
     loadComponent: () => import('./features/workspace').then((x) => x.Workspace),
+  },
+  {
+    path: 'workspace/security',
+    canActivate: [sessionGuard],
+    loadComponent: () => import('./features/security-settings').then((x) => x.SecuritySettings),
+  },
+  {
+    path: 'workspace/announcements',
+    canActivate: [sessionGuard],
+    loadComponent: () => import('./features/announcements').then((x) => x.Announcements),
   },
   {
     path: 'workspace/access',

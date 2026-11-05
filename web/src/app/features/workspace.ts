@@ -1,13 +1,15 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { AccessApi } from '../core/access-api';
+import { FeedItem } from './announcements';
 import { MyProfile, facultyLabels, relationshipLabels } from '../core/people-api';
 import { SessionService } from '../core/session';
 import { InstitutionService } from '../core/institution';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
+import { CyclePipe } from '../shared/cycle.pipe';
 import { RouterLink } from '@angular/router';
 @Component({
-  imports: [Shell, Icon, RouterLink],
+  imports: [Shell, Icon, RouterLink, CyclePipe],
   template: `
     <app-shell title="Mi espacio">
       <div class="page-heading">
@@ -16,7 +18,7 @@ import { RouterLink } from '@angular/router';
           <h1>Te damos la bienvenida{{ greetingName() ? ', ' + greetingName() : '' }}.</h1>
           <p>Tu punto de encuentro con {{ school.displayName }}.</p>
         </div>
-        <form action="/Identity/Account/Logout" method="post">
+        <form class="header-logout" action="/Identity/Account/Logout" method="post">
           <input type="hidden" name="__RequestVerificationToken" [value]="session.token()" /><button
             class="button outline"
             type="submit"
@@ -27,6 +29,14 @@ import { RouterLink } from '@angular/router';
         </form>
       </div>
       @if (session.state() === 'ready') {
+        @if (session.mfaPending().length) {
+          <div class="feedback action-explanation mfa-banner" role="note">
+            <app-icon name="shield" /><span
+              >Tu perfil incluye funciones de administración que requieren verificación en dos pasos.
+              <a routerLink="/workspace/security">Actívala ahora</a> para usarlas.</span
+            >
+          </div>
+        }
         @if (shortcuts().length) {
           <section class="card quick-card" aria-labelledby="quick-title">
             <div class="card-heading">
@@ -55,6 +65,33 @@ import { RouterLink } from '@angular/router';
             <div class="connection-status"><span></span>Cuenta conectada a {{ school.displayName }}</div>
           </section>
         }
+        @if (feed().length) {
+          <section class="card my-profile" aria-labelledby="feed-title">
+            <div class="card-heading">
+              <div>
+                <span class="eyebrow">AVISOS</span>
+                <h2 id="feed-title">
+                  Avisos recientes
+                  @if (unread()) {
+                    <span class="pill gold">{{ unread() }} sin leer</span>
+                  }
+                </h2>
+              </div>
+              <app-icon name="mail" />
+            </div>
+            <ul class="payment-list">
+              @for (item of feed().slice(0, 4); track item.id) {
+                <li>
+                  <span class="unread-dot" [class.hidden-dot]="item.read" aria-hidden="true"></span>
+                  <span class="person-copy"
+                    ><strong>{{ item.title }}</strong><small>{{ item.author }} · {{ api.date(item.publishedAt) }}</small></span
+                  >
+                </li>
+              }
+            </ul>
+            <a class="text-button" routerLink="/workspace/announcements">Ver todos los avisos</a>
+          </section>
+        }
         @if (profile(); as me) {
           @if (me.person; as person) {
             <section class="card my-profile" aria-labelledby="my-profile-title">
@@ -75,7 +112,7 @@ import { RouterLink } from '@angular/router';
               </p>
               @if (me.placement; as placement) {
                 <p class="placement-line">
-                  Ciclo {{ placement.year }} · {{ placement.grade }}
+                  {{ placement.year | cycle }} · {{ placement.grade }}
                   {{ placement.section ? '· Sección ' + placement.section : '' }}
                 </p>
               }
@@ -94,7 +131,7 @@ import { RouterLink } from '@angular/router';
                       >
                       @if (student.placement; as placement) {
                         <span class="placement-line"
-                          >Ciclo {{ placement.year }} · {{ placement.grade }}
+                          >{{ placement.year | cycle }} · {{ placement.grade }}
                           {{ placement.section ? '· Sección ' + placement.section : '' }}</span
                         >
                       }
@@ -199,7 +236,9 @@ import { RouterLink } from '@angular/router';
 export class Workspace {
   readonly session = inject(SessionService);
   readonly school = inject(InstitutionService).current;
-  private readonly api = inject(AccessApi);
+  readonly api = inject(AccessApi);
+  readonly feed = signal<FeedItem[]>([]);
+  readonly unread = computed(() => this.feed().filter((x) => !x.read).length);
   readonly profile = signal<MyProfile | null>(null);
   readonly profileError = signal('');
   readonly myCourses = signal<
@@ -225,6 +264,7 @@ export class Workspace {
   async loadProfile(): Promise<void> {
     if (this.session.state() !== 'ready') return;
     try {
+      void this.api.get<FeedItem[]>('/api/v1/me/announcements').then((x) => this.feed.set(x)).catch(() => undefined);
       const profile = await this.api.get<MyProfile>('/api/v1/me');
       this.profile.set(profile);
       if (profile.person?.isStaff) this.myCourses.set(await this.api.get('/api/v1/me/courses'));

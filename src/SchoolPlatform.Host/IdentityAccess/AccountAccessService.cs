@@ -20,7 +20,7 @@ public sealed class AccountAccessService(IdentityDbContext db, UserManager<Appli
         if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => x.UserName!.Contains(search.Trim()));
         var total = await query.CountAsync(ct);
         var rows = await query.OrderBy(x => x.UserName).ThenBy(x => x.Id).Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(x => new { x.Id, x.UserName, x.IsActive, HasPassword = x.PasswordHash != null, x.ConcurrencyStamp }).ToArrayAsync(ct);
+            .Select(x => new { x.Id, x.UserName, x.IsActive, HasPassword = x.PasswordHash != null, x.ConcurrencyStamp, x.TwoFactorEnabled }).ToArrayAsync(ct);
         var ids = rows.Select(x => x.Id).ToArray();
         var permissions = await db.AccountPermissions.AsNoTracking().Where(x => ids.Contains(x.UserId)).ToArrayAsync(ct);
         var now = time.GetUtcNow();
@@ -31,7 +31,7 @@ public sealed class AccountAccessService(IdentityDbContext db, UserManager<Appli
             var code = codes.Where(c => c.UserId == x.Id).OrderByDescending(c => c.ExpiresAt).FirstOrDefault();
             return new AccountSummary(x.Id, x.UserName!, !x.HasPassword ? "Pending" : x.IsActive ? "Active" : "Suspended",
                 AccessProfiles.Resolve(permissions.Where(p => p.UserId == x.Id).Select(p => p.Permission)), x.ConcurrencyStamp!,
-                code?.ExpiresAt, code?.Purpose);
+                code?.ExpiresAt, code?.Purpose, x.TwoFactorEnabled);
         }).ToArray(), total, page, pageSize);
     }
 
@@ -120,6 +120,22 @@ public sealed class AccountAccessService(IdentityDbContext db, UserManager<Appli
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
         return code;
+    }
+
+    /// <summary>Removes the authenticator after verifying the holder (lost phone); closes sessions and is audited.</summary>
+    public async Task ResetMfaAsync(Guid actorId, Guid userId, AccountChangeRequest request, CancellationToken ct = default)
+    {
+        var reason = Reason(request.Reason);
+        await using var transaction = await BeginOperationAsync(ct);
+        await RequireManagerAsync(actorId, ct);
+        var user = await TargetAsync(userId, request.Version, ct);
+        if (!user.TwoFactorEnabled) throw new AccessOperationException(409, "mfa-disabled", "Esta cuenta no tiene verificación en dos pasos.");
+        Check(await users.SetTwoFactorEnabledAsync(user, false));
+        Check(await users.ResetAuthenticatorKeyAsync(user));
+        Check(await users.UpdateSecurityStampAsync(user));
+        audit.Record("MfaReset", actorId, userId, reason);
+        await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
     }
 
     public async Task CancelCodesAsync(Guid actorId, Guid userId, AccountChangeRequest request, CancellationToken ct = default)

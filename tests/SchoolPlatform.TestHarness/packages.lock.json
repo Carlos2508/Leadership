@@ -342,6 +342,24 @@
         "resolved": "1.0.0",
         "contentHash": "N4KeF3cpcm1PUHym1RmakkzfkEv3GRMyofVv40uXsQhCQeglr2OHNcUk2WOG51AKpGO8ynGpo9M/kFXSzghwug=="
       },
+      "Microsoft.Win32.SystemEvents": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "hqTM5628jSsQiv+HGpiq3WKBl2c8v1KZfby2J6Pr7pEPlK9waPdgEO6b8A/+/xn/yZ9ulv8HuqK71ONy2tg67A=="
+      },
+      "QRCoder": {
+        "type": "Transitive",
+        "resolved": "1.8.1",
+        "contentHash": "aGfRFpU/IPexAtEOEXCNxC3fMCAqgn6kqALRvXt6LxVAW0VolSDGHiyrY+o2CJgTITOsMpsrsDi7svMJaJ9Vfg==",
+        "dependencies": {
+          "System.Drawing.Common": "6.0.0"
+        }
+      },
+      "QuestPDF": {
+        "type": "Transitive",
+        "resolved": "2026.9.1",
+        "contentHash": "i2BT/v+Ui6Hg9+BZbOci/VfsyvmtY8nlQqAOmFt8iOZ4Hm9aKZZRgZZ+LfrKWYXAHRb3l1EjDcMVfjRaZTt+Cw=="
+      },
       "System.ClientModel": {
         "type": "Transitive",
         "resolved": "1.8.0",
@@ -364,6 +382,14 @@
         "type": "Transitive",
         "resolved": "9.0.11",
         "contentHash": "2Us/NchH6SM69NYWzf8NRyeftdv3ILso8LMiMdAjT7ECTiZKzddiXWhAyQj6ZzbddoAOHS9GdlPbAAkwCPID3Q=="
+      },
+      "System.Drawing.Common": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "NfuoKUiP2nUWwKZN6twGqXioIe1zVD0RIj2t976A+czLHr2nY454RwwXs6JU9Htc6mwqL6Dn/nEL3dpVf2jOhg==",
+        "dependencies": {
+          "Microsoft.Win32.SystemEvents": "6.0.0"
+        }
       },
       "System.IdentityModel.Tokens.Jwt": {
         "type": "Transitive",
@@ -389,12 +415,20 @@
         "resolved": "9.0.11",
         "contentHash": "s8yUYuYYu+PAwvBdhLG1KyrGrk9gkYeuPxfAsXsTqqWyepwSyEw8hAaflW4nO98NG52YpYI1am2+9o+79h2RtQ=="
       },
+      "ZXing.Net": {
+        "type": "Transitive",
+        "resolved": "0.16.11",
+        "contentHash": "OZfAVu88hl87BffQ+rlWCj/vLvAhhCK4QnFaoveeF/MY8SjHNSYBQ3qyUEWlPKNgBQGh1syXhCDg10vUnCsqkg=="
+      },
       "schoolplatform.host": {
         "type": "Project",
         "dependencies": {
           "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "[10.0.14, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.14, )",
-          "System.Security.Cryptography.Pkcs": "[10.0.14, )"
+          "QRCoder": "[1.8.1, )",
+          "QuestPDF": "[2026.9.1, )",
+          "System.Security.Cryptography.Pkcs": "[10.0.14, )",
+          "ZXing.Net": "[0.16.11, )"
         }
       }
     }

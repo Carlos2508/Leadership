@@ -17,7 +17,10 @@ import { Icon } from '../shared/icon';
       <div class="receipt-toolbar no-print">
         <a class="back-link" [routerLink]="backLink()"><app-icon name="arrow" />Volver</a>
         @if (receipt()) {
-          <button class="button" (click)="print()">Imprimir</button>
+          <span class="toolbar-actions">
+            <a class="button outline" [href]="pdf()" target="_blank" rel="noopener">Descargar PDF</a>
+            <button class="button" (click)="print()">Imprimir</button>
+          </span>
         }
       </div>
       @if (error()) {
@@ -55,7 +58,7 @@ import { Icon } from '../shared/icon';
             <div><dt>Recibido de</dt><dd>{{ r.receipt.payerName }}</dd></div>
             <div><dt>Fecha de pago</dt><dd>{{ date(r.receipt.receivedOn) }}</dd></div>
             <div><dt>Medio</dt><dd>{{ methods[r.receipt.method] }}{{ r.receipt.reference ? ' · ' + r.receipt.reference : '' }}</dd></div>
-            <div><dt>Emitido</dt><dd>{{ instant(r.receipt.issuedAt) }} · {{ r.receipt.issuedBy }}</dd></div>
+            <div><dt>Emitido</dt><dd>{{ instant(r.receipt.issuedAt) }}{{ studentId() ? '' : ' · ' + r.receipt.issuedBy }}</dd></div>
           </dl>
           <table class="receipt-lines">
             <caption class="sr-only">Obligaciones cubiertas por este pago</caption>
@@ -106,6 +109,13 @@ export class ReceiptView {
     const sha = this.receipt()?.receipt.logoSha256;
     const student = this.studentId();
     return student ? `/api/v1/me/students/${student}/receipt-assets/${sha}` : `/api/v1/finance/assets/${sha}`;
+  });
+
+  readonly pdf = computed(() => {
+    const student = this.studentId();
+    return student
+      ? `/api/v1/me/students/${student}/receipts/${this.id()}/receipt.pdf`
+      : `/api/v1/finance/payments/${this.id()}/receipt.pdf`;
   });
 
   constructor() {

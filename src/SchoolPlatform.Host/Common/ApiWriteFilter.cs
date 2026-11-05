@@ -10,7 +10,9 @@ public sealed class ApiWriteFilter(IAntiforgery antiforgery) : IEndpointFilter
     {
         try
         {
-            if (!HttpMethods.IsGet(context.HttpContext.Request.Method))
+            // Scanner devices authenticate with a bearer token only (no cookies), so cross-site request forgery does not apply.
+            if (!HttpMethods.IsGet(context.HttpContext.Request.Method) &&
+                context.HttpContext.User.Identity?.AuthenticationType != SchoolPlatform.Host.Gate.GateDeviceAuthenticationHandler.SchemeName)
                 await antiforgery.ValidateRequestAsync(context.HttpContext);
             return await next(context);
         }

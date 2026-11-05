@@ -10,6 +10,8 @@ namespace SchoolPlatform.Host.Grades;
 
 public sealed record ScoreEntry(Guid StudentId, decimal? Score, string Status, string? Version);
 public sealed record SaveScoresRequest(Guid PeriodId, ScoreEntry[] Entries, string? Reason);
+public sealed record SavedScore(Guid StudentId, decimal? Score, string Status, string Version);
+public sealed record SaveScoresResult(int Changed, SavedScore[] Rows);
 public sealed record SheetRow(Guid StudentId, string Name, string Code, decimal? Score, string? Status, string? Version);
 public sealed record SheetPeriod(Guid Id, int Sequence, string Name, DateOnly StartsOn, DateOnly EndsOn, bool Published);
 public sealed record GradeSheet(CourseView Course, SheetPeriod Period, SheetPeriod[] Periods, bool CanEdit, bool RequiresReason, SheetRow[] Rows);
@@ -31,7 +33,7 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
     public async Task<GradeSheet?> SheetAsync(Guid userId, Guid courseId, Guid? periodId, CancellationToken ct)
     {
         if (!await courses.CanViewAsync(userId, courseId, ct)) return null;
-        var course = (await courses.CoursesAsync(await YearOf(courseId, ct), null, ct)).Single(x => x.Id == courseId);
+        var course = await courses.CourseAsync(courseId, ct);
         var periods = await Periods(course.AcademicYearId, ct);
         if (periods.Length == 0) throw new OperationException(409, "periods-required", "El ciclo no tiene períodos definidos.");
         var period = periodId is null ? periods.FirstOrDefault(x => !x.Published) ?? periods[^1] : periods.SingleOrDefault(x => x.Id == periodId)
@@ -48,10 +50,10 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
                 : new SheetRow(s.Id, s.Name, s.Code, null, null, null)).ToArray());
     }
 
-    public async Task<int> SaveAsync(Guid userId, Guid courseId, SaveScoresRequest request, CancellationToken ct)
+    public async Task<SaveScoresResult> SaveAsync(Guid userId, Guid courseId, SaveScoresRequest request, CancellationToken ct)
     {
         if (!await courses.CanViewAsync(userId, courseId, ct)) throw OperationException.NotFound("No encontramos ese curso.");
-        var course = (await courses.CoursesAsync(await YearOf(courseId, ct), null, ct)).Single(x => x.Id == courseId);
+        var course = await courses.CourseAsync(courseId, ct);
         var period = (await Periods(course.AcademicYearId, ct)).SingleOrDefault(x => x.Id == request.PeriodId)
             ?? throw OperationException.NotFound("No encontramos ese período en el ciclo del curso.");
         string reason;
@@ -86,11 +88,13 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
             .ToDictionaryAsync(x => x.StudentId, ct);
         var now = time.GetUtcNow();
         var changed = 0;
+        var touched = new List<PeriodScore>(entries.Length);
         foreach (var entry in entries)
         {
             if (current.TryGetValue(entry.StudentId, out var score))
             {
                 if (!score.Version.AsSpan().SequenceEqual(Versions.Decode(entry.Version))) throw OperationException.Changed();
+                touched.Add(score);
                 if (score.Score == entry.Score && score.Status == entry.Status) continue;
                 db.ScoreRevisions.Add(new ScoreRevision
                 {
@@ -111,6 +115,7 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
                     Status = entry.Status, UpdatedAt = now, UpdatedBy = userId
                 };
                 db.PeriodScores.Add(score);
+                touched.Add(score);
                 db.ScoreRevisions.Add(new ScoreRevision
                 {
                     Id = Guid.NewGuid(), ScoreId = score.Id, NewScore = entry.Score, NewStatus = entry.Status, Reason = reason,
@@ -119,11 +124,14 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
             }
             changed++;
         }
-        if (changed == 0) return 0;
-        audit.Record(period.Published ? "PublishedScoresCorrected" : "ScoresRecorded", userId, "Course", courseId,
-            period.Published ? reason : "", $"{period.Sequence}:{changed}");
-        await db.SaveChangesAsync(ct);
-        return changed;
+        if (changed > 0)
+        {
+            audit.Record(period.Published ? "PublishedScoresCorrected" : "ScoresRecorded", userId, "Course", courseId,
+                period.Published ? reason : "", $"{period.Sequence}:{changed}");
+            await db.SaveChangesAsync(ct);
+        }
+        // New row versions let the sheet keep autosaving without reloading (and without losing what is being typed).
+        return new(changed, touched.Select(x => new SavedScore(x.StudentId, x.Score, x.Status, Versions.Encode(x.Version))).ToArray());
     }
 
     public async Task<PublicationView[]> PublicationsAsync(Guid yearId, CancellationToken ct)
@@ -207,10 +215,6 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
     }
 
     // ---- helpers
-
-    private async Task<Guid> YearOf(Guid courseId, CancellationToken ct) =>
-        await db.Courses.AsNoTracking().Where(x => x.Id == courseId).Select(x => (Guid?)x.AcademicYearId).SingleOrDefaultAsync(ct)
-        ?? throw OperationException.NotFound("No encontramos ese curso.");
 
     private async Task<SheetPeriod[]> Periods(Guid yearId, CancellationToken ct) =>
         await db.Periods.AsNoTracking().Where(x => x.AcademicYearId == yearId).OrderBy(x => x.Sequence)

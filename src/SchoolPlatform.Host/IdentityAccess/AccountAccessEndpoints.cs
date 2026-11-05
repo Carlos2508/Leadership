@@ -33,19 +33,50 @@ public static class AccountAccessEndpoints
         });
         group.MapPost("/accounts/{id:guid}/codes", async (Guid id, IssueCodeRequest request, ClaimsPrincipal actor, AccountAccessService service, CancellationToken ct) =>
             Results.Ok(await service.IssueCodeAsync(Actor(actor), id, request, ct)));
+        group.MapPost("/accounts/{id:guid}/reset-mfa", async (Guid id, AccountChangeRequest request, ClaimsPrincipal actor, AccountAccessService service, CancellationToken ct) =>
+        {
+            await service.ResetMfaAsync(Actor(actor), id, request, ct);
+            return Results.NoContent();
+        });
         group.MapPost("/accounts/{id:guid}/cancel-codes", async (Guid id, AccountChangeRequest request, ClaimsPrincipal actor, AccountAccessService service, CancellationToken ct) =>
         {
             await service.CancelCodesAsync(Actor(actor), id, request, ct);
             return Results.NoContent();
         });
 
-        app.MapGet("/api/v1/audit", async (int? page, IdentityDbContext db, CancellationToken ct) =>
+        var mfa = app.MapGroup("/api/v1/me/mfa").RequireAuthorization("ActiveAccount").AddEndpointFilter<ApiWriteFilter>();
+        mfa.MapGet("", (ClaimsPrincipal user, MfaService service, CancellationToken ct) => service.StatusAsync(user, ct));
+        mfa.MapPost("/setup", (ClaimsPrincipal user, MfaService service) => service.SetupAsync(user));
+        mfa.MapPost("/enable", (MfaCodeRequest request, ClaimsPrincipal user, MfaService service, CancellationToken ct) => service.EnableAsync(user, request, ct));
+        mfa.MapPost("/recovery-codes", (MfaCodeRequest request, ClaimsPrincipal user, MfaService service, CancellationToken ct) => service.RegenerateAsync(user, request, ct));
+        mfa.MapPost("/disable", async (MfaCodeRequest request, ClaimsPrincipal user, MfaService service, CancellationToken ct) =>
+        {
+            await service.DisableAsync(user, request, ct);
+            return Results.NoContent();
+        });
+
+        app.MapGet("/api/v1/audit", async (int? page, string? area, IdentityDbContext db, CancellationToken ct) =>
         {
             var number = page ?? 1;
             if (number < 1 || number > 10000) return Results.BadRequest();
             const int size = 25;
-            var total = await db.AuditEvents.CountAsync(ct);
-            var items = await db.AuditEvents.AsNoTracking().OrderByDescending(x => x.OccurredAt).ThenByDescending(x => x.Id)
+            // Areas group the record types written by each module; account events have no type (historical rows).
+            string[]? types = area switch
+            {
+                null or "" or "all" => null,
+                "people" => ["Person", "Relationship", "ImportBatch"],
+                "academic" => ["AcademicYear", "Grade", "Course", "Enrollment", "Subject", "Assignment"],
+                "finance" => ["Charge", "Payment", "FeeConcept"],
+                "communication" => ["Announcement"],
+                "access" => [],
+                _ => null
+            };
+            if (area is not (null or "" or "all" or "people" or "academic" or "finance" or "communication" or "access")) return Results.BadRequest();
+            var query = db.AuditEvents.AsNoTracking();
+            if (types is { Length: 0 }) query = query.Where(x => x.TargetType == null);
+            else if (types is not null) query = query.Where(x => x.TargetType != null && types.Contains(x.TargetType));
+            var total = await query.CountAsync(ct);
+            var items = await query.OrderByDescending(x => x.OccurredAt).ThenByDescending(x => x.Id)
                 .Skip((number - 1) * size).Take(size).Select(x => new
                 {
                     x.Id, x.OccurredAt, x.Action, x.Reason, x.Detail, x.TraceId, x.TargetId, x.TargetType,

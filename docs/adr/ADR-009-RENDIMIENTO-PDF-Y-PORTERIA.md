@@ -1,0 +1,26 @@
+# ADR-009: rendimiento local, documentos PDF, carnets y portería
+
+Estado: implementado para desarrollo; operación física y licencia por confirmar. Fecha: 5 de noviembre de 2026, America/Guatemala.
+
+## Contexto
+
+Cada instalación atiende un colegio con una base SQL Server. Se necesitan libreta ágil, documentos descargables, carnets con lectura en portería y teléfonos lectores revocables. La asistencia de portería es distinta de la asistencia por curso (ADR-007 y `ATTENDANCE.md` siguen vigentes).
+
+## Decisiones
+
+- Angular: archivos con hash precomprimidos en Brotli/Gzip, caché inmutable para esos archivos e `index.html` con revalidación. Precarga de módulos y reutilización de sesión por 15 segundos en guards. La autorización del servidor sigue comprobándose en cada petición. API privada y documentos: `no-store`; antiforgery sin compresión. No se introduce Redis: las mediciones locales no justifican un servicio adicional, y solvencia/privilegios no se cachean.
+- Libreta por período: Enter/flecha abajo, pegado vertical desde Excel (E exonerado, P pendiente), autoguardado y rowversion. Las revisiones y el motivo de corrección de un período publicado siguen siendo obligatorios; no cambia la política académica.
+- QuestPDF 2026.9.1 genera recibos, consulta de notas, libreta docente, informes de período publicado por grado/sección y carnets. La marca procede de `InstitutionOptions`. El recibo familiar omite el usuario interno emisor. Las notas familiares pasan por `GradeService.MyGradesAsync`, con facultad/solvencia por publicación. Un informe retenido no contiene notas. Sin promedios anuales ni redondeos nuevos.
+- Licencia configurada: Community. **Elegibilidad de esta instalación pendiente de confirmación del propietario**. Consultadas [licencia](https://www.questpdf.com/license/community.html) y [reglas oficiales](https://www.questpdf.com/pricing.html) el 5 de noviembre de 2026: para empresas privadas con fines de lucro, ingresos brutos anuales consolidados inferiores a USD 1 millón; existen categorías académicas públicas o sin fines de lucro. No inferir elegibilidad por el nombre «colegio». No se adquirió licencia ni se autorizó producción.
+- Carnet CR80 (85.6 × 53.98 mm), dos páginas para tarjeta o frente/reverso lado a lado en carta para cortar. Token aleatorio, QR y Code 128 (ZXing). La impresión conserva el carnet vigente y emite uno si falta. **Reemplazar**, con motivo, revoca el anterior. El reemplazo es transaccional con auditoría y comparte el bloqueo por estudiante con las lecturas. La foto es privada y opcional; PNG/JPEG validado por firma, fuera de `wwwroot`.
+- Portería almacena eventos con hora del servidor, fecha institucional, dirección, fuente, cuenta o dispositivo. Bloqueo de aplicación SQL por estudiante: las lecturas simultáneas deciden contra la última marca confirmada. Modos `In`, `Out`, `Auto`; automático exige estancia mínima (30 minutos por defecto). No es un control de autorización de salida ni sustituye las facultades de recogida/custodia.
+- Marcas manuales requieren motivo y `attendance.gate`; lectura de reportes, `attendance.read`; anulación y dispositivos, `attendance.manage`. Las anulaciones conservan el evento y auditoría. Se serializan con las lecturas para evitar decidir sobre una marca que está siendo anulada. Toda cuenta exige `ActiveAccount`; los permisos se consultan en SQL. Perfiles `gatekeeper` y `attendance-supervisor` son perfiles de acceso.
+- Dispositivo: credencial bearer propia, solo hash durable, revocación independiente. Esquema `GateDevice` limitado a `whoami` y `scan`; ninguna cookie escolar lo sustituye y el token no abre módulos escolares. El QR contiene JSON `{v,server,token}`, nunca un secreto en URL. Solo se muestra al registrar; la web descarta el QR al cerrar/salir y no lo persiste. E2E de registro sin trazas automáticas para no capturar el QR.
+- Flutter: excepción acotada al prototipo de ADR-008: `/gate-reader` usa HTTP real y autenticación de dispositivo. Emparejamiento HTTPS con confirmación de servidor; credencial en almacenamiento seguro nativo, solo en memoria en web. Cámara mediante `mobile_scanner` y entrada manual alternativa, pausa al quedar en segundo plano. No hay cola offline ni reintentos automáticos de marcas. Un 401/403 invalida el emparejamiento; nunca se muestra una marca exitosa por un fallo de red. Los demás módulos Flutter continúan con datos ficticios.
+- Consulta familiar/estudiantil de portería: estudiante propio o facultad vigente `AcademicRecords`, últimos 45 días, sin nombres de operadores. No depende de solvencia; no revela calificaciones ni detalles financieros.
+
+## Consecuencias y límites
+
+La migración `StudentCardsAndGate` agrega tablas y extiende los administradores que tenían exactamente el conjunto previo de permisos; registra un evento por cuenta. Se aplicó a `SchoolPlatform_Development`, sin importar personas ni tocar PHP/MariaDB.
+
+Las mediciones son locales, sin carga ni red móvil; no son un SLA. El PDF se revisa renderizado y los códigos se verifican en pruebas; todavía se requiere impresión real al 100 %, lectura con los equipos y prueba Android/iOS de cámara, ciclo de vida y almacenamiento seguro. Falta aprobación de política académica, licencia/operación y piloto antes de habilitar producción. Ver `GATE.md`, `PROGRESS.md` y `HANDOFF.md` para evidencias actuales.

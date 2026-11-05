@@ -14,7 +14,7 @@ public static class GradeEndpoints
         scoped.MapGet("/courses/{id:guid}/grades", async (Guid id, Guid? periodId, ClaimsPrincipal user, GradeService service, CancellationToken ct) =>
             await service.SheetAsync(Actor(user), id, periodId, ct) is { } sheet ? Results.Ok(sheet) : Results.NotFound());
         scoped.MapPost("/courses/{id:guid}/grades", async (Guid id, SaveScoresRequest request, ClaimsPrincipal user, GradeService service, CancellationToken ct) =>
-            Results.Ok(new { changed = await service.SaveAsync(Actor(user), id, request, ct) }));
+            Results.Ok(await service.SaveAsync(Actor(user), id, request, ct)));
         scoped.MapGet("/me/students/{id:guid}/grades", async (Guid id, ClaimsPrincipal user, GradeService service, CancellationToken ct) =>
             await service.MyGradesAsync(Actor(user), id, ct) is { } grades ? Results.Ok(grades) : Results.NotFound());
 

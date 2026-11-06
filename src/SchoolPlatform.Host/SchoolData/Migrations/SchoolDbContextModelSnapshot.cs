@@ -1661,6 +1661,89 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SchoolPlatform.Host.LegacyImport.RosterBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AcademicYearId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("AppliedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("FileSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("PlanSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("ResultJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
+
+                    b.HasIndex("ActorId");
+
+                    b.ToTable("RosterBatches", "people");
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.LegacyImport.RosterSourceAlias", b =>
+                {
+                    b.Property<string>("Source")
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<string>("Entity")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("LegacyId")
+                        .HasMaxLength(60)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(60)");
+
+                    b.Property<string>("Discriminator")
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<Guid>("BatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Source", "Entity", "LegacyId", "Discriminator");
+
+                    b.HasIndex("BatchId");
+
+                    b.HasIndex("PersonId");
+
+                    b.ToTable("RosterSourceAliases", "people");
+                });
+
             modelBuilder.Entity("SchoolPlatform.Host.People.AccountLink", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2498,6 +2581,36 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
 
             modelBuilder.Entity("SchoolPlatform.Host.LegacyImport.LegacyIdentity", b =>
                 {
+                    b.HasOne("SchoolPlatform.Host.People.Person", null)
+                        .WithMany()
+                        .HasForeignKey("PersonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.LegacyImport.RosterBatch", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.Academic.AcademicYear", null)
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("ActorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.LegacyImport.RosterSourceAlias", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.LegacyImport.RosterBatch", null)
+                        .WithMany()
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SchoolPlatform.Host.People.Person", null)
                         .WithMany()
                         .HasForeignKey("PersonId")

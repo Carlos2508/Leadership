@@ -2,7 +2,7 @@
 
 ## Preparación solicitada para 2027 — 6 de noviembre de 2026
 
-El propietario operará la migración y pidió estudiar estudiantes/familias con matrícula en el ciclo indicado y todos los accesos inicialmente inactivos. La recomendación, alternativas y brechas están en [MIGRATION_2027.md](MIGRATION_2027.md) y [ADR-015](adr/ADR-015-MIGRACION-INICIAL-2027.md). Se prepararon consultas de extracción de lectura y un ejemplo sintético de revisión, sin ejecutar extracción ni importar datos. **La ampliación a matrículas/cuentas pendientes no está implementada.** El comando siguiente conserva su alcance anterior; no admite el paquete propuesto para 2027.
+El propietario operará la migración y pidió dejarla implementada/probada para estudiantes/familias con matrícula en el ciclo indicado y todos los accesos inicialmente inactivos. **El flujo v2 ya está implementado:** extracción de lectura, revisión, `--import-roster` con plan/apply/reconcile, matrícula y cuentas pendientes sin contraseña/códigos; ver [guía de uso](MIGRATION_2027.md), [QA](QA_MIGRATION_2027.md) y [ADR-015](adr/ADR-015-MIGRACION-INICIAL-2027.md). Probado solo con datos sintéticos. El comando v1 siguiente conserva su alcance anterior y no admite el paquete v2; usar la guía nueva para 2027.
 
 Referencia PHP: `C:/xampp/htdocs/sys/sys-escolar` (sin modificar). Documento original copiado en `reference/PLAN_MAESTRO_ORIGINAL.md` (§16).
 

@@ -1,187 +1,139 @@
-# Migración de estudiantes y familias para iniciar en 2027
+# Migración inicial de estudiantes y familias: guía de uso
 
-Fecha: 6 de noviembre de 2026. Responsable de revisión y operación: propietario/desarrollador.
+Actualizado: 6 de noviembre de 2026, America/Guatemala. Operador: propietario/desarrollador.
 
-**Recomendación:** importar un padrón revisado mediante consola, con personas, vínculos y matrícula 2027 separados, y preparar cuentas pendientes sin contraseña ni código. Activar después persona por persona. Este documento prepara ese trabajo; no ejecuta una migración ni certifica datos del colegio.
+El flujo de consola ya está implementado: **extraer → revisar → planificar → aplicar → conciliar**. Guarda personas estables, encargados/vínculos confirmados, matrícula del ciclo explícito y una cuenta por persona **inactiva, sin contraseña ni código de activación**. Ningún parentesco concede facultades automáticamente. El propietario activa después cada acceso mediante el código individual existente.
 
-## Qué se estudió y qué existe hoy
+No importa notas, historial 2026, dinero, tareas, asistencia, fotos, documentos ni credenciales antiguas. No genera cuotas, carnets o mensajes. No modifica el PHP ni la base del legado. Una persona puede existir como estudiante y encargado con una sola cuenta; un encargado puede tener varios hijos; un estudiante no necesita encargado.
 
-Se revisó código local, sin conectar a MariaDB ni leer registros personales. Los nombres de columnas se contrastaron con el inventario de esquema de la referencia; falta comprobarlos contra metadatos de la instalación antes de extraer.
+Decisión: [ADR-015](adr/ADR-015-MIGRACION-INICIAL-2027.md). La comparación de seis alternativas y el análisis original se conservan como [estudio histórico](MIGRATION_2027_STUDY.md).
 
-| Evidencia | Implicación |
+## Preparar la instalación de destino
+
+1. Usar la rama `feat/legacy-migration-2027` o integrar este incremento en la instalación que vaya a operarse. No cambiar la rama del otro agente. Cada colegio mantiene su propia copia/base.
+2. Preparar .NET 10 según `global.json`, restaurar con lock y compilar el host. El artefacto local de esta entrega está en `.local/migration-tool/` y el wrapper usa por defecto el DLL de `bin/Release/net10.0`.
+
+```powershell
+dotnet restore SchoolPlatform.slnx --locked-mode
+dotnet publish src/SchoolPlatform.Host/SchoolPlatform.Host.csproj -c Release -o .local/migration-tool
+```
+
+3. Configurar el ambiente y `ConnectionStrings__SchoolDatabase` mediante el gestor de secretos/entorno de esa instalación. No escribir la conexión ni contraseñas dentro del paquete, marca, Git o comandos grabados. Confirmar el catálogo y verificar el respaldo antes de una carga real.
+4. Aplicar las migraciones de Identity y después School con el procedimiento habitual. El importador **no migra ni crea la base al arrancar**. La migración nueva es `20261106202522_InitialRosterImport`: agrega `people.RosterBatches` y `people.RosterSourceAliases`, conservando el mapa v1. Se incluye el [SQL de actualización](migration-2027/initial-roster.sql), generado desde `ReceiptNumbersNoCache`; está destinado exclusivamente a una instalación que ya tenga ese historial. No ejecutarlo repetidamente ni contra otro catálogo. En una base nueva se aplica la cadena completa de migraciones, no solamente este delta.
+5. Crear o revisar en la web el ciclo 2027 con sus **fechas reales**, grados y secciones; abrir inscripciones. La etiqueta 2027 no es un GUID. No se deduce promoción ni continuidad a partir de 2026. El ciclo predeterminado no decide escrituras.
+6. Tener una cuenta operadora activa con contraseña y `people.manage`, `enrollment.manage`, `accounts.manage`. El comando verifica contraseña, permisos SQL, bloqueo y TOTP si el operador tiene MFA o la política lo exige. No basta conocer el usuario. Para configurar previamente la estructura se usa `academic.manage`.
+7. Elegir un rol SQL activo con **cero permisos del catálogo administrativo** para las cuentas nuevas. No se elige por nombre. Si no existe, crearlo desde Roles con el gestor; el importador no siembra roles ni concede privilegios por su nombre.
+
+Consultas de lectura para obtener IDs/estado del destino, sin datos personales:
+
+```sql
+SELECT Id, Label, StartsOn, EndsOn, Status FROM academic.Years ORDER BY StartsOn;
+SELECT Id, Code, Name, IsActive FROM academic.Grades ORDER BY Sequence;
+SELECT Id, AcademicYearId, GradeLevelId, Name, Capacity FROM academic.Sections;
+SELECT r.[Key], r.Label FROM iam.AccessRoles r
+WHERE r.IsActive = 1 AND NOT EXISTS
+    (SELECT 1 FROM iam.AccessRolePermissions p WHERE p.RoleKey = r.[Key]);
+```
+
+## 1. Extraer del legado con lectura solamente
+
+Se usa el PHP CLI instalado, con PDO MySQL, **sin cargar ningún archivo de la aplicación antigua**. El wrapper pide una credencial MariaDB de solo lectura y mantiene los secretos fuera de argumentos/listados. No utiliza ni lee la configuración de conexión del PHP antiguo.
+
+```powershell
+# Primero ver catálogo, versión, ciclos de origen y motores; sin fichas personales.
+./scripts/Export-LegacyRoster.ps1 -HostName localhost -Database '<catalogo-legado>' -Inspect
+
+# Después elegir el ID de ciclo fuente, que NO tiene por qué ser 2026 o 2027.
+./scripts/Export-LegacyRoster.ps1 -HostName localhost -Database '<catalogo-legado>' `
+  -SourceYearId '<id-numerico-origen>' -SourceKey 'legacy-school-local'
+```
+
+Reemplazar los marcadores antes de ejecutar. `-PhpPath` y `-Port` permiten otra instalación. `SourceKey` debe mantenerse estable para esta misma fuente en todos los intentos; cambiarla no es una forma de resolver duplicados.
+
+El exportador comprueba seis tablas, columnas necesarias y motores InnoDB; ejecuta las lecturas en una conexión con `REPEATABLE READ`, instantánea consistente y transacción `READ ONLY`. Esta garantía requiere no hacer DDL concurrente y no incluye tablas no transaccionales: si encuentra otro motor, rechaza la operación. [Referencia oficial de MariaDB](https://mariadb.com/docs/server/ha-and-performance/standard-replication/enhancements-for-start-transaction-with-consistent-snapshot).
+
+Produce `raw-<uuid>.json` dentro de `.local/migration/`, carpeta ignorada con ACL restringida al usuario actual/SYSTEM. No sobrescribe archivos; solo imprime conteos y hash. Conserva códigos con ceros iniciales y no extrae contraseñas, usuarios, permisos o identificadores oficiales. `studentrelation` se extrae aparte para no multiplicar alumnos por sus filas históricas. Encargados de otro ciclo se conservan como referencia a revisar. Una referencia inexistente queda visible en el estudiante.
+
+No se filtra por `active` del legado: ese campo no demuestra continuidad en 2027. El ciclo fuente selecciona **candidatos**, no matriculados confirmados. La operación se rechaza si el ciclo no existe, no hay candidatos, faltan columnas, el motor no es compatible o falla cualquier consulta. No entrega archivos parciales.
+
+## 2. Preparar y revisar el padrón
+
+```powershell
+./scripts/New-RosterReview.ps1 -ExportFile '.local/migration/raw-<uuid>.json' `
+  -OutputFile '.local/migration/review-2027.json' `
+  -TargetYearId '<guid-real-del-ciclo>' -TargetYearLabel '2027' `
+  -EnrolledOn '<fecha-real-yyyy-MM-dd>' -RoleKey '<clave-sql-del-rol-vacio>'
+```
+
+El borrador nace **bloqueado**: decisiones `pending`, nombres/apellidos vacíos, grados sin resolver y matrículas sin revisar. Conserva el hash exacto de la extracción; genera identificadores de ingreso opacos sin datos personales. No divide nombres, inventa adultos, copia contactos compartidos o promueve alumnos automáticamente. Consultar el archivo raw en privado para completar la revisión.
+
+El [ejemplo completamente sintético](migration-2027/review.example.json) tiene la estructura v2 real; los GUIDs, hash, fechas y rol son ilustrativos y deben reemplazarse en una carga real. No agregar comentarios/campos extras al JSON: el lector rechaza campos desconocidos, campos requeridos ausentes, nulos indebidos y propiedades repetidas.
+
+Revisión que haces tú:
+
+- `candidates`: cada alumno fuente queda `include` o `exclude`, con motivo de 8–500 caracteres. Un incluido apunta a su `personKey`; un excluido tiene `personKey:null` y no debe figurar en personas/alias/matrículas. Los pendientes bloquean el lote entero. Varios IDs antiguos del mismo estudiante pueden apuntar a una persona **tras revisión explícita**, con sus alias correspondientes.
+- `people`: nombres/apellidos ya separados, nacimiento opcional `yyyy-MM-dd`, perfiles `student`/`guardian`, código estudiantil estable y único, usuario opaco reservado y contactos verificados. No usar DNI como código de ingreso. Códigos: 1–30 caracteres `A-Z 0-9 . -`. Contactos admitidos: un `Phone` y un `Email` por persona, opcionales. Valores inválidos se corrigen o se excluyen expresamente, nunca se descartan en silencio.
+- `distinctPersonConfirmed`: solo poner `true` cuando se haya verificado que una coincidencia de nombre/fecha corresponde a **otra persona**. No permite reutilizar código/usuario/alias ni fusiona fichas.
+- `families`: una decisión explícita por referencia familiar de los estudiantes incluidos. `include` enumera los adultos identificados; `exclude` tiene `personKeys:[]` y motivo, por ejemplo referencia rota o titular sin identificar. No dejar un encargado ausente sin decisión.
+- `legacyAliases`: cada referencia original apunta a una persona canónica. Estudiante: `entity:"student"`, ID original y `discriminator:"person"`. Familia: `entity:"parents"`, ID de ficha familiar y discriminadores distintos por adulto confirmado. La misma ficha antigua puede originar padre y madre; el mismo adulto puede tener varios alias revisados.
+- `relationships`: solo parentescos confirmados, fecha explícita, `reviewed:true` y `faculties:[]`. Una ficha `parents` contiene `name`, `father_name`, `mother_name`: `name` puede repetir al padre. No crear un tercer adulto ni atribuir teléfono/DNI familiar a ambos. Un adulto se guarda una vez para todos sus hijos.
+- `enrollments`: una fila por estudiante canónico, GUID de ciclo destino, grado y sección de **ese ciclo/grado** o `null`, fecha dentro del calendario y `reviewed:true`. `0` no representa una sección. Revisar continuidad, repetición o promoción sin trasladar notas antiguas.
+- `accountPreparation`: mantener `pending-without-secrets`, `isActive:false`, `passwordHash:null`, `issueActivationCodes:false`, `sendMessages:false`, rol SQL sin permisos y comprobación de permisos vacíos habilitada.
+
+Si se excluye un estudiante, retirar sus objetos exclusivos del borrador; conservar los adultos compartidos que todavía tengan otro estudiante incluido. Los adultos sin estudiante válido se rechazan. Los conflictos se resuelven antes de aplicar: ninguna política «primera fila gana».
+
+## 3. Planificar sin escrituras
+
+```powershell
+./scripts/Invoke-RosterImport.ps1 -File '.local/migration/review-2027.json' `
+  -Mode plan -Actor '<operador>' -Database '<catalogo-destino>' -Environment Production
+```
+
+El wrapper pide contraseña/TOTP de forma oculta y restaura el entorno al terminar. Si se usa el artefacto publicado, agregar `-HostDll '<ruta-absoluta>/SchoolPlatform.Host.dll'`. La conexión procede del entorno/secretos de la instalación, no del paquete. El comando no inicia un servidor HTTP.
+
+Revisar `server`, `database`, `yearId`, `yearLabel`, conteos de alumnos/encargados/vínculos/cuentas/excluidos y las dos huellas: `fileSha256` representa los bytes del paquete; **`planSha256` es el valor que exige apply**, e incluye el destino/estado/actor. `-Database` debe coincidir con la conexión final; sin esa confirmación explícita el comando rechaza incluso plan. El ciclo se comprueba contra su GUID y etiqueta, y los cupos suman destino existente más **todas** las filas del lote. Antes del corte comparar además los grupos del padrón revisado con la estructura del ciclo.
+
+Plan no crea personas, cuentas, códigos, lotes o eventos. Cualquier incidencia bloquea todo el paquete. Si otra operación cambia las precondiciones entre plan y apply, hay que planificar/revisar otra vez.
+
+## 4. Aplicar exactamente el plan y conciliar
+
+Con respaldo del destino verificado y padrón final revisado:
+
+```powershell
+./scripts/Invoke-RosterImport.ps1 -File '.local/migration/review-2027.json' `
+  -Mode apply -PlanSha256 '<planSha256-revisado>' -Actor '<operador>' -Database '<catalogo-destino>' -Environment Production
+
+# Lectura independiente posterior al commit:
+./scripts/Invoke-RosterImport.ps1 -File '.local/migration/review-2027.json' `
+  -Mode reconcile -Actor '<operador>' -Database '<catalogo-destino>' -Environment Production
+```
+
+Personas, perfiles, matrículas/ubicaciones, relaciones, cuentas/enlaces, alias, resultado del lote y auditoría se confirman en **una transacción SQL compartida por Identity y School**. El lote usa el bloqueo IAM y el mismo bloqueo de escritura de matrícula que la web. Si falla después de crear cuentas, también se revierten esas cuentas. La comparación de precondiciones usa filas ordenadas del destino, no el contador global de rowversions que puede avanzar por un rollback. [Transacciones compartidas de EF Core](https://learn.microsoft.com/en-us/ef/core/saving/transactions).
+
+El reporte contiene IDs técnicos y conteos, sin nombres, contactos o secretos. `reconcile` relee personas, perfiles, contactos, cuentas/enlaces/permisos, matrículas/ubicaciones, relaciones/facultades y alias. Debe devolver `observations:[]` inmediatamente después de importar y antes de habilitar accesos.
+
+| Salida | Significado |
 | --- | --- |
-| PHP `mvc/models/student_m.php`, `get_promoted_student` | El código contempla copias por ciclo y busca por varios identificadores. Es evidencia de un riesgo de duplicación, no una medición de duplicados reales. |
-| PHP `mvc/models/parents_m.php`, `get_existing_for_promotion` | También contempla múltiples candidatos de encargado entre ciclos; no copiar su selección automática. |
-| PHP `mvc/controllers/student.php` | Lee ciclo desde sesión y escribe usando configuración en distintos flujos. No confiar en el ciclo global del legado como destino. |
-| PHP `mvc/models/studentrelation_m.php` | Hay campos de grado/sección/ciclo repetidos respecto de `student`; una discrepancia debe revisarse. `studentrelation` no representa parentescos. |
-| PHP `mvc/language/spanish/student_lang.php` y formulario `student/add.php` | `state` se presenta como código institucional, `dni` como código personal y `registerNO` como número de registro. No confundirlos por el nombre técnico. |
-| PHP `mvc/controllers/parents.php`, alta | Asigna `parents.name` desde `father_name`; `parents` contiene además `mother_name`. El nombre principal no identifica de forma fiable a quien usa la ficha familiar. |
-| [LegacyPeopleImporter.cs](../src/SchoolPlatform.Host/LegacyImport/LegacyPeopleImporter.cs) | Ya importa estudiantes/encargados normalizados, mapa legado y vínculos sin facultades. No crea cuentas ni matrículas; solo admite un `parentLegacyId` por estudiante. |
-| [AccountAccessService.cs](../src/SchoolPlatform.Host/IdentityAccess/AccountAccessService.cs) | Invitación crea cuenta inactiva **y emite código**. Activación añade contraseña y pone `IsActive=true`; el botón de habilitar rechaza cuentas sin contraseña. |
-| [EnrollmentService.cs](../src/SchoolPlatform.Host/Academic/EnrollmentService.cs) | Ya valida ciclo abierto, fecha, grado, sección y cupo. La importación deberá conservar esas reglas y aportar fecha explícita. |
+| `0` | Plan/aplicación/conciliación correctos y sin observaciones |
+| `1` | Operación rechazada o fallida; se imprime código seguro, sin stack ni datos personales |
+| `2` | Lote ya aplicado con cambios posteriores observados; no se modificaron esos cambios |
 
-El esquema conocido está en `reference/PLAN_MAESTRO_ORIGINAL.md`, apartados `student`, `parents`, `studentrelation`, `schoolyear`, `classes`, `section`. El PHP es referencia de estructura; sus reglas de acceso no se trasladan.
+Repetir el mismo `batchId` con bytes y plan originales no duplica nada; devuelve `alreadyApplied:true`. Cambiar el contenido de ese lote se rechaza. Una activación/cambio posterior se informa y **nunca se revierte** al repetir. Si se cortó la consola después de un commit incierto, volver a usar el mismo lote/plan o `reconcile`.
 
-## Alternativas consideradas
+El importador inicial no es un actualizador general: un lote distinto no reutiliza ni sobrescribe personas/cuentas/matrículas importadas antes. Código, usuario o alias existentes provocan conflicto. Consolidar estudiantes y familias compartidas en un único padrón inicial; las correcciones y altas posteriores usan los flujos normales o un incremento explícito. No cambiar `source` ni asignar códigos inventados para saltar conflictos.
 
-| Forma | Ventaja | Coste o limitación para este caso | Decisión |
-| --- | --- | --- | --- |
-| Registrar todo manualmente en la nueva web | Usa validaciones existentes | Mucha captura repetida; difícil comparar con el origen y evitar omisiones | Reservar para excepciones y altas posteriores |
-| Cargar directamente SQL/volcado MariaDB a tablas finales | Parece rápida | Mezcla modelos incompatibles y omite IAM, reglas de matrícula y auditoría | Descartar |
-| Archivo de hoja de cálculo como único importador | Fácil de revisar | Fechas/códigos pueden alterarse; una fila por alumno duplica adultos y mezcla matrícula | Útil como interfaz de revisión, convertir después a paquete estricto |
-| Importador web permanente para el cliente | Accesible desde navegador | Añade carga de archivos sensibles, pantallas y mantenimiento a una operación del propietario | No construir para esta migración |
-| Sincronización continua entre plataformas | Mantiene dos sistemas actualizados | Conflictos de identidad y dos fuentes de verdad; innecesaria sin historial a transferir | Descartar |
-| Consola con extracción acotada, paquete revisado, plan y conciliación | Repetible, trazable y permite separar cada concepto | Requiere ampliar la herramienta existente y revisar ambigüedades | **Recomendada** |
+## 5. Activar gradualmente
 
-No es necesario un sistema ETL de terceros para este alcance. Reutilizar el host y las reglas de dominio, con contrato versionado y sin endpoints públicos nuevos.
+Persona y matrícula quedan activas como registros; el acceso permanece inactivo. No se cambia ninguna cuenta ajena al lote ni la del operador.
 
-## Qué queda guardado
+En Cuentas: localizar al titular por el usuario reservado en su ficha, verificar identidad y vínculo cuenta/persona, revisar hijos/facultades cuando sea un encargado, y emitir un **código de activación individual en ese momento**. Entregarlo manualmente por canal verificado; el titular elige contraseña y ese canje activa su cuenta. El botón de habilitar no reemplaza este proceso para una cuenta sin contraseña. No hay contraseña compartida ni correo obligatorio.
 
-| Concepto | Destino | Estado inicial |
-| --- | --- | --- |
-| Persona confirmada | `people.Persons` | `Active`: ficha utilizable; no concede ingreso |
-| Estudiante | `people.Students` | Código institucional revisado, estable y único |
-| Padre/madre/encargado identificado | `people.Guardians` | Una persona por adulto, compartida entre sus hijos |
-| Relación confirmada | `people.GuardianRelationships` | Parentesco descriptivo y fecha de inicio revisada |
-| Facultades familiares | `people.RelationshipFaculties` | Cero concesiones importadas |
-| Inscripción | `academic.Enrollments` | Una por estudiante y GUID de ciclo de destino; `Active` para los confirmados |
-| Grado/sección | `academic.EnrollmentPlacements` | Fecha efectiva explícita; sección opcional `null` |
-| Cuenta | `iam.AspNetUsers` | `IsActive=false`, `PasswordHash=null`; sin códigos emitidos |
-| Cuenta ↔ persona | `people.AccountLinks` | Una relación vigente por persona y cuenta; una cuenta sirve si la persona tiene varios perfiles |
-| Rol de cuenta | `iam.AccountRoleAssignments` | Clave de rol SQL elegida explícitamente, activa y sin permisos administrativos |
-| Procedencia | Mapa legado y lote por ampliar | Identidad original, decisiones de unificación/descomposición, hash y resultado persistentes |
+Web/app usan la misma sesión existente. El encargado no recibe datos académicos/financieros por ser padre: necesita las facultades revisadas; las notas, si se publican después, mantienen las reglas de solvencia. Un saldo vacío no acredita solvencia. Los cargos 2027 se configuran por su flujo normal, separados de la importación.
 
-La cuenta del operador y cualquier cuenta anterior quedan fuera del cambio masivo. No ejecutar `UPDATE ... SET IsActive=0` sobre toda la base.
+## Límites comprobables y corte real
 
-### Cómo asegurar el ciclo correcto
+Se admiten paquetes de hasta 20 MB, 5.000 personas y 10.000 candidatos, con límites adicionales en listas. La prueba de volumen usa 150 estudiantes sintéticos; no es una certificación de rendimiento del máximo ni del servidor de producción. Ante una incidencia se rechaza el lote completo, sin aplicar filas sueltas.
 
-1. Crear en la nueva plataforma el ciclo de etiqueta `2027`, con las fechas reales indicadas por el propietario; abrir inscripciones. No asumir que sus fechas son 1 de enero/31 de diciembre ni que tiene el ID numérico 2027.
-2. Registrar o comprobar grados y secciones de ese ciclo. Los IDs MariaDB no se reutilizan como GUID SQL Server.
-3. Seleccionar explícitamente un ciclo **de origen** para extraer candidatos. Puede ser 2026 o un padrón 2027 ya preparado; no se ha comprobado qué contiene la base antigua.
-4. Revisar por estudiante `include/exclude/pending`, grado de destino, sección opcional y fecha efectiva. Una correspondencia por grado puede proponer valores, pero cada fila requiere confirmación. No trasladar automáticamente el grado 2026 ni subir uno por orden numérico.
-5. Resolver el GUID del ciclo de destino en el paquete y confirmar su etiqueta/fechas en el plan. Todas las matrículas deben apuntar a ese GUID. Sección `0` se normaliza a `null`, nunca a una sección inventada.
-6. Los candidatos que no continúan quedan excluidos con motivo; los pendientes bloquean el lote final. No se copia matrícula 2026 ni se crea otra persona por cambiar de ciclo.
+Antes del corte real hacer la extracción final y revisar diferencias con la anterior; una huella distinta no autoriza sincronizar cambios automáticamente. El propietario define cuándo se deja de registrar en el legado y dónde entrarán las nuevas altas. No se ha ejecutado extracción/carga de personas reales ni cambiado la base del colegio en esta entrega.
 
-Ejemplo: un estudiante de cuarto en el origen puede ir a quinto, repetir cuarto o no continuar. El padrón revisado determina cuál ocurre; no se necesita importar ninguna nota para decidirlo.
-
-### Cómo tratar padres y hermanos
-
-- `student.parentID → parents.parentsID` aporta una referencia familiar, no una facultad ni prueba de custodia.
-- Un encargado confirmado con varios hijos se guarda una vez y tiene varios vínculos; no una cuenta por hijo.
-- Una ficha con padre y madre puede producir dos personas **si se confirma quién es cada una**. `parents.name`, `father_name` y `mother_name` pueden repetir un nombre: no crear tres adultos ni asignar automáticamente el `dni`/teléfono de la fila a todos.
-- Si el titular real no se puede identificar, importar el estudiante sin encargado y conservar el asunto pendiente en el expediente de revisión privado. No crear una persona ficticia «Familia de…».
-- Un alumno sin referencia familiar se importa normalmente. Una referencia inexistente se informa; el operador decide excluir ese vínculo antes del lote final.
-- Nombres semejantes, correo o teléfono compartido generan candidatos de revisión; no uniones automáticas. Separar nombres/apellidos requiere confirmación humana, especialmente nombres compuestos.
-- Seleccionar un solo ciclo de origen reduce copias históricas. Cuando una persona tenga varias referencias antiguas, asignar alias confirmados a la misma persona canónica; no confiar en DNI/código/nombre por sí solo.
-- Los datos oficiales de identidad no tienen todavía almacenamiento específico en la nueva plataforma. No reutilizar `StudentCode` para ese fin ni copiarlos a observaciones. La extracción propuesta los omite.
-
-### Códigos y contactos
-
-Revisar primero `state` como candidato a código institucional y `registerNO` como alternativa de revisión. Mantener ceros a la izquierda. El destino exige 1–30 caracteres `A-Z 0-9 . -` y unicidad global en esta instalación. Una colisión detiene la decisión: no añadir sufijos silenciosamente ni fusionar fichas por código. Si hace falta asignar códigos nuevos, decidir el patrón y dejar la correspondencia en el paquete antes de aplicarlo.
-
-Fechas vacías o inválidas no se inventan. Los contactos inválidos se corrigen o se excluyen expresamente; no se descartan en silencio. No crear correos ficticios, ni usar el teléfono como contraseña o como identidad única. Direcciones, fotografías, documentos, datos médicos y demás campos quedan fuera de esta primera carga salvo un incremento autorizado posterior.
-
-## Acceso inactivo y activación gradual
-
-Se compararon dos variantes: crear la cuenta solo cuando alguien la solicite, o prepararla pendiente durante la importación. La segunda satisface mejor la solicitud: permite ver quién está pendiente, reservar un usuario único y activar sin volver a enlazar la ficha.
-
-La preparación propuesta crea una cuenta por persona confirmada, sin contraseña y sin `AccessGrant`. El identificador de ingreso será un código técnico opaco reservado en el plan, sin DNI/fecha de nacimiento; no se deduce del nombre ni se reutiliza el usuario antiguo. No representa un secreto. Su formato definitivo debe quedar fijado en el implementador antes del primer lote.
-
-El rol SQL se selecciona por clave y se verifica contra `AccessRolePermissions`/`AccountPermissions`: cero permisos de gestión/lectura administrativa del catálogo actual. No asumir que un rol llamado «Estudiante» o «Familia» es seguro. Los accesos propios/familiares los resuelve `PeopleService.StudentAccessAsync` y las facultades verificadas, no el nombre del rol. Un cambio posterior del rol debe seguir el flujo IAM y su auditoría normales.
-
-Activación individual, usando las pantallas existentes:
-
-1. Comprobar identidad del titular y que la cuenta está vinculada a la persona correcta. Para un adulto, revisar hijos, vigencia y las facultades que procedan; parentesco por sí solo no basta.
-2. Emitir **en ese momento** un código de activación de un uso desde Cuentas, con `accounts.manage`. No habilitar masivamente ni generar centenares de códigos que caduquen antes de entregarse.
-3. Entregar manualmente por canal verificado. El secreto se muestra una vez y su hash queda durable; nunca en URL, exportación, reporte o Git.
-4. El titular canjea el código y elige contraseña. `RedeemAsync` activa esa cuenta; el flujo compartido de ingreso sirve a web y app. No hay otra contraseña inicial.
-5. Verificar que ve solo su información autorizada. Para encargados, activar la cuenta no concede automáticamente información académica o financiera de sus hijos.
-
-No se necesita correo obligatorio ni enviar mensajes automáticamente. Cambiar `IsActive` por SQL no es el procedimiento de activación.
-
-## Procedimiento operativo propuesto
-
-### 1. Inspección y extracción autorizada
-
-El archivo [extract-readonly.sql](migration-2027/extract-readonly.sql) es un **borrador de consultas**, no un extractor ejecutado ni un cliente configurado. Por defecto su ciclo origen es `NULL`: las consultas de candidatos no devuelven datos hasta elegirlo explícitamente. Primero verificar metadatos/versión/motores y que el catálogo seleccionado sea el correcto; no leer `mvc/config/database.php` ni copiar sus credenciales al repositorio.
-
-Para la operación real, usar una credencial de solo lectura aportada al proceso por secretos de la instalación. Mantener todas las consultas del lote en una sola conexión. La propuesta usa `REPEATABLE READ` y `START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY`, que MariaDB documenta para una vista consistente en InnoDB. Si alguna tabla no es transaccional, o hay DDL concurrente, no afirmar que esa instantánea la cubre; definir una extracción desde una copia consistente con el propietario. [Documentación de MariaDB](https://mariadb.com/docs/server/ha-and-performance/standard-replication/enhancements-for-start-transaction-with-consistent-snapshot).
-
-Los resultados contienen personas reales solo cuando el propietario ejecute después la extracción. Guardarlos fuera de Git, con acceso restringido y sin volcarlos por consola/CI. El extractor futuro escribirá archivos UTF-8 locales, no `SELECT INTO OUTFILE` en el servidor. Este borrador no modifica tablas, crea usuarios ni cambia permisos.
-
-### 2. Padrón de revisión
-
-Trabajar fuera de Git, por ejemplo en `staging/2027/` (ignorado). Conservar original, revisión y paquete final separados. La revisión puede hacerse con una hoja de cálculo o herramienta local, pero el artefacto final será JSON estricto. Si se usa hoja de cálculo, importar códigos como texto y tratar los contenidos de origen como texto, sin evaluar fórmulas.
-
-Cada candidato tendrá una decisión y motivo, identidad canónica, nombres/apellidos revisados, código y matrícula destino. Los adultos y los vínculos estarán en listas separadas. El JSON [review.example.json](migration-2027/review.example.json) muestra **solo datos inventados**: hermanos, dos encargados de un estudiante y otro estudiante sin encargado. Es un contrato de ejemplo para diseñar la ampliación; **ningún comando actual lo aplica**. No cambiarle nombres de campos para forzarlo a pasar por `--import-people`.
-
-El paquete final deberá incluir versión, lote, fuente estable de esta instalación, `SchoolId`, instante/hash de extracción, ciclo destino por GUID, decisiones cerradas, personas canónicas y alias, vínculos, matrículas y política de cuentas pendientes. Los nombres/contactos se guardan solo donde hacen falta; reportes operativos y auditoría general usan IDs y conteos.
-
-### 3. Plan sin escrituras
-
-El futuro plan validará el paquete contra el destino real y producirá:
-
-- GUID/etiqueta/fechas/estado del ciclo, huella de la base/instalación y SHA-256 de los bytes exactos del paquete.
-- Candidatos = incluidos + excluidos; pendientes = 0 antes del corte. Adultos sin identificar se resuelven como vínculo excluido, con el estudiante incluido si corresponde.
-- Personas, perfiles, vínculos, matrículas, cuentas y alias a crear; coincidencias ya importadas separadas de conflictos. Totales por grado/sección y ocupación prevista contando filas del lote y del destino.
-- Incidencias bloqueantes: duplicados/ambigüedades sin resolver, códigos repetidos, fechas inválidas, identificadores desconocidos, cuenta/persona ya enlazada de forma incompatible, permisos del rol, matrículas existentes diferentes, sección de otro grado/ciclo o cupo insuficiente.
-- Cero contraseñas, códigos o facultades por generar; cero notas/cargos/recibos/asistencia/carnets a migrar.
-
-No aplicar parcialmente «las filas que pasaron». Resolver el paquete o dividirlo explícitamente en lotes cerrados y volver a planificar. Un hash acredita qué archivo se revisó, no que el destino siga igual.
-
-### 4. Ensayo y aplicación
-
-Desarrollar/probar únicamente con datos sintéticos y SQL Server real en bases aleatorias del fixture, sin copiar la base escolar. Un ensayo con datos reales sería una operación posterior separada, no una prueba de desarrollo autorizada por este documento.
-
-El comando futuro de aplicación deberá exigir actor activo, `people.manage`, `enrollment.manage` y `accounts.manage`, más el hash del plan y el GUID destino explícito. El ciclo/estructura se preparan previamente con `academic.manage`; el importador no crea estructura desconocida. La política MFA de la instalación también debe cumplirse en el procedimiento de consola, sin asumir que comprobar permisos SQL equivale a verificar segundo factor.
-
-Antes de aplicar: respaldo verificable del destino y revisión del lote exacto. Dentro de una transacción SQL corta: bloqueo de lote, bloqueo IAM compartido, revalidación del actor/permisos y del estado del destino, creación de personas/perfiles/alias/vínculos/matrículas/cuentas/enlaces, proyección de permisos y auditoría, confirmación conjunta. Identity y School son contextos distintos: compartir conexión/transacción explícitamente; no confirmar uno antes del otro. No introducir `SaveChanges` independientes que dejen cuentas o personas huérfanas.
-
-La concurrencia con inscripciones normales debe quedar cubierta por bloqueo/rango SQL o una ventana operativa verificada: un bloqueo exclusivo del importador por sí solo no impide que la web ocupe el último cupo. Revalidar cupos bajo la protección elegida y probarlo. No iniciar extracciones, entregas o respaldos bajo el bloqueo IAM.
-
-Si el destino cambió desde el plan y afecta a sus precondiciones, abortar y generar otro plan. En errores, rollback completo del lote; no borrar personas a mano como compensación.
-
-### 5. Conciliación y corte
-
-Releer el destino tras confirmar; no tomar como conciliación el reporte que se calculó antes del `commit`. Conservar un resultado durable por lote, hash, actor y IDs; el detalle privado de revisión queda fuera de Git y de la auditoría general.
-
-- Cada estudiante incluido tiene una persona canónica, código esperado, alias de origen y exactamente una matrícula en el GUID de 2027 con la ubicación/fecha revisadas.
-- Cada adulto confirmado existe una vez según las decisiones revisadas; hijos y parentescos coinciden. Ningún vínculo tiene facultades importadas.
-- Cada persona importada tiene una cuenta pendiente vinculada: inactiva, sin contraseña, sin concesión de activación, sin permisos administrativos. No se alteró ninguna cuenta ajena al lote.
-- Totales conciliados de alumnos por grado/sección, adultos, vínculos y cuentas, con conteos de ya existentes y conflictos diferenciados.
-- No aparecen notas, tareas, asistencia, obligaciones, pagos, carnets o credenciales de dispositivos por efecto de la migración. La falta de saldo no se presenta como solvencia.
-
-Repetir el mismo lote debe devolver un resultado sin nuevas creaciones. Un lote posterior con datos cambiados no sobrescribe identidades, cuenta, contactos o matrículas: se informa el conflicto y se corrige mediante flujo explícito. Las activaciones individuales que ya hayan ocurrido nunca se revierten al repetir la importación.
-
-Como el legado sigue cambiando, hacer una extracción final del mismo alcance y comparar su hash/contenido normalizado con el revisado. Un hash diferente obliga a revisar los cambios, no a aplicarlos automáticamente. El propietario define el momento de corte y qué plataforma recibe nuevas altas desde entonces. No activar personas hasta pasar conciliación.
-
-Si falla la transacción, se revierte entera. Si el error se descubre después del commit, corregir por procedimientos auditados; restaurar el respaldo solo en una ventana sin escrituras posteriores verificadas. No prometer un «deshacer» que borre auditoría, cuentas activadas o cambios de terceros.
-
-## Brechas del importador actual antes de usarlo para 2027
-
-Estas observaciones proceden de lectura de código; no se ejecutaron fallos contra datos reales.
-
-| Brecha | Trabajo necesario |
-| --- | --- |
-| No tiene ciclo/matrícula ni cuentas | Ampliar el flujo; ejecutar hoy `--import-people` no satisface la solicitud |
-| Deserialización tolera propiedades desconocidas; `scope` no se valida | Versión/esquema estricto y rechazo de alcance/campos/modo inesperados |
-| Relación `parentLegacyId` única y mapa de encargado uno a uno por fila | Listas de vínculos y alias discriminados para dos adultos de una ficha y adultos compartidos |
-| Aplica filas válidas aunque reporte incidencias en otras | Lote cerrado con bloqueos explícitos y exclusiones revisadas |
-| Encargados se seleccionan antes de excluir alumnos inválidos | Evitar crear adultos sin ningún estudiante incluido válido |
-| Dos registros repetidos pueden dejar válida la primera aparición | Marcar el grupo completo como ambiguo; ninguna política «primero gana» |
-| Plan cuenta parejas sin descontar vínculos ya existentes | Conteos reales del estado destino, incluidas repeticiones |
-| Verificación del actor/lectura del mapa ocurre antes de iniciar la transacción | Revalidar bajo transacción y protección de concurrencia |
-| Contactos inválidos se omiten; algunos límites no se validan en plan | Validación completa antes de escribir, sin pérdidas silenciosas |
-| Fecha de vínculo usa UTC actual; nacimiento limita a 1990 y usa reloj real | Fecha revisada para vínculo y validación coherente con dominio/TimeProvider; no inventar umbrales |
-| `InviteAsync` genera código y `SchoolDbContext` no escribe IAM | Nueva operación pendiente sin secretos y transacción compartida con Identity, no escritura indirecta del contexto escolar |
-| No hay conciliación durable de matrículas/cuentas/lote | Persistencia y consulta del resultado para reintento seguro y verificación posterior |
-
-## Implementación por incrementos y aceptación
-
-1. **Contrato/extractor y revisión:** versión estricta, extracción solo de columnas permitidas, alias/descomposición familiar y decisiones del padrón. Metadatos y consola redactados; pruebas sintéticas de códigos, fechas, nombres, hermanos, dos adultos, huérfanos y duplicados. No leer tablas académicas/financieras del legado.
-2. **Plan 2027 y persistencia del lote:** resolver GUIDs, validar estado/fechas/cupos/permisos y reportar exactamente las creaciones. Cero escrituras en plan, incluso sobre incidencias; no generar cuentas ni códigos para planificar.
-3. **Apply atómico:** cuentas pendientes sin códigos, enlaces, matrícula y auditoría compartidos. Pruebas SQL reales de rollback por fallo después de crear personas/cuentas; dos aplicaciones concurrentes; cupo competido desde la web; actor revocado; rol modificado desde el plan; último gestor intacto.
-4. **Reconcile/activación:** doble ejecución sin duplicación, destino alterado produce conflicto, repetición tras una activación la conserva; web y app rechazan cuentas pendientes, canje individual habilita solo al titular, encargado sin facultades no obtiene datos protegidos. Otro estudiante/ciclo permanece inaccesible.
-5. **Operación del propietario:** respaldo/restauración verificados, extracción final y delta revisados, aplicación real y conciliación. Este paso no se ha realizado.
-
-No se establece fecha de corte ni se necesita decisión del cliente para terminar esta investigación. La selección de estudiantes, grados, fechas reales y titulares se resuelve en el padrón del propietario cuando se prepare el lote real.
+Las pruebas, sus escenarios y evidencia están en [QA_MIGRATION_2027.md](QA_MIGRATION_2027.md). Las verificaciones de desarrollo usan SQL Server y una instancia MariaDB independiente con directorio/puerto aleatorios, siempre con datos sintéticos.

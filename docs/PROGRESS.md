@@ -2,6 +2,15 @@
 
 Actualizado: 6 de noviembre de 2026, America/Guatemala.
 
+## Importador inicial 2027 listo en rama aislada — estado vigente
+
+- El propietario pidió implementar y probar lo que antes era estudio. `--import-roster` v2 y wrappers PowerShell/PHP: extracción acotada de lectura, borrador con decisiones pendientes, plan sin escrituras, apply atómico y reconcile independiente. Guía `MIGRATION_2027.md`; ADR-015 y `QA_MIGRATION_2027.md`. El estudio original se conserva como `MIGRATION_2027_STUDY.md`.
+- Personas/estudiantes/encargados, vínculos sin facultades, matrícula del GUID/ciclo/grado/sección/fecha revisados y cuentas pendientes (`IsActive=false`, sin contraseña, código o permisos administrativos). Una persona con dos perfiles comparte cuenta. Familias requieren decisión expresa; no se infiere el titular ni promoción. Activación individual por IAM existente; reintentos no duplican ni revierten activaciones posteriores.
+- Identity y School comparten conexión/transacción serializable, bloqueo IAM y bloqueo de matrícula compartido con las escrituras web; cuida cupos concurrentes y rollback de cuentas/personas. Actor con contraseña/permisos/TOTP cuando corresponde; consola exige confirmar catálogo destino. Paquete estricto, huella de archivo/estado, resultados técnicos durables y alias con discriminador para separar adultos de una ficha familiar.
+- Migración School `20261106202522_InitialRosterImport`, snapshot y delta SQL preparados; aplicada solo en bases propias del fixture, sin cambios de esquema/datos en la instalación escolar/desarrollo. Artefacto Release local `.local/migration-tool/`. Rama `feat/legacy-migration-2027`, worktree `.local/worktrees/legacy-migration-2027`; no se incorporaron cambios del otro agente en main.
+- Validación: **117 .NET/SQL correctas, 0 omitidas**, incluyendo 16 nuevas (caso con 26 variantes inválidas, rollback, concurrencia, MFA real, CLI completa y 150 alumnos); **17 específicas posteriores correctas**, **7 escenarios PHP de contrato** y recorrido de extracción/borrador con MariaDB real aislado correctos. Publicación Release, sintaxis de scripts, enlaces y `git diff --check` correctos. Evidencia `.local/qa/test-results/`; ver QA para límites.
+- No se conectó al MariaDB del legado ni se leyeron/importaron personas reales. Sin notas, pagos, deudas, tareas o contraseñas migradas; sin despliegue. Quedan configuración/backups, extracción/revisión del padrón real y su corte/conciliación a cargo del propietario. No se certifica un corte real ni ausencia absoluta de bugs.
+
 ## Estudio de migración inicial 2027 — rama aislada
 
 - Solicitud del propietario: estudiar la mejor forma de migrar estudiantes y padres/encargados para empezar en 2027, con ciclo/grado/sección explícitos y acceso inactivo para activarlo individualmente; operación a cargo del propietario, sin notas ni historial.

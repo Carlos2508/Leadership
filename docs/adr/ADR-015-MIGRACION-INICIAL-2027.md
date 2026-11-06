@@ -2,15 +2,15 @@
 
 Fecha: 6 de noviembre de 2026, America/Guatemala.
 
-Estado: alcance solicitado por el propietario y estrategia propuesta; **no implementada ni ejecutada**. El importador MIG-001a anterior sigue limitado a personas.
+Estado: **implementado y validado con datos sintéticos** por solicitud posterior del propietario. El corte con personas reales no se ha ejecutado. El importador MIG-001a anterior conserva su alcance separado de personas.
 
 ## Contexto y autorización
 
 El propietario hará la migración, no el cliente. Pide estudiar alternativas en una rama separada: estudiantes, padres/encargados existentes y matrícula en el ciclo indicado; el nuevo sistema empezará a usarse en 2027 sin historial académico. Todos los accesos importados deben comenzar inactivos y habilitarse individualmente después.
 
-Esto autoriza investigar y preparar el procedimiento. No supone importar datos reales para desarrollar, modificar el PHP/MariaDB ni efectuar el corte ahora. ADR-003/004/005/012/014 siguen vigentes.
+La solicitud posterior exige dejar la herramienta lista y probar los escenarios. Autoriza implementación y ensayos sintéticos; no supone importar datos reales para desarrollar, modificar el PHP/MariaDB ni efectuar el corte ahora. ADR-003/004/005/012/014 siguen vigentes.
 
-## Estrategia recomendada
+## Decisión implementada
 
 Herramienta de consola operada por el propietario: extracción de lectura → revisión explícita del padrón → `plan` sin escrituras → aplicación transaccional del paquete exacto → conciliación independiente. Sin asistente web para el cliente, conexión permanente entre plataformas ni sincronización de notas.
 
@@ -20,15 +20,19 @@ Herramienta de consola operada por el propietario: extracción de lectura → re
 - Vínculos familiares verificables separados de las personas, con facultades inicialmente vacías. No se atribuye un teléfono familiar a un adulto sin revisión.
 - Una cuenta pendiente por persona confirmada, incluso si tiene varios perfiles, vinculada a ella: `IsActive=false`, `PasswordHash=null`, sin códigos, sesiones, autenticadores ni permisos administrativos. Persona activa y matrícula activa son compatibles con acceso inactivo. No suspender cuentas preexistentes ajenas al lote ni al operador.
 - El rol de las cuentas nuevas debe elegirse por clave SQL y verificarse con **cero permisos administrativos efectivos**, nunca por nombre. La revisión individual de vínculos/facultades y el canje del código de un uso habilitan después el acceso usando IAM existente y la misma cookie para web/app.
-- No usar `InviteAsync` para generar cuentas masivamente: hoy también emite un código. Hace falta una operación IAM para preparar cuentas pendientes sin emitir secretos, con bloqueo, auditoría y vínculo transaccionales.
-- El paquete debe tener una versión nueva y estricta. No enviarlo al importador actual, que no interpreta matrículas ni cuentas y tolera propiedades desconocidas. Un modo desconocido debe fallar explícitamente, no parecer un plan correcto.
+- No usar `InviteAsync` para generar cuentas masivamente: también emite un código. `RosterAccountProvisioner` prepara cuentas pendientes sin emitir secretos dentro de la transacción/bloqueo IAM compartidos; el vínculo y auditoría se confirman juntos.
+- Paquete v2 estricto y comando `--import-roster`, separado del importador v1. Rechaza campos desconocidos/ausentes, propiedades repetidas y modos desconocidos. El v1 también rechaza campos desconocidos y fuentes que ya tengan lotes v2.
 
 ## Consecuencias y límites
 
-Se necesita ampliar el importador y su persistencia de lotes/alias antes del corte. `LegacyIdentities` permite varios IDs antiguos hacia una persona, pero su clave actual no representa por sí sola un registro familiar que se divide entre dos adultos. La solución debe incorporar alias revisados con discriminador y vínculos explícitos, sin reescribir migraciones aplicadas.
+La migración nueva `InitialRosterImport` incorpora `people.RosterBatches` (hashes, actor, ciclo y resultado técnico durable) y `RosterSourceAliases` (fuente/entidad/ID/discriminador → persona/lote). Conserva `LegacyIdentities` y las migraciones aplicadas. Una referencia familiar exige decisión explícita; su descomposición en adultos no se infiere. Solo se crean fichas nuevas: un lote distinto no actualiza ni reutiliza fichas importadas antes; un lote inicial completo evita repetir encargados entre lotes.
+
+Contraseña del operador comprobada sin rehash/escrituras durante plan, permisos revalidados y TOTP real cuando corresponde. Identity y School comparten conexión/transacción serializable. Bloqueos en orden IAM → matrícula; la escritura web de matrícula también adquiere el bloqueo de matrícula antes de validar cupo. Un fallo revierte las cuentas y los registros escolares. Hash del plan liga archivo, catálogo, actor y estado de filas ordenadas; un cambio de destino obliga a plan nuevo.
+
+Conciliación independiente de solo lectura y reintento por el mismo lote: no duplica ni suspende cuentas activadas después; informa cambios posteriores. Los reportes/auditoría guardan IDs/conteos sin nombres, contactos o secretos. Exportador PHP independiente de solo lectura, sin cargar el legado, con control de motores/esquema y salida privada; generador de revisión deja todas las decisiones pendientes hasta revisión del propietario.
 
 No se migra historial 2026, notas, promedios, tareas, asistencia, dinero, solvencia, claves, permisos antiguos ni credenciales de portería. Tampoco se generan cuotas, carnets ni códigos de activación al importar. Las cuotas 2027 se configuran después por su flujo normal; ausencia de saldo no equivale a solvencia.
 
-El ensayo de desarrollo usará datos sintéticos y SQL Server real en bases propiedad del fixture. La migración real será una operación posterior del propietario con respaldo verificado y conciliación. No se declara completada MIG-001 ni listo el corte.
+El ensayo usa datos sintéticos y SQL Server real en bases propiedad del fixture, además de MariaDB sintético en una instancia aparte. La migración real será una operación posterior del propietario con respaldo verificado y conciliación. No se declara ejecutado ni conciliado el corte real.
 
 Detalle, alternativas, hallazgos verificables, archivos preparatorios y pruebas de aceptación: [MIGRATION_2027.md](../MIGRATION_2027.md).

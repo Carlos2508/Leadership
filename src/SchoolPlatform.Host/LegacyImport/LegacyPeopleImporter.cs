@@ -41,7 +41,8 @@ public sealed class LegacyIdentity
 /// </summary>
 public sealed partial class LegacyPeopleImporter(SchoolDbContext db, SchoolAudit audit, TimeProvider time, IOptions<InstitutionOptions> institution)
 {
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
+    { UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow };
 
     public async Task<ImportPlan> RunAsync(byte[] content, bool apply, string? expectedSha256, string? actorUsername, CancellationToken ct)
     {
@@ -54,6 +55,8 @@ public sealed partial class LegacyPeopleImporter(SchoolDbContext db, SchoolAudit
             throw new InvalidOperationException("El manifiesto pertenece a otra instalación (SchoolId distinto). No se importa.");
         var source = Clean(file.Manifest.Source);
         if (!SourcePattern().IsMatch(source)) throw new InvalidOperationException("Fuente del manifiesto inválida.");
+        if (await db.RosterBatches.AnyAsync(b => b.Source == source, ct))
+            throw new InvalidOperationException("Esta fuente ya usa el importador de padrón v2. No mezcles el importador anterior de personas.");
 
         var incidents = new List<ImportIncident>();
         var map = await db.LegacyIdentities.AsNoTracking().Where(x => x.Source == source)

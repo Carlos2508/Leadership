@@ -20,7 +20,7 @@ public sealed record LinkAccountRequest(string Version, Guid UserId, string Reas
 public sealed record UnlinkAccountRequest(string Version, string Reason);
 
 public sealed record PersonSummary(Guid Id, string DisplayName, string GivenNames, string FamilyNames, string? StudentCode,
-    bool IsGuardian, string Status, string? Account, bool IsStaff = false);
+    bool IsGuardian, string Status, string? Account, bool IsStaff = false, string? Placement = null);
 
 public sealed record ContactView(Guid Id, string Kind, string Value, string Label, bool IsPrimary);
 public sealed record LinkedAccountView(Guid UserId, string Username, string Status, DateTimeOffset LinkedAt);

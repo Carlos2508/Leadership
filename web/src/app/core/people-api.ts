@@ -15,6 +15,8 @@ export interface PersonSummary {
   status: 'Active' | 'Archived';
   account: string | null;
   isStaff: boolean;
+  /** Current grade and section of a student («Cuarto primaria · A»), to tell homonyms apart. */
+  placement?: string | null;
 }
 export interface RelationshipItem {
   id: string;

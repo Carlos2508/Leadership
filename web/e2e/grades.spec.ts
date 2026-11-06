@@ -323,7 +323,7 @@ test('teacher captures, coordination publishes and the family sees grades only o
     allocations: [{ chargeId: statement.charges[0].id, amount: 300 }],
   });
   await familyPage.reload();
-  await expect(familyPage.locator('.grade-value')).toContainText('91.5');
+  await expect(familyPage.locator('.grade-matrix')).toContainText('91.5');
   await expectAccessible(familyPage);
   await familyPage.screenshot({ path: testInfo.outputPath('family-grades.png'), fullPage: true });
   await familyPage.context().close();

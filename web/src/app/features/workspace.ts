@@ -59,6 +59,11 @@ export class Workspace {
   readonly activityDate = signal('');
   readonly self = computed(() => this.stats()?.students.find((s) => s.isSelf));
   readonly familyStudents = computed(() => this.stats()?.students.filter((s) => !s.isSelf) ?? []);
+  /** Sum of the balances the family may see (finance faculty); null when none of the links includes finance. */
+  readonly familyBalance = computed(() => {
+    const visible = this.familyStudents().filter((s) => s.canFinance && s.balance !== null);
+    return visible.length ? visible.reduce((sum, s) => sum + (s.balance ?? 0), 0) : null;
+  });
   readonly personalCourseCount = computed(() =>
     this.self()
       ? (this.self()!.courses ?? '—')

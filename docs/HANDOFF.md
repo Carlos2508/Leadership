@@ -1,5 +1,13 @@
 # Handoff para la siguiente sesión
 
+## Prueba de uso real en rama aparte — 6 de noviembre de 2026, leer primero
+
+- Solicitud: probar como si el colegio usara la plataforma, en otra rama porque otro agente trabaja en la carpeta principal (`feat/private-chat-biometric-unlock`). Rama **`qa/uso-real`**, worktree `.local/worktrees/qa-uso-real`, base `main` `ce563a7`. No se tocó `main` ni la carpeta del otro agente. Informe: `QA_USO_REAL_2026-11-06.md` (H1–H15).
+- Simulación `.local/qa/uso-real/` (ignorada): `prepare.ps1`/`host.ps1` (puerto 5098)/`cleanup.ps1`, `seed.mjs` (187 estudiantes, 120 familias, 144 cursos, 1.945 recibos, notas y asistencia; cuentas por rol cifradas con DPAPI en `accounts.xml`), `uso.mjs` (21 tareas por rol con acciones/tiempos), `timing.mjs`, informe `Reporte-uso-real.html`.
+- Cambios en la rama: `GradeService.CompletenessAsync` calcula completitud de todo el año en 3 consultas (antes 2 por curso y período; Inicio 0,9→0,2 s, Publicación 0,83→0,11 s, resultado idéntico comprobado). `PersonSummary.Placement` (grado · sección vigente en el ciclo abierto más reciente) en el directorio de estudiantes y la búsqueda de Caja. Caja: cierre del día por forma de pago. Solvencia: exportar CSV y etiqueta `.pill.due`. Familia: tabla de notas materias × bimestres (`.grade-matrix`) y «Saldo pendiente total». Menú docente agrupado por grado/sección cuando tiene más de 6 cursos.
+- Validación en la rama: 127 .NET/SQL; Playwright completo 81 + 3 omisiones previstas con 2 fallas esperadas por el cambio de la vista de notas, corregidas en `grades.spec.ts` y reejecutadas junto con finanzas/directorios/personas (16/16).
+- Pendiente de decisión del colegio (no implementado): asistencia diaria por grupo, asistente de familia nueva, emisión de cuotas al inscribir tarde, cobro familiar, tarea en varios cursos, botón de carnets, detalle por curso en publicación y texto «Cómo pagar».
+
 ## Merge en main y regresión completa — 6 de noviembre de 2026, leer primero
 
 - Solicitud vigente: integrar la migración en `main` y volver a probar los flujos y la presentación. Se integra `feat/legacy-migration-2027` (`23a1bad`) sobre `main` (`2ab3a13`). Solo hubo conflictos en este documento y `PROGRESS.md`; se conservaron las entregas de ambas ramas, incluidos primeros pasos, gestión académica y diseño web/app. Los bloques anteriores sobre rama aislada describen la preparación histórica; la herramienta ya está en `main`.

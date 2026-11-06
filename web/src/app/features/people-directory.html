@@ -101,7 +101,11 @@
               <tr>
                 <th scope="col">Nombre</th>
                 <th scope="col">Código</th>
-                <th scope="col">Perfiles</th>
+                @if (directory === 'student') {
+                  <th scope="col">Grado y sección</th>
+                } @else {
+                  <th scope="col">Perfiles</th>
+                }
                 <th scope="col">Cuenta</th>
                 <th scope="col">Estado</th>
               </tr>
@@ -126,6 +130,15 @@
                     >
                   </td>
                   <td data-label="Código">{{ person.studentCode ?? '—' }}</td>
+                  @if (directory === 'student') {
+                    <td data-label="Grado">
+                      @if (person.placement) {
+                        {{ person.placement }}
+                      } @else {
+                        <span class="muted-copy">Sin inscripción vigente</span>
+                      }
+                    </td>
+                  } @else {
                   <td data-label="Perfiles">
                     <span class="role-list">
                       @if (person.studentCode) {
@@ -142,6 +155,7 @@
                       }
                     </span>
                   </td>
+                  }
                   <td data-label="Cuenta">
                     @if (person.account) {
                       {{ person.account }}

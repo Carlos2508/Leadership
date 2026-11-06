@@ -2,6 +2,10 @@
 
 Actualizado: 6 de noviembre de 2026, America/Guatemala.
 
+## Prueba de uso real (rama qa/uso-real)
+
+- Colegio ficticio de tamaño real usado por seis roles. Se corrigieron lentitud con volumen, homónimos en búsquedas, cierre de caja, exportación de solvencia, vista de notas y saldo total para familias y menú del docente con muchos cursos. Ocho mejoras quedan recomendadas en `QA_USO_REAL_2026-11-06.md`.
+
 ## Integración en main y regresión — estado vigente
 
 - Por solicitud del propietario se integra la rama de migración sobre el `main` que ya incluye primeros pasos, gestión académica simplificada y revisión visual web/app. Conflictos limitados a continuidad documental, conservando ambos incrementos. El asistente se abre desde `Migrar estudiantes.cmd` en la raíz de `main`; publicación local actualizada.

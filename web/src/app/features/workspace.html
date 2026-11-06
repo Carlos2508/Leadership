@@ -171,14 +171,26 @@
           ><app-icon name="clipboard" /><strong>{{ personalPending() }}</strong
           ><span>{{ st.teaching.length ? 'Entregas por revisar' : 'Tareas pendientes' }}</span></a
         >
-        <a
-          class="reference-metric"
-          routerLink="/workspace"
-          fragment="calendario"
-          [queryParams]="{ year: st.yearId }"
-          ><app-icon name="calendar" /><strong>{{ upcomingCount() }}</strong
-          ><span>Próximas actividades</span></a
-        >
+        @if (familyBalance() !== null) {
+          <!-- Families: what is owed across all their children, in one figure. -->
+          <a
+            class="reference-metric"
+            routerLink="/workspace"
+            fragment="students-summary-title"
+            [queryParams]="{ year: st.yearId }"
+            ><app-icon name="wallet" /><strong>{{ familyBalance() ? money(familyBalance()!) : 'Al día' }}</strong
+            ><span>{{ familyBalance() ? 'Saldo pendiente total' : 'Colegiaturas pagadas' }}</span></a
+          >
+        } @else {
+          <a
+            class="reference-metric"
+            routerLink="/workspace"
+            fragment="calendario"
+            [queryParams]="{ year: st.yearId }"
+            ><app-icon name="calendar" /><strong>{{ upcomingCount() }}</strong
+            ><span>Próximas actividades</span></a
+          >
+        }
         <a class="reference-metric" routerLink="/workspace/announcements"
           ><app-icon name="megaphone" /><strong>{{ feedError() ? '—' : unread() }}</strong
           ><span>{{ feedError() ? 'Avisos sin consultar' : 'Comunicados sin leer' }}</span></a

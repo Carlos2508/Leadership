@@ -79,12 +79,29 @@ import { AppNotification, NotificationKind, NotificationService } from '../core/
           }
           @if (!preview() && session.myCourses().length) {
             <span class="nav-group" aria-hidden="true">DOCENCIA</span>
-            @for (course of session.myCourses().slice(0, 6); track course.id) {
-              <a [routerLink]="['/workspace/courses', course.id]" routerLinkActive="active" ariaCurrentWhenActive="page"
-                ><app-icon name="book" /><span class="nav-text"
-                  >{{ course.subject }}<small>{{ course.grade }}{{ course.section ? ' · ' + course.section : '' }}</small></span
-                ></a
-              >
+            @if (session.myCourses().length <= 6) {
+              @for (course of session.myCourses(); track course.id) {
+                <a [routerLink]="['/workspace/courses', course.id]" routerLinkActive="active" ariaCurrentWhenActive="page"
+                  ><app-icon name="book" /><span class="nav-text"
+                    >{{ course.subject }}<small>{{ course.grade }}{{ course.section ? ' · ' + course.section : '' }}</small></span
+                  ></a
+                >
+              }
+            } @else {
+              <!-- Many courses (homeroom teachers): grouped by grade and section, every course reachable. -->
+              @for (group of teachingGroups(); track group.label) {
+                <span class="nav-subgroup" aria-hidden="true">{{ group.label }}</span>
+                @for (course of group.courses; track course.id) {
+                  <a
+                    class="nav-compact"
+                    [routerLink]="['/workspace/courses', course.id]"
+                    routerLinkActive="active"
+                    ariaCurrentWhenActive="page"
+                    [attr.aria-label]="course.subject + ', ' + group.label"
+                    ><app-icon name="book" /><span class="nav-text">{{ course.subject }}</span></a
+                  >
+                }
+              }
             }
           }
           @if (!preview()) {
@@ -404,6 +421,17 @@ export class Shell {
   readonly title = input('Vista general');
   /** Kept for compatibility with pages that still pass it; the bell uses NotificationService. */
   readonly unread = input(0);
+  /** Teacher courses grouped by grade and section, in grade order then subject. */
+  readonly teachingGroups = computed(() => {
+    const groups = new Map<string, { label: string; courses: { id: string; subject: string }[] }>();
+    for (const c of this.session.myCourses()) {
+      const label = c.section ? `${c.grade} · ${c.section}` : c.grade;
+      const group = groups.get(label) ?? { label, courses: [] };
+      group.courses.push({ id: c.id, subject: c.subject });
+      groups.set(label, group);
+    }
+    return [...groups.values()].map((g) => ({ ...g, courses: g.courses.sort((a, b) => a.subject.localeCompare(b.subject, 'es')) }));
+  });
   readonly menuOpen = signal(false);
   readonly notifications = inject(NotificationService);
   readonly notifyOpen = signal(false);

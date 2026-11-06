@@ -1,5 +1,9 @@
 # Migración limitada de personas (MIG-001a)
 
+## Preparación solicitada para 2027 — 6 de noviembre de 2026
+
+El propietario operará la migración y pidió estudiar estudiantes/familias con matrícula en el ciclo indicado y todos los accesos inicialmente inactivos. La recomendación, alternativas y brechas están en [MIGRATION_2027.md](MIGRATION_2027.md) y [ADR-015](adr/ADR-015-MIGRACION-INICIAL-2027.md). Se prepararon consultas de extracción de lectura y un ejemplo sintético de revisión, sin ejecutar extracción ni importar datos. **La ampliación a matrículas/cuentas pendientes no está implementada.** El comando siguiente conserva su alcance anterior; no admite el paquete propuesto para 2027.
+
 Referencia PHP: `C:/xampp/htdocs/sys/sys-escolar` (sin modificar). Documento original copiado en `reference/PLAN_MAESTRO_ORIGINAL.md` (§16).
 
 ## Implementado

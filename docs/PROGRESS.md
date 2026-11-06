@@ -2,6 +2,14 @@
 
 Actualizado: 6 de noviembre de 2026, America/Guatemala.
 
+## Estudio de migración inicial 2027 — rama aislada
+
+- Solicitud del propietario: estudiar la mejor forma de migrar estudiantes y padres/encargados para empezar en 2027, con ciclo/grado/sección explícitos y acceso inactivo para activarlo individualmente; operación a cargo del propietario, sin notas ni historial.
+- Rama `feat/legacy-migration-2027`, worktree `.local/worktrees/legacy-migration-2027`, base `12c9c0d`; no se trasladaron los cambios ajenos del working tree principal. Documentos: `MIGRATION_2027.md` y ADR-015 (estrategia propuesta, no implementada).
+- Comparadas seis alternativas; recomendada consola con extracción de lectura, padrón revisado, plan, aplicación atómica y conciliación. Personas activas/matrículas 2027 separadas de cuentas pendientes (`IsActive=false`, sin contraseña/código). Vínculos sin facultades hasta verificación individual.
+- Lectura estática del PHP/modelo actual: ficha antigua `parents` puede contener dos adultos; `state` es candidato de código institucional; copias por ciclo y grado destino requieren revisión. Importador actual no crea matrículas/cuentas y necesita contrato estricto, tratamiento de alias/familias, bloqueos y conciliación antes del corte.
+- Preparados `migration-2027/extract-readonly.sql` (borrador, origen NULL por defecto) y `review.example.json` (solo sintético, contrato futuro no aceptado por el importador actual). Validado JSON: 5 personas, 3 estudiantes, 2 encargados, 3 vínculos sin facultades y 3 matrículas del mismo ciclo; acceso pendiente sin códigos. Revisión estática de 14 sentencias SQL de lectura/control transaccional y `git diff --check` correctos. Sin conexiones a MariaDB, exportaciones personales, aplicación SQL ni cambios de datos/PHP. No se declara terminada MIG-001 ni listo un corte.
+
 ## Campana de notificaciones (estado vigente)
 
 - La campana del encabezado muestra avisos sin leer y pendientes por rol con las mismas reglas del panel; abre cada destino y marca avisos como leídos. También en el app conectado. Recorrido de 8 cuentas y 74 pantallas sin errores ni desbordes.

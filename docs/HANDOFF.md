@@ -1,5 +1,15 @@
 # Handoff para la siguiente sesión
 
+## Preparación de migración inicial 2027 — 6 de noviembre de 2026, leer primero
+
+- Trabajo aislado por solicitud expresa: rama `feat/legacy-migration-2027`, worktree `D:/Repos/Leadership/.local/worktrees/legacy-migration-2027`, desde `12c9c0d`. El otro agente conserva sus cambios en `main`; no cambiar su rama ni incorporar sus archivos pendientes.
+- Leer `MIGRATION_2027.md` y ADR-015. El propietario hará la operación; pidió evaluar alternativas para estudiantes/encargados y matrícula del ciclo indicado (inicio 2027), sin notas/historial y con todos los accesos importados inactivos hasta activación individual.
+- Recomendación preparada: consola → extracción acotada → padrón revisado → plan → aplicación atómica → conciliación. Crear cuentas pendientes sin contraseña/código y sin permisos administrativos; no confundir persona/matrícula activa con login activo. La invitación actual emite código: falta operación IAM específica para preparación masiva sin secretos.
+- `migration-2027/extract-readonly.sql` es borrador no ejecutado; origen NULL por defecto. Verificar primero metadatos/motores y elegir ciclo fuente; no inferir matrícula/promoción destino. `review.example.json` es sintético y NO es compatible con `--import-people`; no intentar aplicarlo ni forzar su estructura.
+- Hallazgo principal de familias: una fila `parents` guarda `name`, `father_name` y `mother_name`; el alta PHP copia padre en `name`. Resolver titulares explícitos; un registro puede dividirse en dos adultos, sin duplicar nombres ni atribuir contactos compartidos sin revisión. Facultades siempre vacías al importar. Un estudiante puede quedar sin encargado.
+- Próximo incremento de implementación, si se continúa: contrato/extractor/revisión; luego plan de matrícula/cuentas y persistencia de lote/alias discriminados, transacción compartida Identity/School con bloqueo IAM, concurrencia de cupos y conciliación. Brechas y matriz de aceptación detalladas en el estudio. El importador MIG-001a previo sigue siendo solo personas y no está listo para ejecutar esta carga 2027.
+- Solo lectura de archivos PHP y documentación, más consultas a documentación oficial MariaDB. Sin conexión al legado, datos personales, importaciones, migraciones EF ni procesos detenidos. Validación: JSON sintético coherente (5 personas/3 matrículas del mismo ciclo, sin facultades/activación), 14 sentencias SQL de lectura/control y `git diff --check` correctos. No se ejecutaron suites de aplicación por no haber cambios de código ejecutable.
+
 ## Campana de notificaciones y revisión de experiencia — 6 de noviembre de 2026, leer primero
 
 - Solicitud: revisar todos los flujos para que sean sencillos, corregir lo que salga y hacer funcionar la campana del header.

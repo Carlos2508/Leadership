@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
 using SchoolPlatform.Host.Common;
 
 namespace SchoolPlatform.Host.IdentityAccess;
@@ -19,6 +21,26 @@ public static class AppAuthEndpoints
     public static void MapAppAuth(this WebApplication app)
     {
         var auth = app.MapGroup("/api/v1/auth").RequireRateLimiting("identity-forms");
+        // Explicit opt-in after the complete SignInFlow (including MFA). Same revocable Identity ticket;
+        // no password/refresh token is issued. Native clients seal it in biometric Keychain/Keystore storage.
+        async Task<IResult> DeviceSession(HttpContext context, SecurityAudit audit, IdentityDbContext db, bool remember, CancellationToken ct)
+        {
+            var result = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+            if (!result.Succeeded || result.Principal is null || result.Properties is null) return Results.Unauthorized();
+            var properties = result.Properties;
+            properties.IsPersistent = remember;
+            properties.AllowRefresh = !remember;
+            properties.IssuedUtc = DateTimeOffset.UtcNow;
+            properties.ExpiresUtc = remember ? DateTimeOffset.UtcNow.AddDays(14) : DateTimeOffset.UtcNow.AddMinutes(30);
+            audit.Record(remember ? "DeviceSessionRemembered" : "DeviceSessionForgotten", People.PeopleEndpoints.Actor(context.User), People.PeopleEndpoints.Actor(context.User));
+            await db.SaveChangesAsync(ct);
+            await context.SignInAsync(IdentityConstants.ApplicationScheme, result.Principal, properties);
+            return Results.NoContent();
+        }
+        auth.MapPost("/remember-device", (HttpContext context, SecurityAudit audit, IdentityDbContext db, CancellationToken ct) => DeviceSession(context, audit, db, true, ct))
+            .RequireAuthorization("ActiveAccount").AddEndpointFilter<ApiWriteFilter>();
+        auth.MapPost("/forget-device", (HttpContext context, SecurityAudit audit, IdentityDbContext db, CancellationToken ct) => DeviceSession(context, audit, db, false, ct))
+            .RequireAuthorization("ActiveAccount").AddEndpointFilter<ApiWriteFilter>();
         auth.MapGet("/antiforgery", (IAntiforgery antiforgery, HttpContext context) =>
             Results.Ok(new { token = antiforgery.GetAndStoreTokens(context).RequestToken })).AllowAnonymous();
 

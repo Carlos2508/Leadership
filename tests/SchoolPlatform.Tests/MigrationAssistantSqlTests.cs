@@ -202,6 +202,16 @@ public sealed class MigrationAssistantSqlTests : SqlTestBase
             return d.Database.GetConnectionString()!;
         });
         using var browser=await SignIn(OwnerName);
+        // A later chat migration is also pending: the assistant must refuse a general installation upgrade.
+        Assert.Equal(HttpStatusCode.Conflict,(await browser.GetAsync("/api/v1/migration-assistant/catalog")).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict,(await Post(browser,"/api/v1/migration-assistant/prepare",new{})).StatusCode);
+        await Use<SchoolDbContext>(async d=>
+        {
+            Assert.Matches("^SchoolPlatform_Test_[a-f0-9]{32}$",d.Database.GetDbConnection().Database);
+            await d.Database.MigrateAsync(); // Explicit installation upgrade, owned fixture only.
+            // Simulate only the independent roster extension missing while all other modules are current.
+            await d.Database.ExecuteSqlRawAsync("DROP TABLE [people].[RosterSourceAliases]; DROP TABLE [people].[RosterBatches]; DELETE FROM [school].[__EFMigrationsHistory] WHERE [MigrationId]='20261106202522_InitialRosterImport';");
+        });
         Assert.True((await browser.GetFromJsonAsync<AssistantCatalog>("/api/v1/migration-assistant/catalog"))!.NeedsPreparation);
         Assert.Equal(HttpStatusCode.OK,(await Post(browser,"/api/v1/migration-assistant/prepare",new{})).StatusCode);
         Assert.False((await browser.GetFromJsonAsync<AssistantCatalog>("/api/v1/migration-assistant/catalog"))!.NeedsPreparation);

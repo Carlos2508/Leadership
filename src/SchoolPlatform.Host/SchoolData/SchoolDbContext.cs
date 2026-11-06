@@ -72,6 +72,7 @@ public sealed partial class SchoolDbContext(DbContextOptions<SchoolDbContext> op
         ConfigureLearningModel(builder);
         ConfigureAttendanceModel(builder);
         ConfigureCommunicationModel(builder);
+        ConfigureChat(builder);
         ConfigureGateModel(builder);
     }
 

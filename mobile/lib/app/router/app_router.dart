@@ -16,6 +16,7 @@ import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/recovery_page.dart';
 import '../../features/auth/presentation/welcome_page.dart';
+import '../../features/connected/biometric_vault.dart';
 import '../../features/connected/connected_login_page.dart';
 import '../../features/connected/connected_shell.dart';
 import '../../features/finance/presentation/cashier_search_page.dart';
@@ -100,7 +101,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   final router = GoRouter(
     navigatorKey: _rootKey,
-    initialLocation: '/welcome',
+    initialLocation: ref.read(biometricEnabledProvider) ? '/connect' : '/welcome',
     refreshListenable: listenable,
     errorBuilder: (context, state) => const NotFoundPage(),
     redirect: (context, state) {

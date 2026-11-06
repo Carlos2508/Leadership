@@ -1,9 +1,19 @@
-import { Component, ElementRef, HostListener, afterNextRender, computed, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  afterNextRender,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { InstitutionService } from '../core/institution';
 import { Icon } from './icon';
 import { SessionService } from '../core/session';
 import { AppNotification, NotificationKind, NotificationService } from '../core/notifications';
+import { ChatInbox } from '../core/chat';
 @Component({
   selector: 'app-shell',
   imports: [RouterLink, RouterLinkActive, Icon],
@@ -72,17 +82,28 @@ import { AppNotification, NotificationKind, NotificationService } from '../core/
           @if (!preview() && !session.studentId() && session.myStudents().length) {
             <span class="nav-group" aria-hidden="true">MIS ESTUDIANTES</span>
             @for (student of session.myStudents(); track student.id) {
-              <a [routerLink]="['/workspace/my/students', student.id]" routerLinkActive="active" ariaCurrentWhenActive="page"
-                ><app-icon name="people" /><span class="nav-text">{{ student.displayName }}</span></a
+              <a
+                [routerLink]="['/workspace/my/students', student.id]"
+                routerLinkActive="active"
+                ariaCurrentWhenActive="page"
+                ><app-icon name="people" /><span class="nav-text">{{
+                  student.displayName
+                }}</span></a
               >
             }
           }
           @if (!preview() && session.myCourses().length) {
             <span class="nav-group" aria-hidden="true">DOCENCIA</span>
             @for (course of session.myCourses().slice(0, 6); track course.id) {
-              <a [routerLink]="['/workspace/courses', course.id]" routerLinkActive="active" ariaCurrentWhenActive="page"
+              <a
+                [routerLink]="['/workspace/courses', course.id]"
+                routerLinkActive="active"
+                ariaCurrentWhenActive="page"
                 ><app-icon name="book" /><span class="nav-text"
-                  >{{ course.subject }}<small>{{ course.grade }}{{ course.section ? ' · ' + course.section : '' }}</small></span
+                  >{{ course.subject
+                  }}<small
+                    >{{ course.grade }}{{ course.section ? ' · ' + course.section : '' }}</small
+                  ></span
                 ></a
               >
             }
@@ -240,7 +261,11 @@ import { AppNotification, NotificationKind, NotificationService } from '../core/
         }
         @if (!preview()) {
           <div class="sidebar-footer">
-            <a class="sidebar-account" routerLink="/workspace/security" routerLinkActive="active" ariaCurrentWhenActive="page"
+            <a
+              class="sidebar-account"
+              routerLink="/workspace/security"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
               ><app-icon name="user" />Mi cuenta</a
             >
             @if (session.token()) {
@@ -280,6 +305,27 @@ import { AppNotification, NotificationKind, NotificationService } from '../core/
             ><span class="breadcrumb-text">{{ title() }}</span>
           </div>
           <div class="topbar-actions">
+            @if (!preview() && chat.summary().available) {
+              <a
+                class="topbar-chat"
+                routerLink="/workspace/messages"
+                [attr.aria-label]="
+                  'Mensajes' +
+                  (chat.summary().unread ? ': ' + chat.summary().unread + ' sin leer' : '')
+                "
+                [title]="
+                  chat.failed()
+                    ? 'No se pudieron actualizar los mensajes. Abre para reintentar.'
+                    : 'Mensajes'
+                "
+                ><app-icon name="message" />
+                @if (chat.summary().unread) {
+                  <span class="notify-badge" aria-hidden="true">{{
+                    chat.summary().unread > 99 ? '99+' : chat.summary().unread
+                  }}</span>
+                }
+              </a>
+            }
             @if (!preview()) {
               <div class="notify-wrap">
                 <button
@@ -289,7 +335,8 @@ import { AppNotification, NotificationKind, NotificationService } from '../core/
                   [attr.aria-expanded]="notifyOpen()"
                   aria-controls="notification-panel"
                   [attr.aria-label]="
-                    'Notificaciones' + (notifications.count() ? ': ' + notifications.count() + ' nuevas' : '')
+                    'Notificaciones' +
+                    (notifications.count() ? ': ' + notifications.count() + ' nuevas' : '')
                   "
                 >
                   <app-icon name="bell" />
@@ -328,7 +375,8 @@ import { AppNotification, NotificationKind, NotificationService } from '../core/
                               ><span class="notify-icon" [attr.data-kind]="item.kind"
                                 ><app-icon [name]="iconFor(item.kind)" /></span
                               ><span class="notify-copy"
-                                ><strong>{{ item.title }}</strong><small>{{ item.detail }}</small></span
+                                ><strong>{{ item.title }}</strong
+                                ><small>{{ item.detail }}</small></span
                               >
                               @if (item.isNew) {
                                 <span class="notify-dot" aria-label="Nueva"></span>
@@ -346,7 +394,10 @@ import { AppNotification, NotificationKind, NotificationService } from '../core/
                         >
                       </p>
                     }
-                    <a class="notify-all" routerLink="/workspace/announcements" (click)="closeNotifications()"
+                    <a
+                      class="notify-all"
+                      routerLink="/workspace/announcements"
+                      (click)="closeNotifications()"
                       >Ver todos los avisos <app-icon name="arrow"
                     /></a>
                   </section>
@@ -406,8 +457,11 @@ export class Shell {
   readonly unread = input(0);
   readonly menuOpen = signal(false);
   readonly notifications = inject(NotificationService);
+  readonly chat = inject(ChatInbox);
   readonly notifyOpen = signal(false);
-  readonly hasUnreadNotices = computed(() => this.notifications.items().some((x) => x.kind === 'notice'));
+  readonly hasUnreadNotices = computed(() =>
+    this.notifications.items().some((x) => x.kind === 'notice'),
+  );
 
   constructor() {
     // Inputs are bound after construction; read preview() once they are.
@@ -420,14 +474,24 @@ export class Shell {
         const nav = this.host.nativeElement.querySelector('.sidebar nav') as HTMLElement | null;
         const active = nav?.querySelector('a.active') as HTMLElement | null;
         if (!nav || !active) return;
-        const top = active.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
-        if (top + active.offsetHeight > nav.scrollTop + nav.clientHeight - 24 || top < nav.scrollTop)
+        const top =
+          active.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
+        if (
+          top + active.offsetHeight > nav.scrollTop + nav.clientHeight - 24 ||
+          top < nav.scrollTop
+        )
           nav.scrollTop = Math.max(0, top - nav.clientHeight / 2);
       }, 0);
     });
   }
   iconFor(kind: NotificationKind): string {
-    return { notice: 'megaphone', task: 'clipboard', money: 'wallet', teaching: 'book', admin: 'key' }[kind];
+    return {
+      notice: 'megaphone',
+      task: 'clipboard',
+      money: 'wallet',
+      teaching: 'book',
+      admin: 'key',
+    }[kind];
   }
   toggleNotifications(event: Event): void {
     event.stopPropagation();

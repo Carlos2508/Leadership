@@ -8,6 +8,9 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/states.dart';
 import '../../shared/page_layout.dart';
+import 'biometric_settings.dart';
+import 'biometric_vault.dart';
+import 'chat_page.dart';
 import 'connected_session.dart';
 import 'school_api.dart';
 import 'school_tab.dart';
@@ -88,6 +91,7 @@ class ConnectedHome extends ConsumerStatefulWidget {
 
 class _ConnectedHomeState extends ConsumerState<ConnectedHome> {
   int _index = 0;
+  String? _chatRevision;
 
   List<_Destination> _destinations(ConnectedSession s) => [
     const _Destination(
@@ -121,6 +125,35 @@ class _ConnectedHomeState extends ConsumerState<ConnectedHome> {
       return const Scaffold(body: SizedBox.shrink());
     }
     final destinations = _destinations(session);
+    ref.listen(chatInboxProvider, (_, next) {
+      final data = next.value;
+      if (data == null) return;
+      final revision = data['revision'] as String;
+      final unread = (data['unread'] as num).toInt();
+      if (_chatRevision != revision &&
+          unread > 0 &&
+          !ref.read(biometricLockedProvider) &&
+          (ModalRoute.of(context)?.isCurrent ?? false)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                unread == 1 ? 'Tienes un mensaje sin leer' : 'Tienes $unread mensajes sin leer',
+              ),
+              action: SnackBarAction(
+                label: 'Ver',
+                onPressed: () =>
+                    Navigator.of(context)
+                        .push(MaterialPageRoute<void>(builder: (_) => const ChatHomePage())),
+              ),
+            ),
+          );
+        });
+      }
+      _chatRevision = revision;
+    });
+    ref.watch(chatInboxProvider);
     ref.listen(connectedTabRequestProvider, (_, label) {
       if (label == null) return;
       final target = destinations.indexWhere((d) => d.label == label);
@@ -217,6 +250,9 @@ class ConnectedTabPage extends ConsumerWidget {
           onRefresh: onRefresh,
           children: [
             InstitutionHeader(
+              extraAction: ref.watch(chatInboxProvider).value?['available'] == true
+                  ? const ChatButton()
+                  : null,
               notificationCount: unread,
               onNotifications: () => ref.read(connectedTabRequestProvider.notifier).open('Avisos'),
               subtitle: session?.profile ?? '',
@@ -239,48 +275,52 @@ Future<void> showConnectedProfile(BuildContext context, WidgetRef ref) async {
   final colors = AppColors.of(context);
   await showModalBottomSheet<void>(
     context: context,
+    isScrollControlled: true,
     builder: (sheet) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(Spacing.page, 0, Spacing.page, Spacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                InitialsAvatar(initials: session.initials, size: 52),
-                const SizedBox(width: Spacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(session.name, style: theme.textTheme.titleMedium),
-                      Text(
-                        '${session.username} · ${session.profile}',
-                        style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
-                      ),
-                    ],
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(Spacing.page, 0, Spacing.page, Spacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  InitialsAvatar(initials: session.initials, size: 52),
+                  const SizedBox(width: Spacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(session.name, style: theme.textTheme.titleMedium),
+                        Text(
+                          '${session.username} · ${session.profile}',
+                          style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
+                        ),
+                      ],
+                    ),
                   ),
+                ],
+              ),
+              if (session.mfaPending.isNotEmpty) ...[
+                const SizedBox(height: Spacing.md),
+                const StatusPill(
+                  label: 'Activa la verificación en dos pasos desde la web para usar todos tus permisos.',
+                  tone: AppTone.warning,
                 ),
               ],
-            ),
-            if (session.mfaPending.isNotEmpty) ...[
-              const SizedBox(height: Spacing.md),
-              const StatusPill(
-                label: 'Activa la verificación en dos pasos desde la web para usar todos tus permisos.',
-                tone: AppTone.warning,
+              const SizedBox(height: Spacing.lg),
+              const BiometricSettings(),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  Navigator.of(sheet).pop();
+                  await ref.read(connectedControllerProvider.notifier).signOut();
+                },
+                icon: const Icon(Icons.logout),
+                label: const Text('Cerrar sesión'),
               ),
             ],
-            const SizedBox(height: Spacing.lg),
-            OutlinedButton.icon(
-              onPressed: () async {
-                Navigator.of(sheet).pop();
-                await ref.read(connectedControllerProvider.notifier).signOut();
-              },
-              icon: const Icon(Icons.logout),
-              label: const Text('Cerrar sesión'),
-            ),
-          ],
+          ),
         ),
       ),
     ),

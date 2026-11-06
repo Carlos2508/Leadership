@@ -1,5 +1,7 @@
 # App móvil (prototipo Flutter)
 
+**Modo conectado vigente:** cuentas reales, chat privado con docentes de los cursos y desbloqueo opcional con huella en Android/iOS. Guía [Mensajes y desbloqueo](../docs/CHAT_Y_HUELLA.md), ADR-014/016/017. La biometría se activa desde el perfil después del ingreso completo; nunca guarda la contraseña. La descripción de perfiles demo siguiente corresponde al modo de demostración, separado de los módulos conectados.
+
 Prototipo navegable de la app para estudiantes, familias, docentes, administración y caja. Los cinco perfiles usan datos ficticios en memoria. **Excepción: el lector de portería usa la API real con una credencial de dispositivo**, independiente de las cuentas demo; no conecta directamente con SQL Server. No representa módulos implementados en el backend (ver `docs/PROGRESS.md`). Decisión y límites: [ADR-008](../docs/adr/ADR-008-PROTOTIPO-FLUTTER.md).
 
 ## Requisitos

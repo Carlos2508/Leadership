@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers.dart';
 import '../core/theme/app_theme.dart';
+import '../features/connected/biometric_lock.dart';
 import 'router/app_router.dart';
 
 class SchoolApp extends ConsumerWidget {
@@ -21,6 +22,10 @@ class SchoolApp extends ConsumerWidget {
       darkTheme: AppTheme.dark(institution.palette),
       themeMode: themeMode,
       routerConfig: router,
+      builder: (context, child) => BiometricLock(
+        onPassword: () => router.go('/connect'),
+        child: child ?? const SizedBox.shrink(),
+      ),
       locale: const Locale('es'),
       supportedLocales: const [Locale('es')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,

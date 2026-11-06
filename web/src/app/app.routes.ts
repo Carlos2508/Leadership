@@ -9,8 +9,18 @@ const previewGuard = () =>
   inject(InstitutionService).current.previewEnabled || inject(Router).createUrlTree(['/']);
 export const routes: Routes = [
   {
+    path: 'workspace/messages',
+    canActivate: [sessionGuard],
+    canDeactivate: [pendingChangesGuard],
+    loadComponent: () => import('./features/messages').then((x) => x.Messages),
+  },
+  {
     path: 'workspace/migration',
-    canActivate: [permissionGuard('people.manage'), permissionGuard('enrollment.manage'), permissionGuard('accounts.manage')],
+    canActivate: [
+      permissionGuard('people.manage'),
+      permissionGuard('enrollment.manage'),
+      permissionGuard('accounts.manage'),
+    ],
     canDeactivate: [pendingChangesGuard],
     loadComponent: () => import('./features/migration-assistant').then((x) => x.MigrationAssistant),
   },

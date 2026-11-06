@@ -519,6 +519,95 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.ToTable("Sessions", "attendance");
                 });
 
+            modelBuilder.Entity("SchoolPlatform.Host.Chat.ChatConversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AcademicYearId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long>("LastSequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("MemberId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("MemberReadSequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("TeacherReadSequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("MemberId", "UpdatedAt");
+
+                    b.HasIndex("TeacherId", "UpdatedAt");
+
+                    b.HasIndex("AcademicYearId", "StudentId", "TeacherId", "MemberId")
+                        .IsUnique();
+
+                    b.ToTable("Conversations", "chat", t =>
+                        {
+                            t.HasCheckConstraint("CK_Chat_Distinct", "[TeacherId] <> [MemberId]");
+
+                            t.HasCheckConstraint("CK_Chat_Sequences", "[LastSequence] >= 0 AND [TeacherReadSequence] >= 0 AND [MemberReadSequence] >= 0 AND [TeacherReadSequence] <= [LastSequence] AND [MemberReadSequence] <= [LastSequence]");
+                        });
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Chat.ChatMessage", b =>
+                {
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("Sequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<Guid>("ClientMessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SenderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("SentAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("ConversationId", "Sequence");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("ConversationId", "SenderId", "ClientMessageId")
+                        .IsUnique();
+
+                    b.ToTable("Messages", "chat", t =>
+                        {
+                            t.HasCheckConstraint("CK_ChatMessage_Body", "LEN(LTRIM(RTRIM([Body]))) > 0");
+
+                            t.HasCheckConstraint("CK_ChatMessage_Sequence", "[Sequence] > 0");
+                        });
+                });
+
             modelBuilder.Entity("SchoolPlatform.Host.Communication.Announcement", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2227,6 +2316,48 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
                         .WithMany()
                         .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Chat.ChatConversation", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.Academic.AcademicYear", null)
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.People.Person", null)
+                        .WithMany()
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.People.StudentProfile", null)
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.People.StaffProfile", null)
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Chat.ChatMessage", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.Chat.ChatConversation", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.People.Person", null)
+                        .WithMany()
+                        .HasForeignKey("SenderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

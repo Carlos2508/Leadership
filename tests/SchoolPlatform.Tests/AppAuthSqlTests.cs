@@ -9,6 +9,28 @@ namespace SchoolPlatform.Tests;
 /// <summary>Native app sign-in (ADR-014): same cookie session, antiforgery, audit and authorization as the web.</summary>
 public sealed class AppAuthSqlTests : SqlTestBase
 {
+    [Fact]
+    public async Task Remembered_device_uses_the_same_revocable_cookie_and_requires_full_session_and_csrf()
+    {
+        using var anonymous = App.Browser();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.PostAsJsonAsync("/api/v1/auth/remember-device", new { })).StatusCode);
+        var account = await Account("synthetic-remembered");
+        using var browser = await SignIn("synthetic-remembered");
+        Assert.Equal(HttpStatusCode.BadRequest, (await browser.PostAsJsonAsync("/api/v1/auth/remember-device", new { })).StatusCode);
+        var response = await Post(browser, "/api/v1/auth/remember-device", new { });
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var cookies = response.Headers.GetValues("Set-Cookie");
+        Assert.Contains(cookies, c => c.StartsWith("SchoolPlatform.Session=") && c.Contains("expires=", StringComparison.OrdinalIgnoreCase) && c.Contains("httponly", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync("/api/v1/session")).StatusCode);
+        var forgotten = await Post(browser, "/api/v1/auth/forget-device", new { });
+        Assert.Equal(HttpStatusCode.NoContent, forgotten.StatusCode);
+        Assert.Contains(forgotten.Headers.GetValues("Set-Cookie"), c => c.StartsWith("SchoolPlatform.Session=") && !c.Contains("expires=", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(HttpStatusCode.NoContent, (await Post(browser, "/api/v1/auth/remember-device", new { })).StatusCode);
+        await Use<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>(async manager =>
+            Assert.True((await manager.UpdateSecurityStampAsync((await manager.FindByIdAsync(account.ToString()))!)).Succeeded));
+        Assert.Equal(HttpStatusCode.Unauthorized, (await browser.GetAsync("/api/v1/session")).StatusCode);
+    }
+
     private static async Task<string> AnonymousToken(HttpClient client) =>
         (await client.GetFromJsonAsync<JsonElement>("/api/v1/auth/antiforgery")).GetProperty("token").GetString()!;
 

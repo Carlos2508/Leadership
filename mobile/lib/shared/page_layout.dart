@@ -133,6 +133,7 @@ class InstitutionHeader extends ConsumerWidget {
     this.onProfile,
     this.notificationCount,
     this.onNotifications,
+    this.extraAction,
     super.key,
   });
 
@@ -141,6 +142,7 @@ class InstitutionHeader extends ConsumerWidget {
   /// Unread notices for the bell (connected mode); hidden when [onNotifications] is null.
   final int? notificationCount;
   final VoidCallback? onNotifications;
+  final Widget? extraAction;
 
   /// Connected mode passes its own account; the demo uses the prototype session.
   final String? initials;
@@ -155,6 +157,21 @@ class InstitutionHeader extends ConsumerWidget {
     final profileLabel = this.profileLabel ?? demo?.displayName;
     final theme = Theme.of(context);
     final colors = AppColors.of(context);
+    final communicationRow = extraAction != null && MediaQuery.sizeOf(context).width < 600;
+    Widget notifications() => IconButton(
+      tooltip: (notificationCount ?? 0) > 0
+          ? 'Notificaciones: ${notificationCount!} sin leer'
+          : 'Notificaciones',
+      onPressed: onNotifications,
+      color: Colors.white,
+      icon: Badge(
+        isLabelVisible: (notificationCount ?? 0) > 0,
+        backgroundColor: colors.accent,
+        textColor: colors.deep,
+        label: Text((notificationCount ?? 0) > 9 ? '9+' : '${notificationCount ?? 0}'),
+        child: const Icon(Icons.notifications_none_rounded),
+      ),
+    );
     // Dark brand band, like the web sidebar/top bar: gradient, thin gold border and the gold curve.
     return Padding(
       padding: const EdgeInsets.only(top: Spacing.md, bottom: Spacing.lg),
@@ -181,66 +198,68 @@ class InstitutionHeader extends ConsumerWidget {
             painter: _GoldCurvePainter(colors.accent),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 14, 12, 16),
-              child: Row(
+              child: Column(
                 children: [
-                  InstitutionLogo(path: institution.mainLogo),
-                  const SizedBox(width: Spacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          institution.shortName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
-                        ),
-                        Text(
-                          subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colors.accent,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (onNotifications != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: Spacing.xs),
-                      child: IconButton(
-                        tooltip: (notificationCount ?? 0) > 0
-                            ? 'Notificaciones: ${notificationCount!} sin leer'
-                            : 'Notificaciones',
-                        onPressed: onNotifications,
-                        color: Colors.white,
-                        icon: Badge(
-                          isLabelVisible: (notificationCount ?? 0) > 0,
-                          backgroundColor: colors.accent,
-                          textColor: colors.deep,
-                          label: Text(
-                            (notificationCount ?? 0) > 9 ? '9+' : '${notificationCount ?? 0}',
-                          ),
-                          child: const Icon(Icons.notifications_none_rounded),
+                  Row(
+                    children: [
+                      InstitutionLogo(path: institution.mainLogo),
+                      const SizedBox(width: Spacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              institution.shortName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+                            ),
+                            Text(
+                              subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colors.accent,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  if (initials != null)
-                    Tooltip(
-                      message: 'Mi perfil',
-                      child: Semantics(
-                        button: true,
-                        label: 'Abrir perfil de $profileLabel',
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: onProfile ?? () => context.push('/profile'),
-                          child: Padding(
-                            padding: const EdgeInsets.all(2),
-                            child: ExcludeSemantics(child: InitialsAvatar(initials: initials)),
+                      if (!communicationRow) ?extraAction,
+                      if (!communicationRow && onNotifications != null) notifications(),
+                      if (initials != null)
+                        Tooltip(
+                          message: 'Mi perfil',
+                          child: Semantics(
+                            button: true,
+                            label: 'Abrir perfil de $profileLabel',
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: onProfile ?? () => context.push('/profile'),
+                              child: Padding(
+                                padding: const EdgeInsets.all(2),
+                                child: ExcludeSemantics(child: InitialsAvatar(initials: initials)),
+                              ),
+                            ),
                           ),
                         ),
+                    ],
+                  ),
+                  if (communicationRow)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Mensajes y avisos',
+                              style: theme.textTheme.labelSmall?.copyWith(color: Colors.white),
+                            ),
+                          ),
+                          ?extraAction,
+                          if (onNotifications != null) notifications(),
+                        ],
                       ),
                     ),
                 ],

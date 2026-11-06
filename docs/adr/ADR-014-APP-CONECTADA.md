@@ -12,7 +12,7 @@ El propietario pidió que el app tenga el mismo diseño que la web y pueda hacer
 - Antifalsificación igual que la web: `GET /api/v1/auth/antiforgery` (anónimo) entrega el token para el ingreso; después de iniciar sesión el app pide `GET /api/v1/antiforgery` y envía `X-XSRF-TOKEN` en cada escritura. Los endpoints de ingreso usan la política de límite `identity-forms`.
 - Las respuestas de fallo no revelan si el usuario existe o está inactivo; el bloqueo responde 423 y la auditoría registra los mismos eventos que la web.
 - El app no recibe permisos propios: muestra módulos según `/api/v1/session` (permisos efectivos, estudiante vinculado, perfil escolar) y cada consulta sigue autorizada por el servidor. Ocultar una pantalla no es autorización.
-- La cookie se guarda solo en memoria del proceso del app: al cerrarlo se vuelve a ingresar. No se persisten contraseñas. La dirección del servidor debe ser HTTPS salvo `localhost` en desarrollo, igual que el lector de portería.
+- La cookie se guarda normalmente en memoria del proceso del app: al cerrarlo se vuelve a ingresar. **Ampliación autorizada, ADR-017:** el usuario puede activar huella en Android/iOS y sellar exclusivamente el ticket Identity en almacenamiento biométrico, con 14 días absolutos y validación del servidor en cada desbloqueo. No se persisten contraseñas ni códigos MFA. La dirección del servidor debe ser HTTPS salvo `localhost` en desarrollo, igual que el lector de portería.
 - El modo de demostración con datos ficticios se conserva separado y marcado; nunca se usa como respaldo ante errores de la API.
 - La credencial `GateDevice` sigue limitada a `whoami` y `scan`; no se reutiliza para cuentas de personas.
 

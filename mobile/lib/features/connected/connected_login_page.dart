@@ -6,6 +6,7 @@ import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/institution_logo.dart';
+import 'biometric_vault.dart';
 import 'connected_session.dart';
 import 'school_api.dart';
 
@@ -28,6 +29,23 @@ class _ConnectedLoginPageState extends ConsumerState<ConnectedLoginPage> {
   bool _recovery = false;
   bool _obscure = true;
   String? _error;
+
+  Future<void> _unlock() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(connectedControllerProvider.notifier).unlockBiometrics();
+      if (mounted) context.go('/c');
+    } on Object {
+      if (mounted) {
+        setState(() => _error = 'No se desbloqueó. Intenta de nuevo o ingresa con tu contraseña.');
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -139,6 +157,17 @@ class _ConnectedLoginPageState extends ConsumerState<ConnectedLoginPage> {
                       ),
                       const SizedBox(height: Spacing.xl),
                       if (!_secondFactor) ...[
+                        if (ref.watch(biometricEnabledProvider)) ...[
+                          FilledButton.icon(
+                            onPressed: _busy ? null : _unlock,
+                            icon: const Icon(Icons.fingerprint),
+                            label: const Text('Desbloquear con huella'),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 14),
+                            child: Text('O ingresa con tu contraseña', textAlign: TextAlign.center),
+                          ),
+                        ],
                         TextFormField(
                           controller: _server,
                           enabled: !_busy,
@@ -262,7 +291,7 @@ class _ConnectedLoginPageState extends ConsumerState<ConnectedLoginPage> {
                       ),
                       const SizedBox(height: Spacing.lg),
                       Text(
-                        'Tu contraseña no se guarda en el teléfono. Al cerrar el app tendrás que volver a ingresar.',
+                        'Tu contraseña no se guarda. Puedes activar el desbloqueo con huella desde tu perfil en el app del teléfono.',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
                       ),

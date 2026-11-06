@@ -7,6 +7,14 @@ process.env['SCHOOLPLATFORM_E2E_DATABASE'] ??=
   'SchoolPlatform_E2E_' + randomUUID().replaceAll('-', '');
 process.env['SCHOOLPLATFORM_E2E_USERNAME'] ??= 'synthetic-browser-owner';
 process.env['SCHOOLPLATFORM_E2E_PASSWORD'] ??= 'Test!Aa1-' + randomBytes(24).toString('base64url');
+// Isolate intermediates as well as binaries: simultaneous SQL/E2E builds must never rewrite each other's obj files.
+process.env['UseArtifactsOutput'] = 'true';
+process.env['ArtifactsPath'] = join(
+  __dirname,
+  '../.local/qa/e2e-builds',
+  process.env['SCHOOLPLATFORM_E2E_DATABASE']!,
+);
+delete process.env['BaseOutputPath'];
 const connection =
   (process.env['SCHOOLPLATFORM_E2E_SQL'] ??
     'Server=localhost;Integrated Security=true;Encrypt=true;TrustServerCertificate=true') +
@@ -34,8 +42,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command:
-      `dotnet run --project ../src/SchoolPlatform.Host --no-launch-profile --urls http://127.0.0.1:${testPort}${process.env['SCHOOLPLATFORM_E2E_MIGRATION'] === '1' ? ' -- --migration-assistant' : ''}`,
+    command: `dotnet run --project ../src/SchoolPlatform.Host --no-launch-profile --urls http://127.0.0.1:${testPort}${process.env['SCHOOLPLATFORM_E2E_MIGRATION'] === '1' ? ' -- --migration-assistant' : ''}`,
     url: `http://127.0.0.1:${testPort}/health/live`,
     timeout: 60_000,
     reuseExistingServer: false,
@@ -46,9 +53,13 @@ export default defineConfig({
       ConnectionStrings__SchoolDatabase: connection,
       // Uploaded files of the browser tests go to a private temporary folder, never to the installation storage.
       Storage__Root: join(tmpdir(), process.env['SCHOOLPLATFORM_E2E_DATABASE']! + '_files'),
-      MigrationAssistant__Enabled: process.env['SCHOOLPLATFORM_E2E_MIGRATION'] === '1' ? 'true' : 'false',
+      MigrationAssistant__Enabled:
+        process.env['SCHOOLPLATFORM_E2E_MIGRATION'] === '1' ? 'true' : 'false',
       MigrationAssistant__LegacyConfigPath: process.env['SCHOOLPLATFORM_E2E_LEGACY_CONFIG'] ?? '',
-      MigrationAssistant__StorageRoot: join(tmpdir(), process.env['SCHOOLPLATFORM_E2E_DATABASE']! + '_migration'),
+      MigrationAssistant__StorageRoot: join(
+        tmpdir(),
+        process.env['SCHOOLPLATFORM_E2E_DATABASE']! + '_migration',
+      ),
     },
   },
 });

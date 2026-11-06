@@ -2,7 +2,16 @@
 
 Actualizado: 6 de noviembre de 2026, America/Guatemala.
 
-## Integración en main y regresión — estado vigente
+## Chat privado por cursos y desbloqueo biométrico — estado vigente
+
+- Solicitud del propietario: publicar el merge en `main` y después añadir huella al app y chat tipo conversación privada. `ce563a7` se subió al iniciar; el alcance del chat se confirmó expresamente: solo docentes de los cursos del estudiante. Implementación en `feat/private-chat-biometric-unlock`, conservando la instalación independiente por colegio.
+- Chat real en SQL, web `/workspace/messages` y app conectado: conversaciones de dos personas por ciclo/estudiante; estudiante o encargado autorizado ↔ docente asignado, sin chat entre estudiantes, entre estudiante/encargado o lectura general por un rol administrativo. Revalida cuentas/personas activas, vínculos, Communications y matrícula/ubicación/asignación efectiva en cada petición. Ciclo explícito, consulta de cierre e historial conservado. ADR-016.
+- Icono/contador y aviso al ingresar, búsqueda/paginación, historial, burbujas, lectura confirmada, actualización automática y reintento idempotente. Conserva el borrador al cancelar salida o perder conexión; una respuesta perdida/tardía no bloquea el compositor ni borra el siguiente borrador. Móvil deja el compositor en pantalla; Axe y contraste revisados.
+- Huella opcional desde el perfil Android/iOS: ticket Identity cifrado/protegido por biometría, sin contraseña, 14 días absolutos, misma validación de sello/MFA/permisos; bloqueo al perder primer plano y validación del servidor al restaurar. Cerrar sesión, cambiar cuenta o desactivar elimina el recordatorio; desactivar devuelve la sesión ordinaria. No crea tokens o permisos propios. ADR-017.
+- Validación: **136 .NET/SQL**, **91 Flutter**, **85 E2E de suite completa + 2 de migración** aprobados; recorrido de chat repetido tras los ajustes finales y pruebas de respuesta perdida. Análisis Flutter limpio, builds Angular/Release y **APK debug** correctos, snapshot School sin diferencias, 7 + 4 escenarios PHP. Informe `QA_CHAT_BIOMETRIA_2026-11-06.md`; guía `CHAT_Y_HUELLA.md`.
+- Nueva migración aditiva `20261106225356_PrivateChat`, aplicada solo a fixtures propios; pendiente actualización normal de la instalación antes de servir esta versión. Huella/Face ID físicos e iOS nativo pendientes de comprobación; no se declara distribución, push de sistema con app cerrado ni fase MOB completa. Sin datos personales reales, cambios del legado o despliegue.
+
+## Integración en main y regresión — incremento previo
 
 - Por solicitud del propietario se integra la rama de migración sobre el `main` que ya incluye primeros pasos, gestión académica simplificada y revisión visual web/app. Conflictos limitados a continuidad documental, conservando ambos incrementos. El asistente se abre desde `Migrar estudiantes.cmd` en la raíz de `main`; publicación local actualizada.
 - Regresión del conjunto: **127 .NET/SQL**, **83 E2E web + 2 E2E de migración**, **74 Flutter**, todos aprobados; análisis Flutter sin observaciones, builds Angular/Flutter y Release correctos, snapshot School sin cambios pendientes, **7 + 4 escenarios PHP** correctos. De las tres omisiones de la suite web normal, dos se ejecutaron correctamente con MariaDB aislado; la restante es rendimiento medido una sola vez en escritorio.

@@ -1,0 +1,290 @@
+<app-shell title="Mensajes">
+  <div class="chat-heading" [class.thread-open]="current() || threadLoading() || threadError()">
+    <div>
+      <p class="eyebrow">CONVERSACIONES DEL COLEGIO</p>
+      <h1>Mensajes</h1>
+      <p>Un espacio directo con los docentes de cada estudiante.</p>
+    </div>
+    @if (years().length) {
+      <label
+        >Ciclo escolar<select [ngModel]="year" (ngModelChange)="chooseYear($event)">
+          @for (y of years(); track y.id) {
+            <option [value]="y.id">{{ y.label }}</option>
+          }
+        </select></label
+      >
+    }
+  </div>
+  @if (error()) {
+    <div class="error-state" role="alert">
+      {{ error() }}<button class="outline" (click)="load(year || null, null)">Reintentar</button>
+    </div>
+  } @else if (loading()) {
+    <div class="loading-state" role="status">Cargando tus conversaciones…</div>
+  } @else if (!years().length) {
+    <section class="chat-empty">
+      <app-icon name="message" />
+      <h2>Aún no hay contactos disponibles</h2>
+      <p>
+        Aparecerán los docentes de tus cursos y los estudiantes o encargados autorizados cuando
+        estén vinculados y tengan su acceso activo.
+      </p>
+    </section>
+  } @else {
+    <section
+      class="chat-layout"
+      [class.chat-selected]="current() || threadLoading() || threadError()"
+    >
+      <aside class="chat-sidebar" aria-label="Conversaciones">
+        <header>
+          <h2>Conversaciones</h2>
+          <button class="icon-button" (click)="newChat()" aria-label="Nueva conversación">
+            <app-icon name="plus" />
+          </button>
+        </header>
+        <label class="chat-search"
+          ><app-icon name="search" /><input
+            type="search"
+            maxlength="100"
+            placeholder="Buscar conversación"
+            aria-label="Buscar conversación"
+            [ngModel]="filter()"
+            (ngModelChange)="searchThreads($event)"
+        /></label>
+        <div class="chat-thread-list">
+          @for (t of filtered(); track t.id) {
+            <button
+              type="button"
+              class="chat-thread"
+              [class.selected]="current()?.id === t.id"
+              [attr.aria-current]="current()?.id === t.id ? 'true' : null"
+              (click)="choose(t.id)"
+            >
+              <span class="chat-avatar" aria-hidden="true">{{ initials(t.name) }}</span
+              ><span class="chat-thread-copy"
+                ><strong>{{ t.name }}</strong
+                ><small>{{ t.role }} · {{ t.student }}</small
+                ><span>{{ t.preview || 'Comienza la conversación' }}</span></span
+              >
+              <span class="chat-thread-meta"
+                ><time>{{ t.updatedAt | date: 'dd/MM' }}</time>
+                @if (t.unread) {
+                  <b [attr.aria-label]="t.unread + ' sin leer'">{{
+                    t.unread > 99 ? '99+' : t.unread
+                  }}</b>
+                }
+              </span>
+            </button>
+          } @empty {
+            <div class="chat-list-empty">
+              <app-icon name="message" />
+              <p>
+                {{ filter() ? 'No hay coincidencias.' : 'Tu próxima conversación empieza aquí.' }}
+              </p>
+              @if (!filter()) {
+                <button class="outline" (click)="newChat()">Escribir un mensaje</button>
+              }
+            </div>
+          }
+          @if (listBusy()) {
+            <p role="status">Cargando conversaciones…</p>
+          }
+          @if (threads().length < threadTotal()) {
+            <button
+              class="outline chat-earlier"
+              [disabled]="listBusy()"
+              (click)="browseThreads(true)"
+            >
+              Ver más conversaciones
+            </button>
+          }
+        </div>
+        <p class="chat-private">
+          <app-icon name="shield" /> Solo conversaciones entre docente y estudiante o encargado.
+        </p>
+      </aside>
+      <div class="chat-conversation">
+        @if (threadLoading()) {
+          <div class="loading-state" role="status">Abriendo conversación…</div>
+        } @else if (current(); as thread) {
+          <header class="chat-conversation-head">
+            <button
+              class="icon-button chat-back"
+              (click)="choose(null)"
+              aria-label="Volver a conversaciones"
+            >
+              <app-icon name="arrow" /></button
+            ><span class="chat-avatar" aria-hidden="true">{{ initials(thread.name) }}</span>
+            <div>
+              <h2>{{ thread.name }}</h2>
+              <p>{{ thread.role }} · Sobre {{ thread.student }} · {{ thread.year }}</p>
+            </div>
+          </header>
+          <div
+            class="chat-history"
+            #history
+            (scroll)="atEnd() && markRead()"
+            role="log"
+            aria-label="Mensajes de la conversación"
+            aria-live="polite"
+            aria-relevant="additions"
+          >
+            @if (more()) {
+              <button class="outline chat-earlier" (click)="loadOlder()" [disabled]="older()">
+                {{ older() ? 'Cargando…' : 'Ver mensajes anteriores' }}
+              </button>
+            }
+            <p class="chat-security">
+              <app-icon name="shield" /> Conversación privada dentro de la plataforma escolar.
+            </p>
+            @for (m of messages(); track m.sequence) {
+              <article
+                class="chat-bubble"
+                [class.mine]="m.mine"
+                [attr.aria-label]="m.mine ? 'Tú' : thread.name"
+              >
+                <p>{{ m.body }}</p>
+                <footer>
+                  <time>{{ m.sentAt | date: 'dd/MM HH:mm' }}</time>
+                  @if (m.mine) {
+                    <span
+                      [class.read]="m.sequence <= thread.peerReadSequence"
+                      [attr.aria-label]="
+                        m.sequence <= thread.peerReadSequence ? 'Leído' : 'Enviado'
+                      "
+                      >{{ m.sequence <= thread.peerReadSequence ? '✓✓ Leído' : '✓ Enviado' }}</span
+                    >
+                  }
+                </footer>
+              </article>
+            } @empty {
+              <div class="chat-start">
+                <app-icon name="message" />
+                <h3>Saluda para empezar</h3>
+                <p>Escribe tu consulta a {{ thread.name }}.</p>
+              </div>
+            }
+          </div>
+          @if (newMessages()) {
+            <button class="chat-new" (click)="jumpToEnd()">Ver mensajes nuevos ↓</button>
+          }
+          @if (threadError()) {
+            <div class="chat-error" role="alert">
+              {{ threadError() }}
+              @if (retrying()) {
+                <button class="outline" [disabled]="sending()" (click)="send()">
+                  Reintentar envío
+                </button>
+              } @else {
+                <button class="outline" (click)="poll()">Reconectar</button>
+              }
+            </div>
+          }
+          @if (thread.canSend) {
+            <form class="chat-composer" (ngSubmit)="send()">
+              <label class="sr-only" for="chat-draft">Escribe un mensaje</label
+              ><textarea
+                id="chat-draft"
+                name="message"
+                [(ngModel)]="draft"
+                (keydown)="key($event)"
+                rows="2"
+                maxlength="4000"
+                [readOnly]="sending() || retrying()"
+                placeholder="Escribe un mensaje…"
+              ></textarea
+              ><button
+                type="submit"
+                [disabled]="sending() || retrying() || !draft.trim()"
+                aria-label="Enviar mensaje"
+              >
+                <app-icon name="arrow" /><span>{{
+                  sending() ? 'Enviando…' : 'Enviar'
+                }}</span></button
+              ><small
+                >{{
+                  retrying()
+                    ? 'El mensaje se conserva. Reintenta para confirmar el envío.'
+                    : 'Enter para enviar · Mayús + Enter para otra línea'
+                }}<span>{{ draft.length }}/4000</span></small
+              >
+            </form>
+          } @else {
+            <p class="chat-private">Este ciclo está cerrado. Puedes consultar la conversación.</p>
+          }
+        } @else {
+          <div class="chat-empty">
+            <app-icon name="message" />
+            <h2>
+              {{ threadError() ? 'Conversación no disponible' : 'Cerca, aunque estén lejos' }}
+            </h2>
+            <p>
+              {{ threadError() || 'Elige una conversación o escribe a un contacto de tus cursos.' }}
+            </p>
+            <button class="outline" (click)="threadError() ? choose(null) : newChat()">
+              {{ threadError() ? 'Volver a conversaciones' : 'Nueva conversación' }}
+            </button>
+          </div>
+        }
+      </div>
+    </section>
+  }
+  <dialog #contactsDialog class="account-dialog chat-contact-dialog">
+    <header>
+      <div>
+        <p class="eyebrow">NUEVA CONVERSACIÓN</p>
+        <h2>Con quién conversar</h2>
+      </div>
+      <button
+        type="button"
+        class="icon-button"
+        (click)="contactsDialog.close()"
+        aria-label="Cerrar contactos"
+      >
+        <app-icon name="close" />
+      </button>
+    </header>
+    <div class="chat-contact-body">
+      <p>
+        Contactos autorizados para el ciclo seleccionado. Los encargados necesitan la facultad de
+        comunicaciones.
+      </p>
+      <form class="chat-contact-search" (ngSubmit)="findContacts()">
+        <label class="sr-only" for="contact-search">Buscar contacto o estudiante</label
+        ><input
+          id="contact-search"
+          name="search"
+          [(ngModel)]="contactSearch"
+          maxlength="100"
+          placeholder="Nombre del contacto o estudiante"
+        /><button class="outline" [disabled]="contactBusy()">Buscar</button>
+      </form>
+      @if (contactError()) {
+        <p class="chat-error" role="alert">{{ contactError() }}</p>
+      }
+      @for (c of contacts(); track c.studentId + c.teacherId + c.memberId) {
+        <button class="chat-contact" [disabled]="contactBusy()" (click)="start(c)">
+          <span class="chat-avatar" aria-hidden="true">{{ initials(c.name) }}</span
+          ><span
+            ><strong>{{ c.name }}</strong
+            ><small>{{ c.role }} · Sobre {{ c.student }}</small></span
+          ><app-icon name="message" />
+        </button>
+      }
+      @if (contactBusy()) {
+        <p role="status">Cargando…</p>
+      } @else if (!contacts().length && !contactError()) {
+        <p>
+          No hay contactos que coincidan. Verifica que los accesos estén activos y las asignaciones
+          vigentes.
+        </p>
+      }
+      @if (contacts().length < contactTotal()) {
+        <button class="outline" [disabled]="contactBusy()" (click)="moreContacts()">
+          Ver más contactos
+        </button>
+      }
+    </div>
+    <footer><button class="outline" (click)="contactsDialog.close()">Cerrar</button></footer>
+  </dialog>
+</app-shell>

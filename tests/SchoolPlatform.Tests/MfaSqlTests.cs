@@ -126,6 +126,7 @@ public sealed class MfaSqlTests : SqlTestBase
         Assert.Equal("second-factor", (await password.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("status").GetString());
         // The pending second step is not a session.
         Assert.Equal(HttpStatusCode.Unauthorized, (await app.GetAsync("/api/v1/session")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await AppPost("/api/v1/auth/remember-device", new { })).StatusCode);
         var wrong = await AppPost("/api/v1/auth/login/second-factor", new { code = "000000" });
         Assert.Equal("second-factor-failed", (await wrong.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
         var ok = await AppPost("/api/v1/auth/login/second-factor", new { code = Totp(key, 1) });

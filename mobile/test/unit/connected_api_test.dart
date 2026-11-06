@@ -15,6 +15,8 @@ class FakeSchool {
   bool requireSecondFactor = false;
   bool expireNextToken = false;
   int tokens = 0;
+  bool revoked = false;
+  bool offline = false;
 
   http.Response json(Object body, {int status = 200, Map<String, String> headers = const {}}) =>
       http.Response(
@@ -28,6 +30,7 @@ class FakeSchool {
 
   late final client = MockClient((request) async {
     requests.add(request);
+    if (offline) throw http.ClientException('synthetic offline');
     final path = request.url.path;
     if (path == '/api/v1/auth/antiforgery' || path == '/api/v1/antiforgery') {
       tokens++;
@@ -66,6 +69,9 @@ class FakeSchool {
             'set-cookie': 'SchoolPlatform.Session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/',
           },
         );
+      case '/api/v1/auth/remember-device':
+      case '/api/v1/auth/forget-device':
+        return signedIn(request) ? http.Response('', 204) : http.Response('', 401);
       case '/api/v1/me/announcements/n1/read':
         if (expireNextToken) {
           expireNextToken = false;
@@ -73,7 +79,7 @@ class FakeSchool {
         }
         return http.Response('', 204);
     }
-    if (!signedIn(request)) return http.Response('', 401);
+    if (revoked || !signedIn(request)) return http.Response('', 401);
     return switch (path) {
       '/api/v1/session' => json({
         'username': 'fam',

@@ -82,6 +82,7 @@ builder.Services.AddOptions<SchoolPlatform.Host.Learning.StorageOptions>().BindC
         "Configuración de almacenamiento inválida.").ValidateOnStart();
 builder.Services.AddScoped<SchoolPlatform.Host.Attendance.AttendanceService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Communication.CommunicationService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Chat.ChatService>();
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
 {
     options.Password.RequiredLength = 12;
@@ -144,6 +145,11 @@ builder.Services.AddRateLimiter(options =>
         context.Connection.RemoteIpAddress?.ToString() ?? "local", _ => new()
         {
             PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+        }));
+    options.AddPolicy("chat-send", context => System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "local", _ => new()
+        {
+            PermitLimit = 60, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
         }));
 });
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
@@ -254,6 +260,7 @@ SchoolPlatform.Host.Grades.GradeEndpoints.MapGrades(app);
 SchoolPlatform.Host.Learning.LearningEndpoints.MapLearning(app);
 SchoolPlatform.Host.Attendance.AttendanceEndpoints.MapAttendance(app);
 SchoolPlatform.Host.Communication.CommunicationEndpoints.MapCommunication(app);
+SchoolPlatform.Host.Chat.ChatEndpoints.MapChat(app);
 SchoolPlatform.Host.Documents.DocumentEndpoints.MapDocuments(app);
 SchoolPlatform.Host.Gate.GateEndpoints.MapGate(app);
 SchoolPlatform.Host.Common.DashboardEndpoints.MapDashboard(app);

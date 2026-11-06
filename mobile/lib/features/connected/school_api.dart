@@ -40,7 +40,8 @@ Uri parseServer(String raw) {
 }
 
 /// HTTP client for the signed-in app. It keeps the Identity session cookie and the antiforgery cookie in memory
-/// only (never on disk, never in logs) and sends `X-XSRF-TOKEN` on every write, exactly like the web.
+/// and sends `X-XSRF-TOKEN` on every write, exactly like the web. An explicit biometric opt-in may export only the
+/// Identity ticket for the separate protected vault; passwords and antiforgery cookies are never persisted.
 /// Every response is authorized by the server; the app never decides permissions.
 class SchoolApi {
   SchoolApi(this.server, {http.Client? client}) : _http = client ?? http.Client();
@@ -56,6 +57,22 @@ class SchoolApi {
   static const _timeout = Duration(seconds: 20);
 
   bool get hasSession => _signedIn;
+
+  /// Export only this application's session cookie (including Identity chunks). Never antiforgery/2FA cookies.
+  Map<String, String> sessionTicket() => Map.fromEntries(
+    _cookies.entries.where((e) => RegExp(r'^SchoolPlatform\.Session(?:C[0-9]+)?$').hasMatch(e.key)),
+  );
+
+  void restoreTicket(Map<String, String> ticket) {
+    if (ticket.isEmpty ||
+        ticket.keys.any((k) => !RegExp(r'^SchoolPlatform\.Session(?:C[0-9]+)?$').hasMatch(k))) {
+      throw const ApiFailure('Vuelve a ingresar para preparar el desbloqueo.');
+    }
+    _cookies.clear();
+    _cookies.addAll(ticket);
+    _token = null;
+    _signedIn = true;
+  }
 
   Future<dynamic> get(String path) async => _decode(await _send('GET', path));
 

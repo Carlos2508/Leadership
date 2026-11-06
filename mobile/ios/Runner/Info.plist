@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>NSFaceIDUsageDescription</key>
+    <string>Desbloquear tu sesión del colegio sin volver a escribir la contraseña.</string>
     <key>NSCameraUsageDescription</key>
     <string>Escanear el QR de emparejamiento y los carnets de estudiantes en portería.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>

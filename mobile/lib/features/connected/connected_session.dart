@@ -1,7 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../../core/providers.dart';
+import 'biometric_vault.dart';
 import 'school_api.dart';
 
 /// Linked student as returned by `/api/v1/me` (guardians) or the account's own student record.
@@ -83,7 +87,7 @@ class ConnectedSession {
 
 const _serverKey = 'connected.server';
 
-/// Last server address used (not secret). Credentials and cookies are never stored.
+/// Last server address used (not secret). The opt-in biometric ticket lives only in the protected vault.
 final savedServerProvider = Provider<String>(
   (ref) => ref.watch(sharedPreferencesProvider).getString(_serverKey) ?? '',
 );
@@ -103,6 +107,8 @@ class ConnectedController extends Notifier<ConnectedSession?> {
     required String username,
     required String password,
   }) async {
+    // An explicit password sign-in must not leave another account's remembered ticket behind.
+    await forgetBiometrics();
     final uri = parseServer(server);
     final api = SchoolApi(uri, client: ref.read(connectedHttpClientProvider));
     final step = await api.login(username.trim(), password);
@@ -137,6 +143,11 @@ class ConnectedController extends Notifier<ConnectedSession?> {
     final current = state;
     state = null;
     _pending = null;
+    try {
+      await forgetBiometrics();
+    } on Object {
+      /* Still close the server session if secure storage is unavailable. */
+    }
     if (current == null) return;
     try {
       await current.api.logout();
@@ -149,6 +160,86 @@ class ConnectedController extends Notifier<ConnectedSession?> {
   void expire() {
     state = null;
     _pending = null;
+    ref.read(biometricLockedProvider.notifier).setLocked(false);
+    // Remove the usable credential immediately; preference cleanup may finish asynchronously.
+    unawaited(forgetBiometrics().catchError((Object _) {}));
+  }
+
+  Future<void> enableBiometrics() async {
+    final current = state;
+    final vault = ref.read(biometricVaultProvider);
+    if (current == null || !await vault.available()) {
+      throw const ApiFailure('Registra una huella o biometría en los ajustes de tu teléfono.');
+    }
+    await current.api.post('/api/v1/auth/remember-device');
+    final ticket = current.api.sessionTicket();
+    if (ticket.isEmpty) {
+      throw const ApiFailure('El desbloqueo está disponible en el app nativo del teléfono.');
+    }
+    try {
+      await vault.seal(jsonEncode({'server': current.api.server.toString(), 'cookies': ticket}));
+      await ref.read(biometricEnabledProvider.notifier).setEnabled(true);
+    } on Object {
+      try {
+        await vault.clear();
+      } on Object {
+        /* The OS may have cancelled the operation. */
+      }
+      await forgetBiometrics();
+      throw const ApiFailure(
+        'No se activó el desbloqueo. Confirma tu biometría e inténtalo de nuevo.',
+      );
+    }
+  }
+
+  Future<void> unlockBiometrics() async {
+    final raw = await ref.read(biometricVaultProvider).unlock();
+    if (raw == null) {
+      await forgetBiometrics();
+      throw const ApiFailure('Vuelve a ingresar para preparar el desbloqueo.');
+    }
+    late SchoolApi api;
+    try {
+      final saved = jsonDecode(raw) as Map<String, dynamic>;
+      api = SchoolApi(
+        parseServer(saved['server'] as String),
+        client: ref.read(connectedHttpClientProvider),
+      );
+      api.restoreTicket(Map<String, String>.from(saved['cookies'] as Map));
+    } on Object {
+      await forgetBiometrics();
+      throw const ApiFailure('Vuelve a ingresar para preparar el desbloqueo.');
+    }
+    try {
+      final restored = await _load(
+        api,
+      ); // Durable stamp, active account, permissions/faculties checked by the server.
+      state = restored;
+      ref.read(biometricLockedProvider.notifier).setLocked(false);
+    } on ApiFailure catch (e) {
+      if (e.unauthorized || e.status == 403) {
+        await forgetBiometrics();
+        state = null;
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> forgetBiometrics() async {
+    // Web/demo clients never touch local secure storage.
+    if (!ref.read(biometricEnabledProvider)) return;
+    try {
+      await ref.read(biometricVaultProvider).clear();
+    } finally {
+      await ref.read(biometricEnabledProvider.notifier).setEnabled(false);
+      ref.read(biometricLockedProvider.notifier).setLocked(false);
+    }
+  }
+
+  Future<void> disableBiometrics() async {
+    final current = state;
+    if (current != null) await current.api.post('/api/v1/auth/forget-device');
+    await forgetBiometrics();
   }
 
   static Future<ConnectedSession> _load(SchoolApi api) async {

@@ -2,6 +2,19 @@
 
 Actualizado: 5 de noviembre de 2026, America/Guatemala.
 
+## Rediseño web y navegación escolar (estado vigente)
+
+El propietario solicitó commit y push de este rediseño antes del siguiente ajuste del dashboard. Las menciones a «sin commit» de esta sección describen el cierre previo.
+
+- Por solicitud del propietario se revisaron Numix (sitio público, dashboard y productos) y su código local como referencia de claridad visual. No se modificó aquel proyecto ni el PHP.
+- Nueva interfaz compartida: Figtree, menú sólido compacto, encabezado blanco, paneles con borde fino, acciones y filtros legibles y menos decoración. Una marca por cabecera/menú; sin escudo gigante, logo duplicado en login ni instrucciones técnicas en la página pública. Ver `DESIGN.md` y ADR-010.
+- Módulos independientes en el menú: **Estudiantes, Padres y Docentes**, con directorios propios filtrados por servidor, perfiles preseleccionados al registrar y pestaña Todos para reutilizar fichas. Docentes incluye al personal y lo indica; asignaciones de cursos y permisos siguen separados.
+- Registro de personal en un paso: cargo opcional en el contrato de alta, validación y persistencia de persona/perfil/auditoría en un mismo guardado. Sin migración de esquema, nuevas cuentas, vínculos o matrícula implícitos. Formularios muestran primero nombres, apellidos y código/cargo; contacto y otros perfiles se despliegan si se necesitan.
+- Portería y Administración se pliegan fuera de su ruta. Menú móvil conserva foco, Escape y fondo inerte. Página pública con presentación configurada, información del portal, servicios reales, contacto y mapa voluntario. Flutter no cambió.
+- Validación: **81 pruebas .NET aprobadas, 0 omitidas**, con SQL Server real; build Angular correcto; **33 E2E aprobados y 1 omitido previsto** (rendimiento móvil), más **14 E2E adicionales aprobados** tras simplificar el formulario y ampliar la revisión pública a 320/768/1920 px. Los directorios/formularios también se comprobaron en 320/768/1024/1920 px, además de escritorio y móvil habituales, con Axe y sin desbordamiento horizontal.
+- QA detectó y corrigió contraste del pie público, transición de cierre de alertas y una fecha UTC usada por la prueba de notas para pagos: las pruebas usan ahora la fecha civil configurada del colegio. Capturas revisadas y conservadas en `.local/qa/evidencia/redesign-2026-11-05/`; `git diff --check` correcto. Advertencia conocida del build: SweetAlert2 CommonJS.
+- Rediseño abierto y verificado en `http://localhost:5082` (proceso lanzador 9816; comprobar disponibilidad en otra sesión). El puerto 5080 ya estaba ocupado por otro host del proyecto y se conservó. Ingreso revisado nuevamente en el navegador tras ajustar la separación de su encabezado. No se desplegó ni se creó commit de este rediseño. Siguen pendientes las políticas, licencias, validaciones físicas y operación indicadas en los incrementos anteriores.
+
 ## Consolidación en Git (5 de noviembre de 2026)
 
 Por solicitud explícita del propietario, este commit reúne todos los cambios pendientes, incluidos los incrementos décimo y undécimo y las correcciones del recorrido QA. Se solicitó también su push a `origin/main`. Las menciones históricas a «sin commit» describen el cierre de aquellas sesiones. Los archivos locales, credenciales, respaldos y evidencias ignoradas permanecen fuera de Git. En esta consolidación se comprobó `git diff --check`; no se repitieron las suites y se conservan sus resultados previos documentados. Los pendientes físicos, de licencia, políticas y producción siguen vigentes.

@@ -9,7 +9,9 @@ async function login(page: Page, username: string, password: string): Promise<vo
   await page.getByLabel('Usuario', { exact: true }).fill(username);
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ }),
+  ).toBeVisible();
 }
 
 async function post(page: Page, path: string, data: object) {
@@ -20,15 +22,24 @@ async function post(page: Page, path: string, data: object) {
 }
 
 async function expectAccessible(page: Page): Promise<void> {
-  expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+  expect(
+    (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
+      .violations,
+  ).toEqual([]);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+  ).toBeTruthy();
 }
 
-test('organize courses by section, assign a teacher and show the teacher only their course roster', async ({ page, browser }, testInfo) => {
+test('organize courses by section, assign a teacher and show the teacher only their course roster', async ({
+  page,
+  browser,
+}, testInfo) => {
   const owner = process.env['SCHOOLPLATFORM_E2E_USERNAME']!;
   const ownerPassword = process.env['SCHOOLPLATFORM_E2E_PASSWORD']!;
   const suffix = randomUUID().slice(0, 5).toUpperCase();
-  const calendarYear = 2080 + testInfo.repeatEachIndex * 2 + (testInfo.project.name === 'mobile' ? 1 : 0);
+  const calendarYear =
+    2080 + testInfo.repeatEachIndex * 2 + (testInfo.project.name === 'mobile' ? 1 : 0);
   const subject = 'Matemática ' + suffix;
   const teacherUser = 'teacher-' + suffix.toLowerCase();
   const teacherPassword = 'Teacher-Synthetic!12345';
@@ -38,60 +49,128 @@ test('organize courses by section, assign a teacher and show the teacher only th
   if (!session.permissions.includes('academic.manage')) {
     const accounts = await (await page.request.get('/api/v1/access/accounts')).json();
     const me = accounts.items.find((x: { id: string }) => x.id === session.userId);
-    await post(page, `/api/v1/access/accounts/${me.id}/profile`, { version: me.version, reason, profile: 'administrator' });
+    await post(page, `/api/v1/access/accounts/${me.id}/profile`, {
+      version: me.version,
+      reason,
+      profile: 'administrator',
+    });
     await login(page, owner, ownerPassword);
   }
-  const year = (await post(page, '/api/v1/academic/years', { label: `${calendarYear}-${suffix}`, startsOn: `${calendarYear}-01-10`, endsOn: `${calendarYear}-10-30` })).id;
-  await post(page, `/api/v1/academic/years/${year}/periods`, { name: null, startsOn: `${calendarYear}-01-10`, endsOn: `${calendarYear}-03-10` });
+  const year = (
+    await post(page, '/api/v1/academic/years', {
+      label: `${calendarYear}-${suffix}`,
+      startsOn: `${calendarYear}-01-10`,
+      endsOn: `${calendarYear}-10-30`,
+    })
+  ).id;
+  await post(page, `/api/v1/academic/years/${year}/periods`, {
+    name: null,
+    startsOn: `${calendarYear}-01-10`,
+    endsOn: `${calendarYear}-03-10`,
+  });
   const detail = await (await page.request.get(`/api/v1/academic/years/${year}`)).json();
-  await post(page, `/api/v1/academic/years/${year}/status`, { version: detail.year.version, status: 'EnrollmentOpen', reason });
+  await post(page, `/api/v1/academic/years/${year}/status`, {
+    version: detail.year.version,
+    status: 'EnrollmentOpen',
+    reason,
+  });
   const gradeName = 'Grado cursos ' + suffix;
-  const grade = (await post(page, '/api/v1/academic/grades', { code: 'K' + suffix, name: gradeName, stage: '', sequence: 60 })).id;
-  const section = (await post(page, `/api/v1/academic/years/${year}/sections`, { gradeLevelId: grade, name: 'A', shift: null, capacity: null })).id;
-  const student = (await post(page, '/api/v1/people', { givenNames: 'Tomás', familyNames: 'Sintético ' + suffix, contacts: [], studentCode: 'CUR-' + suffix, isGuardian: false, confirmDuplicate: true })).id;
-  await post(page, '/api/v1/enrollments', { studentId: student, academicYearId: year, gradeLevelId: grade, sectionId: section, enrolledOn: `${calendarYear}-01-10` });
+  const grade = (
+    await post(page, '/api/v1/academic/grades', {
+      code: 'K' + suffix,
+      name: gradeName,
+      stage: '',
+      sequence: 60,
+    })
+  ).id;
+  const section = (
+    await post(page, `/api/v1/academic/years/${year}/sections`, {
+      gradeLevelId: grade,
+      name: 'A',
+      shift: null,
+      capacity: null,
+    })
+  ).id;
+  const student = (
+    await post(page, '/api/v1/people', {
+      givenNames: 'Tomás',
+      familyNames: 'Sintético ' + suffix,
+      contacts: [],
+      studentCode: 'CUR-' + suffix,
+      isGuardian: false,
+      confirmDuplicate: true,
+    })
+  ).id;
+  await post(page, '/api/v1/enrollments', {
+    studentId: student,
+    academicYearId: year,
+    gradeLevelId: grade,
+    sectionId: section,
+    enrolledOn: `${calendarYear}-01-10`,
+  });
   // Regression QA-001: staff must be registerable without inventing a student or guardian profile.
-  await page.goto('/workspace/people');
-  await page.getByRole('button', { name: 'Registrar persona', exact: true }).click();
+  await page.goto('/workspace/teachers');
+  await page.getByRole('button', { name: 'Registrar docente o personal', exact: true }).click();
   await page.getByLabel('Nombres', { exact: true }).fill('Marta');
   await page.getByLabel('Apellidos', { exact: true }).fill('Docente ' + suffix);
+  await page.getByLabel('Cargo o puesto').fill('Docente');
   await page.getByRole('button', { name: 'Registrar', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Marta Docente ' + suffix, exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Marta Docente ' + suffix, exact: true }),
+  ).toBeVisible();
   const teacher = new URL(page.url()).pathname.split('/').at(-1)!;
-  await page.getByRole('listitem').filter({ hasText: 'Personal del colegio' }).getByRole('button', { name: 'Agregar', exact: true }).click();
-  await page.getByLabel('Cargo').fill('Docente');
-  await page.getByRole('button', { name: 'Guardar', exact: true }).click();
-  await expect(page.getByText('Se agregó el perfil de personal.', { exact: true })).toBeVisible();
   const teacherDetail = await (await page.request.get(`/api/v1/people/${teacher}`)).json();
   expect(teacherDetail.staffPosition).toBe('Docente');
   expect(teacherDetail.isGuardian).toBe(false);
   expect(teacherDetail.studentCode).toBeNull();
-  const invite = await post(page, '/api/v1/access/invitations', { username: teacherUser, profile: 'basic', reason });
+  const invite = await post(page, '/api/v1/access/invitations', {
+    username: teacherUser,
+    profile: 'basic',
+    reason,
+  });
   const linked = await (await page.request.get(`/api/v1/people/${teacher}`)).json();
-  await post(page, `/api/v1/people/${teacher}/account`, { version: linked.version, userId: invite.userId, reason });
+  await post(page, `/api/v1/people/${teacher}/account`, {
+    version: linked.version,
+    userId: invite.userId,
+    reason,
+  });
 
   await page.goto(`/workspace/courses?year=${year}`);
   await expect(page.getByRole('heading', { name: 'Cursos y docentes', level: 1 })).toBeVisible();
   await page.getByRole('button', { name: '+ Nueva' }).click();
-  await page.getByRole('dialog').getByLabel('Código').fill('M' + suffix);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Código')
+    .fill('M' + suffix);
   await page.getByRole('dialog').getByLabel('Nombre').fill(subject);
   await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click();
   await expect(page.locator('.sp-toast')).toContainText('La materia se guardó');
 
   await page.getByRole('button', { name: 'Crear cursos' }).click();
-  await page.getByRole('dialog').getByRole('combobox', { name: 'Grado' }).selectOption({ label: gradeName });
-  await page.getByRole('dialog').getByRole('combobox', { name: 'Alcance' }).selectOption({ label: 'Sección A' });
+  await page
+    .getByRole('dialog')
+    .getByRole('combobox', { name: 'Grado' })
+    .selectOption({ label: gradeName });
+  await page
+    .getByRole('dialog')
+    .getByRole('combobox', { name: 'Alcance' })
+    .selectOption({ label: 'Sección A' });
   await page.getByRole('dialog').getByRole('checkbox', { name: subject }).check();
   await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click();
   await expect(page.locator('.sp-toast')).toContainText('Se creó 1 curso');
 
   await page.getByRole('button', { name: `+ Docente para ${subject}` }).click();
-  await page.getByRole('dialog').getByLabel('Buscar personal').fill('Docente ' + suffix);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Buscar personal')
+    .fill('Docente ' + suffix);
   await page.getByRole('dialog').getByRole('button', { name: 'Buscar', exact: true }).click();
   await page.getByRole('radio', { name: new RegExp('Marta Docente ' + suffix) }).check();
   await page.getByRole('dialog').getByLabel('Motivo').fill(reason);
   await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click();
-  await expect(page.locator('.course-item').filter({ hasText: subject })).toContainText('Marta Docente ' + suffix);
+  await expect(page.locator('.course-item').filter({ hasText: subject })).toContainText(
+    'Marta Docente ' + suffix,
+  );
   await expectAccessible(page);
   await page.screenshot({ path: testInfo.outputPath('courses.png'), fullPage: true });
 

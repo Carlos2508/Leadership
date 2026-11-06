@@ -104,6 +104,9 @@ public sealed partial class PeopleService(SchoolDbContext db, SchoolAudit audit,
             throw new OperationException(409, "possible-duplicate",
                 "Ya existe una persona con el mismo nombre. Revisa el directorio antes de registrar otra; si son personas distintas, confirma el registro.");
         if (code is not null && await db.Students.AnyAsync(x => x.StudentCode == code, ct)) throw CodeTaken();
+        var position = request.StaffPosition is null ? null : Normalize(request.StaffPosition);
+        if (position is not null && position.Length is < 1 or > 80)
+            throw OperationException.Invalid("Escribe el cargo o puesto (máximo 80 caracteres).");
         var now = time.GetUtcNow();
         var person = new Person
         {
@@ -114,8 +117,10 @@ public sealed partial class PeopleService(SchoolDbContext db, SchoolAudit audit,
             { Id = Guid.NewGuid(), PersonId = person.Id, Kind = x.Kind, Value = x.Value, Label = x.Label ?? "", IsPrimary = x.IsPrimary }));
         if (code is not null) person.Student = new StudentProfile { PersonId = person.Id, StudentCode = code, CreatedAt = now };
         if (request.IsGuardian) person.Guardian = new GuardianProfile { PersonId = person.Id, CreatedAt = now };
+        if (position is not null) person.Staff = new StaffProfile { PersonId = person.Id, Position = position, CreatedAt = now };
         db.Persons.Add(person);
         audit.Record("PersonCreated", actorId, "Person", person.Id, detail: Roles(code is not null, request.IsGuardian));
+        if (position is not null) audit.Record("StaffProfileAdded", actorId, "Person", person.Id);
         await db.SaveChangesAsync(ct);
         return new(person.Id);
     }

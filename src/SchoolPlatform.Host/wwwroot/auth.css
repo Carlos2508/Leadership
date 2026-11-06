@@ -7,3 +7,20 @@
 }
 
 .brand-message h1,.login-content h2,.brand span{font-family:'Fraunces',Georgia,serif;font-optical-sizing:auto;font-weight:600}.brand-message h1{letter-spacing:-1.5px}.login-content h2{letter-spacing:-.6px}.eyebrow{display:inline-flex;align-items:center;gap:10px}.login-content .eyebrow::before,.brand-message .eyebrow::before{content:'';width:22px;height:3px;border-radius:3px;background:var(--accent)}.brand-panel{background-image:radial-gradient(520px 320px at 100% 0%,color-mix(in srgb,var(--accent) 18%,transparent),transparent 70%),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath d='M0 14h28M14 0v28' stroke='%23ffffff' stroke-opacity='.04' stroke-width='1'/%3E%3C/svg%3E")}input{transition:border-color .15s,box-shadow .15s}input:focus{border-color:var(--primary);box-shadow:0 0 0 4px color-mix(in srgb,var(--primary) 14%,transparent)}button{border-radius:12px;background-image:linear-gradient(180deg,#ffffff1f,#ffffff00 55%);box-shadow:inset 0 1px 0 #ffffff26,0 1px 2px #0f2e1f29}button:active{transform:translateY(1px)}
+
+/* Shared with the application: simple type, solid surfaces and a single institution mark. */
+:root{font-family:'Figtree','Segoe UI',system-ui,sans-serif;color:#202c29;background:var(--surface)}
+.brand-message h1,.login-content h2,.brand span{font-family:inherit;font-weight:750;font-optical-sizing:auto}
+.auth-shell{grid-template-columns:minmax(0,44%) minmax(0,56%)}
+.brand-panel{padding:40px 56px;background:var(--deep);background-image:none}
+.brand-message h1{font-size:clamp(38px,4.2vw,64px);letter-spacing:-1.8px}
+.brand img{width:42px;height:42px}.brand small{letter-spacing:.5px}
+.brand-message .eyebrow::before,.login-content .eyebrow::before{display:none}
+.form-panel{background:#fff;padding:56px}.login-content{max-width:390px}
+.login-content h2{font-size:32px;letter-spacing:-.8px}.login-content .eyebrow{color:#596862;letter-spacing:1.2px}
+.muted,.help,.password-help{color:#596862}.help strong{color:#202c29}
+input{border-radius:8px;border-color:#cbd6d0;font-size:15px}
+button{border-radius:8px;background-image:none;box-shadow:none;font-size:14px}
+.back{font-size:13px}.brand-footer{color:#c7d8cf}
+.login-content>.back{display:block;width:fit-content;margin-bottom:32px}.login-content>.eyebrow{display:block;margin-bottom:14px}
+@media(max-width:800px){.auth-shell{grid-template-columns:minmax(0,1fr)}.brand-panel{padding:18px 24px}.form-panel{padding:32px 24px 48px}.brand img{width:34px;height:34px}.brand-message,.brand-footer{display:none}.login-content h2{font-size:28px}}

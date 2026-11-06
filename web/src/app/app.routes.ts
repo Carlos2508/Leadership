@@ -7,9 +7,21 @@ import { Router } from '@angular/router';
 const previewGuard = () =>
   inject(InstitutionService).current.previewEnabled || inject(Router).createUrlTree(['/']);
 export const routes: Routes = [
-  { path: 'workspace/gate', canActivate: [permissionGuard('attendance.gate')], loadComponent: () => import('./features/gate-kiosk').then(x => x.GateKiosk) },
-  { path: 'workspace/gate/report', canActivate: [permissionGuard('attendance.read')], loadComponent: () => import('./features/gate-report').then(x => x.GateReport) },
-  { path: 'workspace/gate/devices', canActivate: [permissionGuard('attendance.manage')], loadComponent: () => import('./features/gate-devices').then(x => x.GateDevices) },
+  {
+    path: 'workspace/gate',
+    canActivate: [permissionGuard('attendance.gate')],
+    loadComponent: () => import('./features/gate-kiosk').then((x) => x.GateKiosk),
+  },
+  {
+    path: 'workspace/gate/report',
+    canActivate: [permissionGuard('attendance.read')],
+    loadComponent: () => import('./features/gate-report').then((x) => x.GateReport),
+  },
+  {
+    path: 'workspace/gate/devices',
+    canActivate: [permissionGuard('attendance.manage')],
+    loadComponent: () => import('./features/gate-devices').then((x) => x.GateDevices),
+  },
   { path: '', loadComponent: () => import('./features/welcome').then((x) => x.Welcome) },
   {
     path: 'workspace',
@@ -35,6 +47,24 @@ export const routes: Routes = [
     path: 'workspace/audit',
     canActivate: [permissionGuard('audit.read')],
     loadComponent: () => import('./features/security-audit').then((x) => x.SecurityAudit),
+  },
+  {
+    path: 'workspace/students',
+    canActivate: [permissionGuard('people.read')],
+    data: { directory: 'student' },
+    loadComponent: () => import('./features/people-directory').then((x) => x.PeopleDirectory),
+  },
+  {
+    path: 'workspace/parents',
+    canActivate: [permissionGuard('people.read')],
+    data: { directory: 'guardian' },
+    loadComponent: () => import('./features/people-directory').then((x) => x.PeopleDirectory),
+  },
+  {
+    path: 'workspace/teachers',
+    canActivate: [permissionGuard('people.read')],
+    data: { directory: 'staff' },
+    loadComponent: () => import('./features/people-directory').then((x) => x.PeopleDirectory),
   },
   {
     path: 'workspace/people',

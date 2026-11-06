@@ -18,7 +18,8 @@ import { Icon } from '../shared/icon';
       <header class="public-header">
         <div class="public-header-inner">
           <a class="brand public-brand" routerLink="/"
-            ><img [src]="school.assets.mainLogo" [alt]="school.displayName" /><span aria-hidden="true"
+            ><img [src]="school.assets.mainLogo" [alt]="school.displayName" /><span
+              aria-hidden="true"
               >{{ school.shortName }}<small>{{ school.campusLabel }}</small></span
             ></a
           >
@@ -32,8 +33,12 @@ import { Icon } from '../shared/icon';
             <a href="#plataforma">Mi espacio</a>
             <a href="#contacto">Contacto</a>
           </nav>
-          <a href="/Identity/Account/Login" class="button public-cta" aria-label="Ingresar a mi espacio"
-            ><app-icon name="key" /><span class="cta-long">Ingresar a mi espacio</span><span class="cta-short">Ingresar</span></a
+          <a
+            href="/Identity/Account/Login"
+            class="button public-cta"
+            aria-label="Ingresar a mi espacio"
+            ><app-icon name="key" /><span class="cta-long">Ingresar a mi espacio</span
+            ><span class="cta-short">Ingresar</span></a
           >
         </div>
       </header>
@@ -45,40 +50,63 @@ import { Icon } from '../shared/icon';
             <h1 id="hero-title">{{ school.tagline || school.displayName }}</h1>
             <p class="welcome-description">{{ school.welcomeMessage }}</p>
             <div class="hero-actions">
-              <a class="button hero-primary" href="/Identity/Account/Login">Ingresar a mi espacio <app-icon name="arrow" /></a>
+              <a class="button hero-primary" href="/Identity/Account/Login"
+                >Ingresar a mi espacio <app-icon name="arrow"
+              /></a>
               <a class="button outline" href="#contacto">Contactar al colegio</a>
             </div>
             <ul class="hero-facts" aria-label="Contacto rápido">
               @if (phoneHref(); as tel) {
                 <li>
-                  <a [href]="tel"><span class="fact-icon"><app-icon name="phone" /></span>{{ school.contact.phone }}</a>
+                  <a [href]="tel"
+                    ><span class="fact-icon"><app-icon name="phone" /></span
+                    >{{ school.contact.phone }}</a
+                  >
                 </li>
               }
               @if (school.contact.address) {
                 <li>
                   <a [href]="directionsUrl()" target="_blank" rel="noopener"
-                    ><span class="fact-icon"><app-icon name="pin" /></span>{{ shortAddress() }}<span class="sr-only"> (abre Google Maps)</span></a
+                    ><span class="fact-icon"><app-icon name="pin" /></span>{{ shortAddress()
+                    }}<span class="sr-only"> (abre Google Maps)</span></a
                   >
                 </li>
               }
             </ul>
           </div>
-          <div class="welcome-art" aria-hidden="true">
-            <div class="orb orb-one"></div>
-            <div class="orb orb-two"></div>
-            <div class="school-seal">
-              <img [src]="school.assets.mainLogo" [alt]="school.displayName" />
+          <aside class="portal-card" aria-labelledby="portal-title">
+            <div class="portal-card-heading">
+              <span class="portal-label">PLATAFORMA ESCOLAR</span>
+              <h2 id="portal-title">Tu día a día,<br />más sencillo.</h2>
+              <p>La información que necesitas, sin ir al colegio.</p>
             </div>
-            <div class="floating-card card-learning">
-              <span class="icon-tile mint"><app-icon name="book" /></span>
-              <div><strong>Notas y tareas</strong><small>Siempre a la mano</small></div>
+            <div class="portal-options">
+              <div>
+                <span class="icon-tile"><app-icon name="book" /></span
+                ><span
+                  ><strong>Notas y tareas</strong
+                  ><small>Acompaña cada paso del aprendizaje.</small></span
+                ><app-icon name="check" />
+              </div>
+              <div>
+                <span class="icon-tile"><app-icon name="receipt" /></span
+                ><span
+                  ><strong>Pagos y recibos</strong
+                  ><small>Consulta tu estado de cuenta.</small></span
+                ><app-icon name="check" />
+              </div>
+              <div>
+                <span class="icon-tile"><app-icon name="mail" /></span
+                ><span
+                  ><strong>Avisos del colegio</strong
+                  ><small>Mantente al tanto de lo importante.</small></span
+                ><app-icon name="check" />
+              </div>
             </div>
-            <div class="floating-card card-community">
-              <span class="icon-tile gold"><app-icon name="people" /></span>
-              <div><strong>Familia y colegio</strong><small>Conectados para crecer</small></div>
+            <div class="portal-card-footer">
+              <app-icon name="shield" /><span>Una cuenta personal para cada integrante.</span>
             </div>
-            <span class="decorative-star">✦</span>
-          </div>
+          </aside>
         </section>
 
         @if (hasAbout()) {
@@ -120,24 +148,32 @@ import { Icon } from '../shared/icon';
               }
             </div>
             @if (school.public.admissionsMessage) {
-              <p class="admissions-note"><app-icon name="info" />{{ school.public.admissionsMessage }}</p>
+              <p class="admissions-note">
+                <app-icon name="info" />{{ school.public.admissionsMessage }}
+              </p>
             }
           </section>
         }
 
-        <section id="plataforma" class="public-section platform-section" aria-labelledby="platform-title">
+        <section
+          id="plataforma"
+          class="public-section platform-section"
+          aria-labelledby="platform-title"
+        >
           <div class="section-intro">
-            <span class="eyebrow">MI ESPACIO EN LÍNEA</span>
-            <h2 id="platform-title">Todo lo de la vida escolar, en un solo lugar</h2>
+            <span class="eyebrow">FAMILIAS, ESTUDIANTES Y DOCENTES</span>
+            <h2 id="platform-title">Más cerca de su educación.</h2>
             <p>
-              Estudiantes, familias y docentes ingresan con la cuenta que entrega el colegio. Cada persona ve solo lo que
-              le corresponde.
+              Estudiantes, familias y docentes ingresan con la cuenta que entrega el colegio. Cada
+              persona ve solo lo que le corresponde.
             </p>
           </div>
           <div class="public-grid feature-grid">
             @for (feature of features; track feature.title) {
               <article class="public-card feature-card">
-                <span class="icon-tile" [class]="feature.tone"><app-icon [name]="feature.icon" /></span>
+                <span class="icon-tile" [class]="feature.tone"
+                  ><app-icon [name]="feature.icon"
+                /></span>
                 <h3>{{ feature.title }}</h3>
                 <p>{{ feature.text }}</p>
               </article>
@@ -145,7 +181,11 @@ import { Icon } from '../shared/icon';
           </div>
         </section>
 
-        <section id="contacto" class="public-section contact-section" aria-labelledby="contact-title">
+        <section
+          id="contacto"
+          class="public-section contact-section"
+          aria-labelledby="contact-title"
+        >
           <div class="section-intro">
             <span class="eyebrow">CONTACTO Y UBICACIÓN</span>
             <h2 id="contact-title">Estamos para ayudarte</h2>
@@ -160,7 +200,9 @@ import { Icon } from '../shared/icon';
                     <h3>Dirección</h3>
                     <p>{{ school.contact.address }}</p>
                     <a class="text-link" [href]="directionsUrl()" target="_blank" rel="noopener"
-                      >Cómo llegar <app-icon name="arrow" /><span class="sr-only"> (abre Google Maps)</span></a
+                      >Cómo llegar <app-icon name="arrow" /><span class="sr-only">
+                        (abre Google Maps)</span
+                      ></a
                     >
                   </div>
                 </article>
@@ -171,15 +213,22 @@ import { Icon } from '../shared/icon';
                   <div>
                     <h3>Teléfono</h3>
                     @if (school.contact.phone) {
-                      <p><a class="big-link" [href]="phoneHref()">{{ school.contact.phone }}</a></p>
+                      <p>
+                        <a class="big-link" [href]="phoneHref()">{{ school.contact.phone }}</a>
+                      </p>
                     }
                     @for (phone of school.contact.phones; track phone.number) {
                       <p>
-                        <span class="muted-label">{{ phone.label }}</span> <a class="big-link" [href]="telOf(phone.number)">{{ phone.number }}</a>
+                        <span class="muted-label">{{ phone.label }}</span>
+                        <a class="big-link" [href]="telOf(phone.number)">{{ phone.number }}</a>
                       </p>
                     }
                     @if (school.contact.whatsApp) {
-                      <a class="text-link" [href]="'https://wa.me/' + school.contact.whatsApp" target="_blank" rel="noopener"
+                      <a
+                        class="text-link"
+                        [href]="'https://wa.me/' + school.contact.whatsApp"
+                        target="_blank"
+                        rel="noopener"
                         >Escribir por WhatsApp <app-icon name="arrow"
                       /></a>
                     }
@@ -191,7 +240,11 @@ import { Icon } from '../shared/icon';
                   <span class="icon-tile gold"><app-icon name="mail" /></span>
                   <div>
                     <h3>Correo</h3>
-                    <p><a class="big-link email-link" [href]="'mailto:' + school.contact.email">{{ school.contact.email }}</a></p>
+                    <p>
+                      <a class="big-link email-link" [href]="'mailto:' + school.contact.email">{{
+                        school.contact.email
+                      }}</a>
+                    </p>
                   </div>
                 </article>
               }
@@ -209,7 +262,13 @@ import { Icon } from '../shared/icon';
               @if (socials().length) {
                 <div class="social-row" aria-label="Redes sociales">
                   @for (item of socials(); track item.url) {
-                    <a class="button outline compact-button" [href]="item.url" target="_blank" rel="noopener">{{ item.name }}</a>
+                    <a
+                      class="button outline compact-button"
+                      [href]="item.url"
+                      target="_blank"
+                      rel="noopener"
+                      >{{ item.name }}</a
+                    >
                   }
                 </div>
               }
@@ -217,7 +276,12 @@ import { Icon } from '../shared/icon';
             @if (mapQuery()) {
               <div class="map-card">
                 @if (mapUrl(); as url) {
-                  <iframe [src]="url" title="Ubicación en el mapa" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                  <iframe
+                    [src]="url"
+                    title="Ubicación en el mapa"
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"
+                  ></iframe>
                 } @else {
                   <div class="map-placeholder">
                     <span class="map-pin" aria-hidden="true"><app-icon name="pin" /></span>
@@ -225,7 +289,13 @@ import { Icon } from '../shared/icon';
                     <p>{{ school.contact.address || mapQuery() }}</p>
                     <div class="map-actions">
                       <button class="button" type="button" (click)="showMap()">Mostrar mapa</button>
-                      <a class="button outline" [href]="directionsUrl()" target="_blank" rel="noopener">Abrir en Google Maps</a>
+                      <a
+                        class="button outline"
+                        [href]="directionsUrl()"
+                        target="_blank"
+                        rel="noopener"
+                        >Abrir en Google Maps</a
+                      >
                     </div>
                     <small>Al mostrar el mapa tu navegador se conecta con Google Maps.</small>
                   </div>
@@ -238,10 +308,14 @@ import { Icon } from '../shared/icon';
         <section class="public-band" aria-labelledby="band-title">
           <div>
             <h2 id="band-title">¿Ya tienes tu cuenta?</h2>
-            <p>Consulta notas publicadas, tareas, asistencia, estado de cuenta y avisos del colegio.</p>
+            <p>
+              Consulta notas publicadas, tareas, asistencia, estado de cuenta y avisos del colegio.
+            </p>
           </div>
           <div class="band-actions">
-            <a class="button band-button" href="/Identity/Account/Login">Iniciar sesión <app-icon name="arrow" /></a>
+            <a class="button band-button" href="/Identity/Account/Login"
+              >Iniciar sesión <app-icon name="arrow"
+            /></a>
             <a class="band-link" href="/Identity/Account/Activate">Tengo un código de activación</a>
           </div>
         </section>
@@ -249,7 +323,6 @@ import { Icon } from '../shared/icon';
 
       <footer class="public-footer">
         <div class="footer-brand">
-          <img [src]="school.assets.mainLogo" alt="" />
           <div>
             <strong>{{ school.displayName }}</strong>
             <span>{{ school.tagline }}</span>
@@ -269,15 +342,11 @@ import { Icon } from '../shared/icon';
         <div class="footer-bottom">
           <span>© {{ year }} {{ school.displayName }}</span>
           @if (school.previewEnabled) {
-            <a routerLink="/preview">Explorar muestra del diseño <span aria-hidden="true">↗</span></a>
+            <a routerLink="/preview"
+              >Explorar muestra del diseño <span aria-hidden="true">↗</span></a
+            >
           }
         </div>
-        @if (school.previewEnabled && missing().length) {
-          <p class="setup-hint" role="note">
-            <strong>Solo en desarrollo:</strong> completa en <code>config/institution.json</code> para mostrar más secciones:
-            {{ missing().join(', ') }}.
-          </p>
-        }
       </footer>
     </div>
   `,
@@ -288,17 +357,53 @@ export class Welcome {
   readonly year = new Date().getFullYear();
   readonly mapUrl = signal<SafeResourceUrl | null>(null);
   readonly features = [
-    { icon: 'star', tone: 'gold', title: 'Calificaciones', text: 'Resultados de cada período cuando el colegio los publica, con descarga en PDF.' },
-    { icon: 'book', tone: 'purple', title: 'Tareas y entregas', text: 'Actividades de cada curso, entregas con archivos y retroalimentación del docente.' },
-    { icon: 'check', tone: 'mint', title: 'Asistencia', text: 'Asistencia por curso y registro de entradas y salidas con el carnet escolar.' },
-    { icon: 'wallet', tone: 'blue', title: 'Estado de cuenta', text: 'Cuotas, pagos y recibos para el encargado responsable.' },
-    { icon: 'mail', tone: 'gold', title: 'Avisos del colegio', text: 'Comunicados para el grado, el curso o toda la comunidad.' },
-    { icon: 'shield', tone: 'mint', title: 'Cuenta segura', text: 'Acceso personal con verificación en dos pasos opcional.' },
+    {
+      icon: 'star',
+      tone: 'gold',
+      title: 'Calificaciones',
+      text: 'Resultados de cada período cuando el colegio los publica, con descarga en PDF.',
+    },
+    {
+      icon: 'book',
+      tone: 'purple',
+      title: 'Tareas y entregas',
+      text: 'Actividades de cada curso, entregas con archivos y retroalimentación del docente.',
+    },
+    {
+      icon: 'check',
+      tone: 'mint',
+      title: 'Asistencia',
+      text: 'Asistencia por curso y registro de entradas y salidas con el carnet escolar.',
+    },
+    {
+      icon: 'wallet',
+      tone: 'blue',
+      title: 'Estado de cuenta',
+      text: 'Cuotas, pagos y recibos para el encargado responsable.',
+    },
+    {
+      icon: 'mail',
+      tone: 'gold',
+      title: 'Avisos del colegio',
+      text: 'Comunicados para el grado, el curso o toda la comunidad.',
+    },
+    {
+      icon: 'shield',
+      tone: 'mint',
+      title: 'Cuenta segura',
+      text: 'Acceso personal con verificación en dos pasos opcional.',
+    },
   ];
-  readonly hasAbout = computed(() => !!this.school.public.about || this.school.public.highlights.length > 0);
+  readonly hasAbout = computed(
+    () => !!this.school.public.about || this.school.public.highlights.length > 0,
+  );
   readonly mapQuery = computed(() => this.school.contact.mapQuery || this.school.contact.address);
-  readonly shortAddress = computed(() => this.school.contact.address.split(',').slice(0, 2).join(','));
-  readonly phoneHref = computed(() => (this.school.contact.phone ? this.telOf(this.school.contact.phone) : null));
+  readonly shortAddress = computed(() =>
+    this.school.contact.address.split(',').slice(0, 2).join(','),
+  );
+  readonly phoneHref = computed(() =>
+    this.school.contact.phone ? this.telOf(this.school.contact.phone) : null,
+  );
   readonly socials = computed(() =>
     Object.entries({
       Facebook: this.school.contact.social.facebook,
@@ -327,12 +432,18 @@ export class Welcome {
     return 'tel:' + this.school.contact.dialPrefix + number.replace(/[^0-9]/g, '');
   }
   directionsUrl(): string {
-    return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(this.mapQuery());
+    return (
+      'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(this.mapQuery())
+    );
   }
   /** Loads the embedded map on request (built only from the configured address). */
   showMap(): void {
     this.mapUrl.set(
-      this.sanitizer.bypassSecurityTrustResourceUrl('https://www.google.com/maps?q=' + encodeURIComponent(this.mapQuery()) + '&z=16&output=embed'),
+      this.sanitizer.bypassSecurityTrustResourceUrl(
+        'https://www.google.com/maps?q=' +
+          encodeURIComponent(this.mapQuery()) +
+          '&z=16&output=embed',
+      ),
     );
   }
 }

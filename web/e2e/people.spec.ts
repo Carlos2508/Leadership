@@ -9,7 +9,9 @@ async function signIn(page: Page, username: string, password: string): Promise<v
   await page.getByLabel('Usuario', { exact: true }).fill(username);
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ }),
+  ).toBeVisible();
 }
 
 async function post(page: Page, path: string, data: object) {
@@ -58,17 +60,23 @@ test('register a family, grant explicit faculties and show linked students to th
 
   await expectAccessible(page);
   await page.screenshot({ path: testInfo.outputPath('home.png'), fullPage: true });
-  await page.getByRole('link', { name: 'Personas y familias' }).first().click();
-  await expect(page.getByRole('heading', { name: 'Personas y familias', level: 1 })).toBeVisible();
+  if (testInfo.project.name === 'mobile')
+    await page.getByRole('button', { name: 'Abrir menú' }).click();
+  await page
+    .getByRole('navigation', { name: 'Navegación principal' })
+    .getByRole('link', { name: 'Estudiantes', exact: true })
+    .click();
+  await expect(page.getByRole('heading', { name: 'Estudiantes', level: 1 })).toBeVisible();
   await expectAccessible(page);
   await page.screenshot({ path: testInfo.outputPath('people-directory.png'), fullPage: true });
 
   // Student
-  await page.getByRole('button', { name: 'Registrar persona' }).click();
+  await page.getByRole('button', { name: /Registrar (estudiante|padre o encargado)/ }).click();
   await page.getByLabel('Nombres', { exact: true }).fill('Valeria');
   await page.getByLabel('Apellidos', { exact: true }).fill(family);
+  await page.getByText('Contacto y otros datos (opcionales)', { exact: true }).click();
   await page.getByLabel(/^Teléfono/).fill('+502 5555-0101');
-  await page.getByRole('checkbox', { name: 'Estudiante' }).check();
+
   await page.getByLabel('Código de estudiante').fill(studentCode);
   await expectAccessible(page);
   await page.screenshot({ path: testInfo.outputPath('person-dialog.png'), fullPage: true });
@@ -77,11 +85,12 @@ test('register a family, grant explicit faculties and show linked students to th
   await expect(page.getByText('Estudiante · ' + studentCode)).toBeVisible();
 
   // Guardian
-  await page.getByRole('link', { name: 'Volver a personas y familias' }).click();
-  await page.getByRole('button', { name: 'Registrar persona' }).click();
+  await page.getByRole('link', { name: 'Volver al listado' }).click();
+  await page.goto('/workspace/parents');
+  await page.getByRole('button', { name: /Registrar (estudiante|padre o encargado)/ }).click();
   await page.getByLabel('Nombres', { exact: true }).fill('Andrea');
   await page.getByLabel('Apellidos', { exact: true }).fill(family);
-  await page.getByRole('checkbox', { name: 'Encargado o familiar' }).check();
+
   await page.getByRole('button', { name: 'Registrar', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Andrea ' + family, level: 1 })).toBeVisible();
   const guardianUrl = page.url();
@@ -134,7 +143,7 @@ test('register a family, grant explicit faculties and show linked students to th
   await expect(guardian.getByRole('heading', { name: 'Andrea ' + family })).toBeVisible();
   const linked = guardian.locator('.relationship-row').filter({ hasText: 'Valeria ' + family });
   await expect(linked).toContainText('Información académica');
-  await expect(guardian.getByRole('link', { name: 'Personas y familias' })).toHaveCount(0);
+  await expect(guardian.getByRole('link', { name: 'Estudiantes', exact: true })).toHaveCount(0);
   expect((await guardian.request.get('/api/v1/people')).status()).toBe(403);
   await expectAccessible(guardian);
   await guardian.screenshot({ path: testInfo.outputPath('guardian-home.png'), fullPage: true });

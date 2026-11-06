@@ -4,12 +4,23 @@ Decisiones visuales de la plataforma. Los **colores institucionales** (`--deep`,
 
 ## Identidad
 
-- **Tipografía:** *Fraunces* (serif editorial con eje óptico) para títulos, cifras del panel, nombre en el lector de portería y alertas; *Figtree* para el texto. Autoalojadas en `wwwroot/fonts` (CSP `font-src 'self'`), licencia SIL OFL (`wwwroot/fonts/OFL-*.txt`). Se usan también en las páginas de ingreso (`auth.css`).
-- **Firma visual:** cada etiqueta superior (eyebrow) lleva una barra corta en el color de acento; la opción activa del menú, una barra lateral de acento.
-- **Superficies:** fondo con dos halos muy suaves de los colores institucionales; barra lateral con textura reticular casi imperceptible; tarjetas con sombra en dos capas y borde teñido del color primario.
-- **Movimiento:** elevación leve al pasar sobre accesos y cifras, ícono que gira unos grados, botones que se hunden al presionar. Todo se desactiva con `prefers-reduced-motion`.
+- **Tipografía:** *Figtree* en toda la interfaz, títulos, cifras y acceso. Autoalojada en `wwwroot/fonts` (CSP `font-src 'self'`), licencia SIL OFL. Títulos sin serif, texto habitual de 14–15 px y cifras tabulares. Fraunces deja de utilizarse en la interfaz.
+- **Firma visual:** selección del menú con relleno primario y marca lateral de acento. Sin barras decorativas repetidas, texturas ni íconos que giran.
+- **Superficies:** fondo institucional claro, barra lateral sólida, encabezado blanco y paneles blancos con borde fino. Sombras para diálogos, alertas y el bloque de acceso público; los listados y módulos no flotan. Radios de 8–14 px.
+- **Movimiento:** solo transiciones breves de color y foco. Respetar `prefers-reduced-motion`.
 - **Personas:** avatares con dos iniciales en uno de cinco tonos derivados del nombre (estable para cada persona).
-- **Estados vacíos:** ícono dentro de una forma orgánica teñida, no un glifo suelto.
+- **Estados vacíos:** ícono pequeño en un cuadrado de esquinas suaves, explicación concreta y siguiente paso.
+
+## Navegación y página pública
+
+Referencia visual revisada: página pública, dashboard y listado de productos de Numix, más su código local (solo lectura). Se adopta su claridad de módulos y jerarquía; la marca y los colores siguen siendo los de esta instalación.
+
+- Menú con Estudiantes, Padres y Docentes como entradas independientes, además de Inscripciones, Cursos, Calificaciones y Ciclo escolar. Portería, Finanzas y Administración conservan sus permisos. «Mi cuenta y seguridad» es una utilidad separada.
+- Directorios `/workspace/students`, `/workspace/parents`, `/workspace/teachers`: mismo registro de personas, filtros de servidor `student`, `guardian`, `staff`, alta con perfil preseleccionado y pestaña «Todos» para encontrar fichas existentes. Docentes incluye al personal y lo indica en el título; no convierte todo el personal en docente asignado ni concede cursos por el nombre del cargo. Las asignaciones siguen en Cursos.
+- El registro de personal permite indicar cargo al crear la ficha, con validación, perfil y auditoría confirmados en el mismo `SaveChanges`. No crea cuentas ni vínculos ni matrícula.
+- Una marca en la cabecera pública y una en el menú del área privada. Sin escudo gigante en el hero ni segundo logo en el formulario de ingreso. Documentos y carnets conservan sus marcas propias configuradas.
+- Página pública con presentación institucional configurada, bloque de información del portal, servicios, contacto y mapa bajo solicitud. No inventar oferta educativa, horarios o estadísticas; los campos vacíos se ocultan. No mostrar instrucciones técnicas de configuración a las familias.
+- Diseño fluido hasta 1680 px de contenido, menú móvil con foco/Escape/fondo inerte, tablas adaptadas y formularios utilizables desde 320 px.
 
 Capa: `web/src/styles/_identity.scss` (se carga al final).
 

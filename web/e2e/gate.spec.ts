@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { randomUUID } from 'node:crypto';
+import { schoolToday } from './school-date';
 
 const reason = 'Verificación sintética de portería y registro de incidencias.';
 // Pairing QR codes are credentials; never keep automatic trace screenshots of them.
@@ -10,7 +11,9 @@ async function login(page: Page, username: string, password: string) {
   await page.getByLabel('Usuario', { exact: true }).fill(username);
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ }),
+  ).toBeVisible();
 }
 async function post(page: Page, path: string, data: object) {
   const token = (await (await page.request.get('/api/v1/antiforgery')).json()).token;
@@ -19,48 +22,112 @@ async function post(page: Page, path: string, data: object) {
   return response.status() === 204 ? null : response.json();
 }
 async function accessible(page: Page) {
-  expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  expect(
+    (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
+      .violations,
+  ).toEqual([]);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBeTruthy();
 }
-test('gate reader, cards, manual marks, report, devices and family access', async ({ page, browser }, testInfo) => {
+test('gate reader, cards, manual marks, report, devices and family access', async ({
+  page,
+  browser,
+}, testInfo) => {
   test.setTimeout(60_000);
-  await login(page, process.env['SCHOOLPLATFORM_E2E_USERNAME']!, process.env['SCHOOLPLATFORM_E2E_PASSWORD']!);
+  await login(
+    page,
+    process.env['SCHOOLPLATFORM_E2E_USERNAME']!,
+    process.env['SCHOOLPLATFORM_E2E_PASSWORD']!,
+  );
   const session = await (await page.request.get('/api/v1/session')).json();
   if (!session.permissions.includes('attendance.manage')) {
     const accounts = await (await page.request.get('/api/v1/access/accounts')).json();
     const owner = accounts.items.find((a: { id: string }) => a.id === session.userId);
-    await post(page, `/api/v1/access/accounts/${owner.id}/profile`, { version: owner.version, profile: 'administrator', reason });
-    await login(page, process.env['SCHOOLPLATFORM_E2E_USERNAME']!, process.env['SCHOOLPLATFORM_E2E_PASSWORD']!);
+    await post(page, `/api/v1/access/accounts/${owner.id}/profile`, {
+      version: owner.version,
+      profile: 'administrator',
+      reason,
+    });
+    await login(
+      page,
+      process.env['SCHOOLPLATFORM_E2E_USERNAME']!,
+      process.env['SCHOOLPLATFORM_E2E_PASSWORD']!,
+    );
   }
   const s = randomUUID().slice(0, 6).toUpperCase();
   const start = new Date(Date.now() - 86400000 * 2).toISOString().slice(0, 10);
   const end = new Date(Date.now() + 86400000 * 90).toISOString().slice(0, 10);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = await schoolToday(page);
   const years = await (await page.request.get('/api/v1/academic/years')).json();
-  const current = years.find((y: { startsOn: string; endsOn: string }) => y.startsOn <= today && y.endsOn >= today);
-  const year = current?.id ?? (await post(page, '/api/v1/academic/years', { label: 'Portería ' + s, startsOn: start, endsOn: end })).id;
+  const current = years.find(
+    (y: { startsOn: string; endsOn: string }) => y.startsOn <= today && y.endsOn >= today,
+  );
+  const year =
+    current?.id ??
+    (
+      await post(page, '/api/v1/academic/years', {
+        label: 'Portería ' + s,
+        startsOn: start,
+        endsOn: end,
+      })
+    ).id;
   const detail = await (await page.request.get('/api/v1/academic/years/' + year)).json();
-  if (detail.year.status === 'Draft') await post(page, `/api/v1/academic/years/${year}/status`, { version: detail.year.version, status: 'EnrollmentOpen', reason });
-  const grade = (await post(page, '/api/v1/academic/grades', { code: 'G' + s, name: 'Grado portería ' + s, stage: '', sequence: 90 })).id;
-  const student = (await post(page, '/api/v1/people', { givenNames: 'Sara', familyNames: 'Sintética ' + s, contacts: [], studentCode: 'G-' + s, isGuardian: false, confirmDuplicate: true })).id;
-  await post(page, '/api/v1/enrollments', { studentId: student, academicYearId: year, gradeLevelId: grade, sectionId: null, enrolledOn: detail.year.startsOn });
+  if (detail.year.status === 'Draft')
+    await post(page, `/api/v1/academic/years/${year}/status`, {
+      version: detail.year.version,
+      status: 'EnrollmentOpen',
+      reason,
+    });
+  const grade = (
+    await post(page, '/api/v1/academic/grades', {
+      code: 'G' + s,
+      name: 'Grado portería ' + s,
+      stage: '',
+      sequence: 90,
+    })
+  ).id;
+  const student = (
+    await post(page, '/api/v1/people', {
+      givenNames: 'Sara',
+      familyNames: 'Sintética ' + s,
+      contacts: [],
+      studentCode: 'G-' + s,
+      isGuardian: false,
+      confirmDuplicate: true,
+    })
+  ).id;
+  await post(page, '/api/v1/enrollments', {
+    studentId: student,
+    academicYearId: year,
+    gradeLevelId: grade,
+    sectionId: null,
+    enrolledOn: detail.year.startsOn,
+  });
 
   await page.goto('/workspace/people/' + student);
   await expect(page.getByRole('heading', { name: 'Carnet y fotografía' })).toBeVisible();
-  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/nJzZFgAAAABJRU5ErkJggg==', 'base64');
-  await page.getByLabel('Subir foto privada').setInputFiles({ name: 'synthetic.png', mimeType: 'image/png', buffer: png });
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/nJzZFgAAAABJRU5ErkJggg==',
+    'base64',
+  );
+  await page
+    .getByLabel('Subir foto privada')
+    .setInputFiles({ name: 'synthetic.png', mimeType: 'image/png', buffer: png });
   await expect(page.getByText('La foto privada se guardó.')).toBeVisible();
   const cardPdf = await page.request.get(`/api/v1/students/${student}/card.pdf?layout=card`);
   expect(cardPdf.headers()['content-type']).toContain('application/pdf');
   expect(cardPdf.status()).toBe(200);
-  const oldToken = (await (await page.request.get(`/api/v1/students/${student}/card`)).json()).card.token;
+  const oldToken = (await (await page.request.get(`/api/v1/students/${student}/card`)).json()).card
+    .token;
   await page.getByRole('button', { name: 'Reemplazar carnet', exact: true }).click();
   await page.getByLabel('Motivo del reemplazo').fill(reason);
   await accessible(page);
   await page.getByRole('button', { name: 'Confirmar reemplazo' }).click();
   await expect(page.getByText('Carnet reemplazado. Descarga la nueva impresión.')).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('person-card.png'), fullPage: true });
-  const token = (await (await page.request.get(`/api/v1/students/${student}/card`)).json()).card.token;
+  const token = (await (await page.request.get(`/api/v1/students/${student}/card`)).json()).card
+    .token;
 
   await page.goto('/workspace/gate');
   await page.getByLabel('Código del carnet').fill(oldToken);
@@ -101,7 +168,9 @@ test('gate reader, cards, manual marks, report, devices and family access', asyn
   await page.getByRole('button', { name: 'Crear emparejamiento' }).click();
   const qr = page.getByAltText('QR privado de emparejamiento');
   await expect(qr).toBeVisible();
-  await expect.poll(() => qr.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  await expect
+    .poll(() => qr.evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBeGreaterThan(0);
   await page.getByRole('button', { name: 'Terminé de emparejar' }).click();
   await expect(qr).toHaveCount(0);
   await page.getByRole('button', { name: 'Revocar Lector ' + s, exact: true }).click();
@@ -111,12 +180,40 @@ test('gate reader, cards, manual marks, report, devices and family access', asyn
   await accessible(page);
   await page.screenshot({ path: testInfo.outputPath('gate-devices.png'), fullPage: true });
 
-  const invite = await post(page, '/api/v1/access/invitations', { username: 'gate-fam-' + s.toLowerCase(), profile: 'basic', reason });
-  const guardian = (await post(page, '/api/v1/people', { givenNames: 'Alma', familyNames: 'Familia ' + s, contacts: [], isGuardian: true, confirmDuplicate: true })).id;
+  const invite = await post(page, '/api/v1/access/invitations', {
+    username: 'gate-fam-' + s.toLowerCase(),
+    profile: 'basic',
+    reason,
+  });
+  const guardian = (
+    await post(page, '/api/v1/people', {
+      givenNames: 'Alma',
+      familyNames: 'Familia ' + s,
+      contacts: [],
+      isGuardian: true,
+      confirmDuplicate: true,
+    })
+  ).id;
   const person = await (await page.request.get('/api/v1/people/' + guardian)).json();
-  await post(page, `/api/v1/people/${guardian}/account`, { version: person.version, userId: invite.userId, reason });
-  const link = (await post(page, '/api/v1/relationships', { studentId: student, guardianId: guardian, kind: 'Mother', startsOn: null, faculties: ['AcademicRecords'], reason })).id;
-  const context = await browser.newContext({ baseURL: new URL(page.url()).origin, viewport: page.viewportSize() });
+  await post(page, `/api/v1/people/${guardian}/account`, {
+    version: person.version,
+    userId: invite.userId,
+    reason,
+  });
+  const link = (
+    await post(page, '/api/v1/relationships', {
+      studentId: student,
+      guardianId: guardian,
+      kind: 'Mother',
+      startsOn: null,
+      faculties: ['AcademicRecords'],
+      reason,
+    })
+  ).id;
+  const context = await browser.newContext({
+    baseURL: new URL(page.url()).origin,
+    viewport: page.viewportSize(),
+  });
   const family = await context.newPage();
   await family.goto('/Identity/Account/Activate');
   await family.getByLabel('Código de acceso', { exact: true }).fill(invite.code);
@@ -132,11 +229,19 @@ test('gate reader, cards, manual marks, report, devices and family access', asyn
   expect((await family.request.get('/api/v1/gate/daily')).status()).toBe(403);
   const fresh = await (await page.request.get('/api/v1/people/' + student)).json();
   const relation = fresh.guardians.find((r: { id: string }) => r.id === link);
-  await post(page, '/api/v1/relationships/' + link, { version: relation.version, kind: 'Mother', faculties: [], reason });
+  await post(page, '/api/v1/relationships/' + link, {
+    version: relation.version,
+    kind: 'Mother',
+    faculties: [],
+    reason,
+  });
   expect((await family.request.get(`/api/v1/me/students/${student}/gate`)).status()).toBe(404);
   await context.close();
 
   await page.goto('/workspace/enrollment?year=' + year);
   await page.getByRole('combobox', { name: 'Grado', exact: true }).selectOption(grade);
-  await expect(page.getByRole('link', { name: 'Carnets en carta', exact: true })).toHaveAttribute('href', `/api/v1/years/${year}/cards.pdf?gradeId=${grade}&layout=sheet`);
+  await expect(page.getByRole('link', { name: 'Carnets en carta', exact: true })).toHaveAttribute(
+    'href',
+    `/api/v1/years/${year}/cards.pdf?gradeId=${grade}&layout=sheet`,
+  );
 });

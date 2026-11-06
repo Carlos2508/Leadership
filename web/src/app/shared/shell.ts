@@ -1,5 +1,5 @@
 import { Component, ElementRef, inject, input, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { InstitutionService } from '../core/institution';
 import { Icon } from './icon';
 import { SessionService } from '../core/session';
@@ -24,20 +24,20 @@ import { SessionService } from '../core/session';
           <app-icon name="close" />
         </button>
         <div class="nav-label">{{ preview() ? 'ESPACIO DE ADMINISTRACIÓN' : 'MI ESPACIO' }}</div>
-        <nav aria-label="Navegación principal" (click)="closeMenu(false)">
+        <nav aria-label="Navegación principal" (click)="onNavigationClick($event)">
           <a
             [routerLink]="preview() ? '/preview' : '/workspace'"
             routerLinkActive="active"
             [routerLinkActiveOptions]="{ exact: true }"
             ariaCurrentWhenActive="page"
-            ><app-icon name="home" />Vista general</a
+            ><app-icon name="home" />Inicio</a
           >
           @if (!preview()) {
-            <a routerLink="/workspace/announcements" routerLinkActive="active" ariaCurrentWhenActive="page"
+            <a
+              routerLink="/workspace/announcements"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
               ><app-icon name="mail" />Avisos</a
-            >
-            <a routerLink="/workspace/security" routerLinkActive="active" ariaCurrentWhenActive="page"
-              ><app-icon name="shield" />Mi seguridad</a
             >
           }
           @if (preview()) {
@@ -46,51 +46,129 @@ import { SessionService } from '../core/session';
             >
           }
           @if (!preview() && (session.can('people.read') || session.can('academic.read'))) {
-            <span class="nav-group" aria-hidden="true">Comunidad y académico</span>
+            <span class="nav-group" aria-hidden="true">COLEGIO</span>
           }
           @if (!preview() && session.can('people.read')) {
-            <a routerLink="/workspace/people" routerLinkActive="active" ariaCurrentWhenActive="page"
-              ><app-icon name="people" />Personas y familias</a
+            <a
+              routerLink="/workspace/students"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+              ><app-icon name="people" />Estudiantes</a
+            >
+            <a
+              routerLink="/workspace/parents"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+              ><app-icon name="users" />Padres</a
+            >
+            <a
+              routerLink="/workspace/teachers"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+              ><app-icon name="school" />Docentes</a
             >
           }
           @if (!preview() && session.can('academic.read')) {
-            <a routerLink="/workspace/enrollment" routerLinkActive="active" ariaCurrentWhenActive="page"
+            <a
+              routerLink="/workspace/enrollment"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
               ><app-icon name="school" />Inscripciones</a
             >
-            <a routerLink="/workspace/courses" routerLinkActive="active" ariaCurrentWhenActive="page"
-              ><app-icon name="book" />Cursos y docentes</a
+            <a
+              routerLink="/workspace/courses"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+              ><app-icon name="book" />Cursos</a
             >
             <a routerLink="/workspace/grades" routerLinkActive="active" ariaCurrentWhenActive="page"
-              ><app-icon name="star" />Publicación de notas</a
+              ><app-icon name="star" />Calificaciones</a
             >
-            <a routerLink="/workspace/academic" routerLinkActive="active" ariaCurrentWhenActive="page"
-              ><app-icon name="calendar" />Ciclos y grados</a
+            <a
+              routerLink="/workspace/academic"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+              ><app-icon name="calendar" />Ciclo escolar</a
             >
           }
-          @if (!preview() && (session.can('attendance.gate') || session.can('attendance.read') || session.can('attendance.manage'))) {
-            <span class="nav-group" aria-hidden="true">Portería</span>
-            @if (session.can('attendance.gate')) { <a routerLink="/workspace/gate" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="scan" />Lector de entrada</a> }
-            @if (session.can('attendance.read')) { <a routerLink="/workspace/gate/report" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="clock" />Entradas y salidas</a> }
-            @if (session.can('attendance.manage')) { <a routerLink="/workspace/gate/devices" routerLinkActive="active" ariaCurrentWhenActive="page"><app-icon name="phone" />Teléfonos lectores</a> }
+          @if (
+            !preview() &&
+            (session.can('attendance.gate') ||
+              session.can('attendance.read') ||
+              session.can('attendance.manage'))
+          ) {
+            <details class="nav-section" [open]="router.url.startsWith('/workspace/gate')">
+              <summary>
+                <app-icon name="scan" />Portería<span class="nav-chevron" aria-hidden="true"
+                  >⌄</span
+                >
+              </summary>
+              @if (session.can('attendance.gate')) {
+                <a
+                  routerLink="/workspace/gate"
+                  [routerLinkActiveOptions]="{ exact: true }"
+                  routerLinkActive="active"
+                  ariaCurrentWhenActive="page"
+                  ><app-icon name="scan" />Lector de entrada</a
+                >
+              }
+              @if (session.can('attendance.read')) {
+                <a
+                  routerLink="/workspace/gate/report"
+                  routerLinkActive="active"
+                  ariaCurrentWhenActive="page"
+                  ><app-icon name="clock" />Entradas y salidas</a
+                >
+              }
+              @if (session.can('attendance.manage')) {
+                <a
+                  routerLink="/workspace/gate/devices"
+                  routerLinkActive="active"
+                  ariaCurrentWhenActive="page"
+                  ><app-icon name="phone" />Teléfonos lectores</a
+                >
+              }
+            </details>
           }
           @if (!preview() && session.can('finance.read')) {
             <span class="nav-group" aria-hidden="true">Finanzas</span>
-            <a routerLink="/workspace/finance" routerLinkActive="active" ariaCurrentWhenActive="page"
-              ><app-icon name="wallet" />Caja y finanzas</a
+            <a
+              routerLink="/workspace/finance"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+              ><app-icon name="wallet" />Caja y cobros</a
             >
           }
           @if (!preview() && (session.can('accounts.manage') || session.can('audit.read'))) {
-            <span class="nav-group" aria-hidden="true">Administración</span>
-          }
-          @if (!preview() && session.can('accounts.manage')) {
-            <a routerLink="/workspace/access" routerLinkActive="active" ariaCurrentWhenActive="page"
-              ><app-icon name="key" />Cuentas y accesos</a
+            <details
+              class="nav-section"
+              [open]="
+                router.url.startsWith('/workspace/access') ||
+                router.url.startsWith('/workspace/audit')
+              "
             >
-          }
-          @if (!preview() && session.can('audit.read')) {
-            <a routerLink="/workspace/audit" routerLinkActive="active" ariaCurrentWhenActive="page"
-              ><app-icon name="chart" />Auditoría</a
-            >
+              <summary>
+                <app-icon name="key" />Administración<span class="nav-chevron" aria-hidden="true"
+                  >⌄</span
+                >
+              </summary>
+              @if (session.can('accounts.manage')) {
+                <a
+                  routerLink="/workspace/access"
+                  routerLinkActive="active"
+                  ariaCurrentWhenActive="page"
+                  ><app-icon name="key" />Cuentas y accesos</a
+                >
+              }
+              @if (session.can('audit.read')) {
+                <a
+                  routerLink="/workspace/audit"
+                  routerLinkActive="active"
+                  ariaCurrentWhenActive="page"
+                  ><app-icon name="chart" />Auditoría</a
+                >
+              }
+            </details>
           }
         </nav>
         @if (preview()) {
@@ -104,13 +182,11 @@ import { SessionService } from '../core/session';
             <button type="submit"><app-icon name="logout" />Cerrar sesión</button>
           </form>
         }
-        <div class="sidebar-bottom">
-          <span class="icon-tile gold"><app-icon name="star" /></span>
-          <div>
-            <strong>{{ school.tagline }}</strong
-            ><small>{{ school.welcomeMessage }}</small>
-          </div>
-        </div>
+        @if (!preview()) {
+          <a class="sidebar-account" routerLink="/workspace/security"
+            ><app-icon name="shield" />Mi cuenta y seguridad</a
+          >
+        }
       </aside>
       @if (menuOpen()) {
         <button
@@ -132,9 +208,12 @@ import { SessionService } from '../core/session';
               aria-label="Abrir menú"
             >
               <app-icon name="menu" /></button
-            ><span>Inicio <span class="crumb-divider">/</span> {{ title() }}</span>
+            ><span class="breadcrumb-text">{{ title() }}</span>
           </div>
           <div class="topbar-actions">
+            <span class="topbar-school">{{
+              preview() ? 'Demostración' : session.displayName() || session.username()
+            }}</span>
             @if (preview()) {
               <span class="pill gold">Ciclo de muestra 2026</span>
             }
@@ -145,7 +224,11 @@ import { SessionService } from '../core/session';
                 class="avatar avatar-link"
                 routerLink="/workspace/security"
                 [attr.aria-label]="'Mi seguridad: ' + (session.displayName() || session.username())"
-                [attr.title]="session.displayName() ? session.displayName() + ' · ' + session.username() : session.username()"
+                [attr.title]="
+                  session.displayName()
+                    ? session.displayName() + ' · ' + session.username()
+                    : session.username()
+                "
                 >{{ session.initials() || school.shortName.slice(0, 1) }}</a
               >
             }
@@ -162,19 +245,23 @@ import { SessionService } from '../core/session';
         <main id="content" class="page-content"><ng-content /></main>
         <footer class="workspace-footer">
           {{ school.displayName }}
-          <span>{{ preview() ? 'Vista de demostración' : school.welcomeMessage }}</span>
+          <span>{{ preview() ? 'Vista de demostración' : 'Plataforma escolar' }}</span>
         </footer>
       </div>
     </div>
   `,
 })
 export class Shell {
+  readonly router = inject(Router);
   readonly session = inject(SessionService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly school = inject(InstitutionService).current;
   readonly preview = input(false);
   readonly title = input('Vista general');
   readonly menuOpen = signal(false);
+  onNavigationClick(event: MouseEvent): void {
+    if ((event.target as Element).closest('a')) this.closeMenu(false);
+  }
   openMenu(): void {
     this.menuOpen.set(true);
     requestAnimationFrame(() =>
@@ -197,7 +284,9 @@ export class Shell {
     }
     if (event.key !== 'Tab') return;
     const controls = [
-      ...this.host.nativeElement.querySelectorAll<HTMLElement>('aside a, aside button'),
+      ...this.host.nativeElement.querySelectorAll<HTMLElement>(
+        'aside a, aside button, aside summary',
+      ),
     ].filter((element) => element.getClientRects().length > 0);
     const first = controls[0];
     const last = controls[controls.length - 1];

@@ -1,5 +1,19 @@
 # Handoff para la siguiente sesión
 
+## Rediseño web — 5 de noviembre de 2026, leer primero
+
+Por solicitud posterior del propietario, este rediseño se consolida en Git antes de sustituir los accesos duplicados del dashboard por información operativa. Las menciones a «sin commit» siguientes corresponden al cierre previo.
+
+- El propietario rechazó la estética anterior y pidió simplicidad comparable con Numix. Se revisaron el sitio público, dashboard, listado de productos y código de Numix en modo lectura. El usuario omitió personalmente su aviso de 2FA. No se cambió la seguridad de Numix ni se guardaron sus credenciales en el repositorio.
+- `DESIGN.md` y ADR-010 reemplazan la dirección visual anterior: Figtree en toda la interfaz, menú sólido, contenido claro, paneles blancos y decoración mínima. `_identity.scss` debe seguir al final de `styles.scss`. Alertas siguen exclusivamente en `core/alerts.ts`.
+- Rutas `/workspace/students`, `/workspace/parents`, `/workspace/teachers`: mismo componente `PeopleDirectory` con datos de ruta y filtros `student/guardian/staff`. El directorio general `/workspace/people` queda en la pestaña Todos. Los filtros se limpian conservando el módulo. La ficha vuelve al listado de su perfil. Los permisos no se amplían.
+- `CreatePersonRequest.StaffPosition` es opcional; al indicarlo se valida y se crea personal con auditoría en el mismo `SaveChanges`. No requiere migración. No inferir asignación docente del texto del cargo: el módulo muestra Docentes y personal y las asignaciones permanecen en Cursos.
+- Formulario: nombres/apellidos y código/cargo primero; contacto y perfiles adicionales desplegables. Página pública e ingreso sin logos repetidos. Portería y Administración son `details` nativos; el control de foco del menú incluye `summary` y solo cierra al pulsar enlaces.
+- Pruebas: **81 .NET/SQL aprobadas, 0 omitidas; build Angular correcto; 33 E2E aprobados y 1 omisión prevista; 14 E2E adicionales aprobados** tras el último ajuste del formulario y tamaños públicos. Axe en recorridos, capturas de escritorio/móvil revisadas; directorios/formularios desde 320 hasta 1920 px. `school-date.ts` corrige la fecha de pagos/reportes E2E cuando UTC ya cambió de día.
+- Evidencia preservada fuera de la carpeta que vacía Playwright: `.local/qa/evidencia/redesign-2026-11-05/`. Sin datos reales ni cambios al PHP o proyecto Numix. No hay migración nueva ni commit del rediseño. El commit/push de la sección siguiente corresponde al estado anterior.
+- Host del rediseño iniciado y verificado con `dotnet run --no-build` en `http://localhost:5082`, lanzador 9816, logs en `.local/qa/redesign-5082*.log`. El intento de usar 5080 terminó porque otro host del proyecto (14216) ya lo ocupaba; se conservó ese proceso. Comprobar puerto antes de iniciar otro. El host anterior 18356 bloqueaba la compilación y se detuvo tras verificar su ruta. No reconstruir el host con Playwright abierto. El artefacto `.local/publish` sigue siendo histórico. Se revisó el ingreso local nuevamente tras separar el enlace de regreso y la etiqueta superior.
+- Flutter y los pendientes de licencia, políticas, hardware y producción no se consideran terminados por este rediseño.
+
 ## Consolidación en Git — 5 de noviembre de 2026
 
 El propietario autorizó commit y push de todo lo pendiente a `origin/main`. Este commit consolida los incrementos y las correcciones QA descritos abajo; las menciones históricas a trabajo sin commit corresponden a sesiones anteriores. Se verificó `git diff --check`, sin repetir las suites previamente documentadas. Archivos locales y secretos ignorados siguen fuera de Git. Esta solicitud no incluye despliegue ni modifica los pendientes físicos, de licencia, políticas u operación.

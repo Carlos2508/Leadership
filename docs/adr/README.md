@@ -1,5 +1,7 @@
 # Registro de decisiones
 
+ADR-010 registra el rediseño web y la navegación por Estudiantes, Padres y Docentes, conservando el modelo de personas y los permisos existentes. Complementa `docs/DESIGN.md`.
+
 ADR-001 recoge monolito, Angular, SQL y proyecto/base independientes por colegio. ADR-002 recoge identidad inicial y configuración única de marca. La aclaración directa más reciente del usuario prevalece sobre propuestas anteriores de crecimiento/membresías del documento fuente.
 
 ADR-008 registra el prototipo Flutter en `mobile/` con datos ficticios: valida experiencia y diseño, no integra la API ni sustituye la fase móvil.

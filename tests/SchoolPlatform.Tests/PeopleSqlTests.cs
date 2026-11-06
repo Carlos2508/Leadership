@@ -109,6 +109,25 @@ public sealed class PeopleSqlTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Staff_registration_is_atomic_validated_and_does_not_grant_family_or_student_profiles()
+    {
+        var created = await People(x => x.CreateAsync(owner,
+            new("Docente", "Alta sintética", null, null, [], null, false, false, "Docente de primaria"), default));
+        var detail = await Detail(created.Id);
+        Assert.Equal("Docente de primaria", detail.StaffPosition);
+        Assert.Null(detail.StudentCode);
+        Assert.False(detail.IsGuardian);
+        Assert.Null(detail.Account);
+        Assert.Empty(detail.Students);
+        Assert.Contains((await People(x => x.ListAsync("Alta sintética", "staff", "Active", 1, default))).Items, x => x.Id == created.Id);
+        Assert.DoesNotContain((await People(x => x.ListAsync("Alta sintética", "student", "Active", 1, default))).Items, x => x.Id == created.Id);
+        await Assert.ThrowsAsync<OperationException>(() => People(x => x.CreateAsync(owner,
+            new("Alta inválida", "Personal sintético", null, null, [], null, false, false, " "), default)));
+        Assert.Equal(0, await School(db => db.Persons.CountAsync(x => x.GivenNames == "Alta inválida")));
+        Assert.True(await Identity(db => db.AuditEvents.AnyAsync(x => x.TargetId == created.Id && x.Action == "StaffProfileAdded")));
+    }
+
+    [Fact]
     public async Task Person_roles_relationships_and_audit_are_stored_separately_from_accounts()
     {
         var student = await Create("Ana Lucía", "Pérez Gómez", code: "est-001");

@@ -3,7 +3,7 @@ namespace SchoolPlatform.Host.People;
 public sealed record ContactInput(string Kind, string Value, string? Label, bool IsPrimary);
 
 public sealed record CreatePersonRequest(string GivenNames, string FamilyNames, string? PreferredName, DateOnly? BirthDate,
-    ContactInput[]? Contacts, string? StudentCode, bool IsGuardian, bool ConfirmDuplicate);
+    ContactInput[]? Contacts, string? StudentCode, bool IsGuardian, bool ConfirmDuplicate, string? StaffPosition = null);
 
 public sealed record UpdatePersonRequest(string Version, string GivenNames, string FamilyNames, string? PreferredName,
     DateOnly? BirthDate, ContactInput[]? Contacts);

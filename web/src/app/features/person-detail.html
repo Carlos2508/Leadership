@@ -1,6 +1,16 @@
 <app-shell [title]="person()?.displayName ?? 'Ficha de persona'">
-  <a class="back-link" routerLink="/workspace/people"
-    ><app-icon name="arrow" />Volver a personas y familias</a
+  <a
+    class="back-link"
+    [routerLink]="
+      person()?.studentCode
+        ? '/workspace/students'
+        : person()?.isGuardian
+          ? '/workspace/parents'
+          : person()?.staffPosition
+            ? '/workspace/teachers'
+            : '/workspace/people'
+    "
+    ><app-icon name="arrow" />Volver al listado</a
   >
   @if (loading() && !person()) {
     <p class="loading-state card" role="status">Cargando ficha…</p>
@@ -18,7 +28,12 @@
   } @else if (person(); as p) {
     <div class="page-heading person-heading">
       <div class="person-title">
-        <span class="avatar large" aria-hidden="true" [attr.data-tone]="(p.givenNames.charCodeAt(0) + p.familyNames.length) % 5">{{ p.givenNames.slice(0, 1) }}{{ p.familyNames.slice(0, 1) }}</span>
+        <span
+          class="avatar large"
+          aria-hidden="true"
+          [attr.data-tone]="(p.givenNames.charCodeAt(0) + p.familyNames.length) % 5"
+          >{{ p.givenNames.slice(0, 1) }}{{ p.familyNames.slice(0, 1) }}</span
+        >
         <div>
           <span class="eyebrow">FICHA PERSONAL</span>
           <h1>{{ p.displayName }}</h1>
@@ -105,8 +120,8 @@
               }
             </div>
             <p class="muted-copy">
-              El parentesco describe la relación. Solo las facultades marcadas permiten consultar
-              o actuar en nombre del estudiante.
+              El parentesco describe la relación. Solo las facultades marcadas permiten consultar o
+              actuar en nombre del estudiante.
             </p>
             @for (item of activeRelationships(p.guardians); track item.id) {
               <ng-container
@@ -148,7 +163,10 @@
                   >
                 </div>
                 <span class="muted-copy">Ingreso: {{ date(item.enrolledOn) }}</span>
-                <ol class="placement-timeline" [attr.aria-label]="'Ubicaciones en el ciclo ' + item.year">
+                <ol
+                  class="placement-timeline"
+                  [attr.aria-label]="'Ubicaciones en el ciclo ' + item.year"
+                >
                   @for (placement of item.placements; track placement.id) {
                     <li [class.closed]="placement.endsOn">
                       <strong>{{ placement.grade }}</strong>
@@ -299,8 +317,8 @@
           · desde {{ date(item.startsOn) }}
           @if (item.endedAt) {
             · finalizó {{ api.date(item.endedAt) }}
-          }</span
-        >
+          }
+        </span>
         <div class="faculty-chips" [attr.aria-label]="'Facultades de ' + item.displayName">
           @for (faculty of item.faculties; track faculty) {
             <span class="chip">{{ facultyLabels[faculty] }}</span>
@@ -409,11 +427,7 @@
                     [(ngModel)]="contact.isPrimary"
                   /><span>Principal</span></label
                 >
-                <button
-                  type="button"
-                  class="text-button danger-text"
-                  (click)="removeContact(i)"
-                >
+                <button type="button" class="text-button danger-text" (click)="removeContact(i)">
                   Quitar <span class="sr-only">{{ contactLabels[contact.kind] }}</span>
                 </button>
               </div>
@@ -434,8 +448,17 @@
         @case ('staff-role') {
           <label class="form-field"
             ><span>Cargo o puesto</span
-            ><input name="position" [(ngModel)]="position" required maxlength="80" placeholder="Docente" autocomplete="off"
-            /><small>Los cursos que puede ver dependen de sus asignaciones docentes; los permisos, de su cuenta.</small></label
+            ><input
+              name="position"
+              [(ngModel)]="position"
+              required
+              maxlength="80"
+              placeholder="Docente"
+              autocomplete="off"
+            /><small
+              >Los cursos que puede ver dependen de sus asignaciones docentes; los permisos, de su
+              cuenta.</small
+            ></label
           >
         }
         @case ('student-role') {
@@ -454,9 +477,7 @@
         @case ('link') {
           <div class="candidate-search">
             <label class="form-field"
-              ><span>{{
-                linkSide === 'guardian' ? 'Buscar encargado' : 'Buscar estudiante'
-              }}</span
+              ><span>{{ linkSide === 'guardian' ? 'Buscar encargado' : 'Buscar estudiante' }}</span
               ><input
                 name="candidateSearch"
                 type="search"
@@ -489,16 +510,16 @@
                     >{{ candidate.displayName }}
                     @if (candidate.studentCode) {
                       <small>· {{ candidate.studentCode }}</small>
-                    }</span
-                  ></label
+                    }
+                  </span></label
                 >
               }
             </fieldset>
           } @else {
             <p class="muted-copy">
               Solo aparecen personas activas con perfil de
-              {{ linkSide === 'guardian' ? 'encargado' : 'estudiante' }}. Si no existe,
-              regístrala primero en el directorio.
+              {{ linkSide === 'guardian' ? 'encargado' : 'estudiante' }}. Si no existe, regístrala
+              primero en el directorio.
             </p>
           }
           <div class="form-grid">
@@ -532,8 +553,8 @@
         @case ('end') {
           <p class="action-explanation">
             Se retirarán todas las facultades de este vínculo con
-            <strong>{{ selectedRelationship()?.displayName }}</strong>. El historial se conserva y
-            puede registrarse un vínculo nuevo más adelante.
+            <strong>{{ selectedRelationship()?.displayName }}</strong
+            >. El historial se conserva y puede registrarse un vínculo nuevo más adelante.
           </p>
         }
         @case ('account') {

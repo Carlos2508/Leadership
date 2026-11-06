@@ -1,6 +1,6 @@
 import { Component, ElementRef, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi, PageResult } from '../core/access-api';
 import { SessionService } from '../core/session';
@@ -18,6 +18,39 @@ export class PeopleDirectory {
   readonly session = inject(SessionService);
   readonly school = inject(InstitutionService).current;
   private readonly router = inject(Router);
+  readonly directory = inject(ActivatedRoute).snapshot.data['directory'] as string | undefined;
+  readonly title =
+    this.directory === 'student'
+      ? this.school.terms.studentPlural
+      : this.directory === 'guardian'
+        ? 'Padres y encargados'
+        : this.directory === 'staff'
+          ? 'Docentes y personal'
+          : 'Directorio';
+  readonly description =
+    this.directory === 'student'
+      ? 'Ficha, familia, inscripción y carnet de cada estudiante.'
+      : this.directory === 'guardian'
+        ? 'Contactos, estudiantes a cargo y permisos de consulta.'
+        : this.directory === 'staff'
+          ? 'Expedientes del equipo y asignaciones docentes desde Cursos.'
+          : 'Busca una ficha existente antes de registrar a alguien.';
+  readonly createLabel =
+    this.directory === 'student'
+      ? 'Registrar estudiante'
+      : this.directory === 'guardian'
+        ? 'Registrar padre o encargado'
+        : this.directory === 'staff'
+          ? 'Registrar docente o personal'
+          : 'Registrar persona';
+  readonly resultLabel =
+    this.directory === 'student'
+      ? this.school.terms.studentPlural.toLowerCase()
+      : this.directory === 'guardian'
+        ? 'padres y encargados'
+        : this.directory === 'staff'
+          ? 'integrantes del equipo'
+          : 'personas';
   @ViewChild('personDialog') private dialog!: ElementRef<HTMLDialogElement>;
   readonly data = signal<PageResult<PersonSummary> | null>(null);
   readonly loading = signal(true);
@@ -26,7 +59,7 @@ export class PeopleDirectory {
   readonly dialogError = signal('');
   readonly duplicateWarning = signal(false);
   search = '';
-  role = 'all';
+  role = this.directory ?? 'all';
   status = 'Active';
   form = this.emptyForm();
 
@@ -43,9 +76,11 @@ export class PeopleDirectory {
       phone: '',
       email: '',
       address: '',
-      isStudent: false,
+      isStudent: this.directory === 'student',
       studentCode: '',
-      isGuardian: false,
+      isGuardian: this.directory === 'guardian',
+      isStaff: this.directory === 'staff',
+      staffPosition: '',
     };
   }
 
@@ -69,7 +104,7 @@ export class PeopleDirectory {
 
   clearFilters(): void {
     this.search = '';
-    this.role = 'all';
+    this.role = this.directory ?? 'all';
     this.status = 'Active';
     void this.load();
   }
@@ -110,6 +145,7 @@ export class PeopleDirectory {
         contacts,
         studentCode: f.isStudent ? f.studentCode : null,
         isGuardian: f.isGuardian,
+        staffPosition: f.isStaff ? f.staffPosition : null,
         confirmDuplicate,
       });
       this.busy.set(false);

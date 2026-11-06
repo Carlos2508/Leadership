@@ -4,7 +4,6 @@
 @{ ViewData["Title"] = "Verificación en dos pasos"; }
 <div class="login-content">
   <a class="back" href="/Identity/Account/Login">← Volver al ingreso</a>
-  <img class="login-logo" src="@Institution.Value.Assets.LoginLogo" alt="@Institution.Value.DisplayName" />
   <div class="eyebrow">VERIFICACIÓN EN DOS PASOS</div>
   <h2>@(Model.UseRecovery ? "Usa un código de respaldo." : "Confirma que eres tú.")</h2>
   <p class="muted">@(Model.UseRecovery

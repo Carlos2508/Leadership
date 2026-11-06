@@ -23,6 +23,11 @@ export class SessionService {
   readonly userId = signal('');
   readonly studentId = signal<string | null>(null);
   readonly schoolProfile = signal('');
+  /** Courses the account teaches (menu shortcuts); empty for non-teachers. The server authorizes each course page. */
+  readonly myCourses = signal<{ id: string; subject: string; grade: string; section: string | null }[]>([]);
+  /** Students linked to the account as guardian (menu shortcuts); access per faculty is decided by the server. */
+  readonly myStudents = signal<{ id: string; displayName: string }[]>([]);
+  private contextFor = '';
   readonly twoFactorEnabled = signal(false);
   /** Permissions the account holds but cannot use until two-step verification is enabled. */
   readonly mfaPending = signal<string[]>([]);
@@ -77,6 +82,7 @@ export class SessionService {
       this.permissions.set(session.permissions);
       this.state.set('ready');
       this.loadedAt = Date.now();
+      if (this.contextFor !== session.userId) void this.loadContext(session.userId);
     } catch (error) {
       this.permissions.set([]);
       this.loadedAt = 0;
@@ -103,6 +109,20 @@ export class SessionService {
       }
     }
     return true;
+  }
+  /** Teaching courses and guardian students for the navigation, loaded once per signed-in account. */
+  private async loadContext(userId: string): Promise<void> {
+    this.contextFor = userId;
+    try {
+      const [me, courses] = await Promise.all([
+        firstValueFrom(this.http.get<{ students?: { id: string; displayName: string }[] }>('/api/v1/me')),
+        firstValueFrom(this.http.get<{ id: string; subject: string; grade: string; section: string | null }[]>('/api/v1/me/courses')),
+      ]);
+      this.myStudents.set((me.students ?? []).map((x) => ({ id: x.id, displayName: x.displayName })));
+      this.myCourses.set(courses ?? []);
+    } catch {
+      this.contextFor = '';
+    }
   }
 }
 export const sessionGuard: CanActivateFn = (_, state) => inject(SessionService).load(state.url);

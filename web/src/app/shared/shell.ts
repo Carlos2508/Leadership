@@ -68,6 +68,24 @@ import { SessionService } from '../core/session';
               ><app-icon name="calendar" />Asistencia</a
             >
           }
+          @if (!preview() && !session.studentId() && session.myStudents().length) {
+            <span class="nav-group" aria-hidden="true">MIS ESTUDIANTES</span>
+            @for (student of session.myStudents(); track student.id) {
+              <a [routerLink]="['/workspace/my/students', student.id]" routerLinkActive="active" ariaCurrentWhenActive="page"
+                ><app-icon name="people" /><span class="nav-text">{{ student.displayName }}</span></a
+              >
+            }
+          }
+          @if (!preview() && session.myCourses().length) {
+            <span class="nav-group" aria-hidden="true">DOCENCIA</span>
+            @for (course of session.myCourses().slice(0, 6); track course.id) {
+              <a [routerLink]="['/workspace/courses', course.id]" routerLinkActive="active" ariaCurrentWhenActive="page"
+                ><app-icon name="book" /><span class="nav-text"
+                  >{{ course.subject }}<small>{{ course.grade }}{{ course.section ? ' · ' + course.section : '' }}</small></span
+                ></a
+              >
+            }
+          }
           @if (!preview()) {
             <a
               routerLink="/workspace/announcements"

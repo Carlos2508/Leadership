@@ -15,3 +15,5 @@ button{display:flex;justify-content:space-between;align-items:center;cursor:poin
 @media(max-width:1000px){.brand-panel{padding:35px}.form-panel{padding:40px 32px}}
 @media(max-width:800px){.auth-shell{width:100%;margin:0;min-height:100dvh;grid-template-columns:minmax(0,1fr);border:0;border-radius:0}.brand-panel{padding:20px 24px}.brand{font-size:16px;max-width:200px}.brand img{width:48px;height:48px}.brand small{font-size:10px}.brand-message,.brand-footer,.auth-campus,.brand-panel::after{display:none}.form-panel{padding:36px 24px 48px;align-items:flex-start}.login-content h2{font-size:30px}.back{margin-bottom:28px}}
 @media(prefers-reduced-motion:reduce){input{transition:none}}
+/* Full-screen sign-in pages: no framed card around the two panels. */
+.auth-shell{width:100%;max-width:none;margin:0;min-height:100dvh;border:0;border-radius:0}

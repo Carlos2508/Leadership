@@ -262,7 +262,7 @@
         <div class="form-grid">
           <label class="form-field"
             ><span>Grado</span
-            ><select name="formGrade" [(ngModel)]="form.gradeId" (ngModelChange)="form.sectionId = ''" required>
+            ><select name="formGrade" [(ngModel)]="form.gradeId" (ngModelChange)="form.sectionId = ''; dialogError.set('')" required>
               <option value="" disabled>Selecciona un grado</option>
               @for (grade of activeGrades(); track grade.id) {
                 <option [value]="grade.id">{{ grade.name }}</option>
@@ -271,11 +271,11 @@
           >
           <label class="form-field"
             ><span>Sección <small>(opcional)</small></span
-            ><select name="formSection" [(ngModel)]="form.sectionId" [disabled]="!form.gradeId">
+            ><select name="formSection" [(ngModel)]="form.sectionId" (ngModelChange)="dialogError.set('')" [disabled]="!form.gradeId">
               <option value="">Sin sección</option>
               @for (section of sectionsFor(form.gradeId); track section.id) {
                 <option [value]="section.id">
-                  {{ section.name }}{{ section.capacity ? ' (' + section.current + '/' + section.capacity + ')' : '' }}
+                  {{ section.name }}{{ section.capacity ? ' (' + section.current + '/' + section.capacity + (section.current >= section.capacity ? ' · llena' : '') + ')' : '' }}
                 </option>
               }
             </select></label

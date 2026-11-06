@@ -4,7 +4,6 @@
 @{ ViewData["Title"] = "Activar o recuperar acceso"; }
 <div class="login-content">
   <a class="back" href="/Identity/Account/Login">← Volver al ingreso</a>
-  <img class="login-logo" src="@Institution.Value.Assets.LoginLogo" alt="@Institution.Value.DisplayName" />
   @if (Model.Completed)
   {
     <h2>Tu acceso está listo</h2>

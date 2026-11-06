@@ -1,6 +1,13 @@
 # Progreso
 
-Actualizado: 5 de noviembre de 2026, America/Guatemala.
+Actualizado: 6 de noviembre de 2026, America/Guatemala.
+
+## Roles, módulos y flujos completos (estado vigente)
+
+- El propietario pidió quitar el aspecto de página enmarcada, quitar el logo grande de la activación y recorrer todos los flujos por perfil escolar (estudiante, docente, familia) y por roles creados (Dirección con 15 permisos, Subdirección con 10, Secretaría y Caja), sin cambiar la paleta, documentando cada prueba en HTML. Informe: `QA_ROLES_FLUJOS_2026-11-06.md`, incidencias RF-001 a RF-006.
+- Pantalla completa en sitio público, ingreso/activación y espacio privado; logo retirado de Activate/LoginWith2fa; menú personal Docencia/Mis estudiantes; saludo sin cortes y selector de ciclo sin recorte; aviso de cupo que se limpia al cambiar sección; migración School `ReceiptNumbersNoCache` (secuencia de recibos sin caché, aplicada en desarrollo).
+- Recorrido Playwright de la instalación de desarrollo con datos ficticios: 41 pasos, 32 correctos, 9 informativos (datos de corridas previas), 0 errores. Matrices rol × pantalla y rol × API, comunicados, captura de nota, portería con lectura repetida, caja con recibo PDF y móvil 390 px. Reporte HTML autocontenido en `.local/qa/reporte/` (ignorado).
+- Validación: **98 .NET/SQL aprobadas**, 0 omitidas; build Angular correcto; suite Playwright completa **81 E2E aprobados + 1 omisión prevista** (82 casos) tras ajustar `finance.spec.ts` y `grades.spec.ts` para buscar el enlace del estudiante dentro de `#content` (el menú Mis estudiantes ahora repite ese enlace). `git diff --check` correcto. Quedan 7 bases `SchoolPlatform_Test_*` del 5/11 23:35 de una corrida interrumpida; no se borraron por no poder confirmar su origen.
 
 ## Rediseño según las capturas del propietario — estado vigente
 

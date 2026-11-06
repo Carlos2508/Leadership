@@ -9,10 +9,9 @@
   font-family: var(--font-body);
   line-height: 1.5;
   overflow: clip;
-  width: calc(100% - 16px);
-  max-width: 1800px;
-  margin: 8px auto;
-  border-radius: 28px;
+  /* Full-bleed: the public site spans the whole window; content stays centered by .site-container. */
+  width: 100%;
+  margin: 0;
   h1,
   h2,
   h3,

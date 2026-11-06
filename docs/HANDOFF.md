@@ -1,5 +1,14 @@
 # Handoff para la siguiente sesión
 
+## Roles, módulos y flujos — 6 de noviembre de 2026, leer primero
+
+- Solicitud: página sin aspecto de tarjeta, sin logo grande en «Tengo un código…», recorrido de todos los flujos por perfil escolar y por roles creados con permisos totales/parciales, sin cambiar paleta, documentado en HTML. Informe `QA_ROLES_FLUJOS_2026-11-06.md` (RF-001 a RF-006).
+- Front: `_public.scss`, `auth.css`, `_identity.scss` (pantalla completa, sidebar fijo a toda altura, `.nav-text`, saludo `nowrap`, selector de ciclo más ancho); `Activate.cshtml`/`LoginWith2fa.cshtml` sin `<img class="login-logo">`; `SessionService.myCourses/myStudents` desde `/me/courses` y `/me` (se recargan por `userId`); `shell.ts` grupos Docencia y Mis estudiantes (solo presentación); `enrollment-roster.html` limpia `dialogError` al cambiar grado/sección y marca secciones llenas.
+- Backend: migración School `20261106055933_ReceiptNumbersNoCache` (`ALTER SEQUENCE finance.ReceiptNumbers NO CACHE`; Down vuelve a `CACHE`). Aplicada en `SchoolPlatform_Development`. EF no expone `UseNoCache`, por eso es SQL en la migración; no reescribirla. Recibos ya emitidos no se renumeran.
+- Recorrido: `.local/qa/evidencia/qa-flows.mjs` + `run-flows.ps1` (credenciales DPAPI `qa-*`, contraseñas solo por variables de ambiente que se borran; códigos de activación tapados). Repetible: datos existentes salen como «informativo». Reporte `build-report.py` → `.local/qa/reporte/Reporte-QA-roles-y-flujos.html` con imágenes incrustadas. Última corrida 41 pasos, 32 ok, 9 info, 0 errores. Roles QA en desarrollo: Dirección (15), Subdirección (10); cuentas `qa-director`, `qa-subdirector`, `qa-secretaria`, `qa-cajero`.
+- Para correr el recorrido: host de desarrollo en `http://localhost:5090` (`Start-Development.ps1 -SkipBuild -Port 5090`) y luego `run-flows.ps1`. Detener el host antes de `dotnet build/test` (bloquea `bin`).
+- Validación: **98 .NET/SQL aprobadas**, 0 omitidas; build Angular correcto; suite Playwright completa **81 E2E aprobados + 1 omisión prevista** (82 casos) tras ajustar `finance.spec.ts` y `grades.spec.ts` para buscar el enlace del estudiante dentro de `#content` (el menú Mis estudiantes ahora repite ese enlace). `git diff --check` correcto. Quedan 7 bases `SchoolPlatform_Test_*` del 5/11 23:35 de una corrida interrumpida; no se borraron por no poder confirmar su origen.
+
 ## Referencias pública/estudiantil — 5 de noviembre de 2026, leer primero
 
 - Solicitud vigente: reproducir las capturas aportadas y usar el paquete local `Colegio_Leadership_HTML_CSS/Colegio_Leadership`. ADR-013 reemplaza la dirección visual Numix/Figtree de ADR-010; sus módulos, autorización y contratos se conservan. Cambios en working tree sobre **`434a824`**, sin commit/push de este incremento ni despliegue.

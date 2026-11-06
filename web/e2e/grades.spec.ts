@@ -302,7 +302,7 @@ test('teacher captures, coordination publishes and the family sees grades only o
     'fam-' + s.toLowerCase(),
     password,
   );
-  await familyPage.getByRole('link', { name: 'Ema Sintética ' + s }).click();
+  await familyPage.locator('#content').getByRole('link', { name: 'Ema Sintética ' + s }).click();
   await expect(familyPage.locator('.blocked-grades')).toContainText('colegiaturas requeridas');
   await expect(familyPage.locator('.blocked-grades')).toContainText('Cuota 1');
   await expect(familyPage.getByText('91.5')).toHaveCount(0);

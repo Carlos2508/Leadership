@@ -6,7 +6,7 @@ Decisiones visuales de la plataforma. Los **colores institucionales** (`--deep`,
 
 - **Tipografía:** *Inter* variable, normal y cursiva, en la web y el acceso Razor. Autoalojada en `wwwroot/fonts` (CSP `font-src 'self'`), licencia SIL OFL conservada. Títulos sin serif, texto habitual de 14–15 px y cifras tabulares. Las fuentes históricas se conservan para no alterar documentos existentes, pero la web ya no utiliza Figtree/Fraunces.
 - **Firma visual:** referencia pública/estudiantil aportada por el propietario, ADR-013. Menú y encabezado oscuros, selección con cápsula dorada, curvas en portada y base lateral, una marca por cabecera/menú y un birrete decorativo discreto.
-- **Superficies:** marfil institucional y paneles blancos con borde fino, sombra suave y radios de 14–22 px. Botones principales dorados con texto oscuro; acciones destructivas rojas. El marco privado se adapta al escritorio y ocupa toda la pantalla en móvil.
+- **Superficies:** marfil institucional y paneles blancos con borde fino, sombra suave y radios de 14–22 px. Botones principales dorados con texto oscuro; acciones destructivas rojas. Sitio público, ingreso/activación y espacio privado ocupan todo el ancho y alto de la ventana (sin marco exterior, margen ni esquinas redondeadas); la barra lateral va fija a toda la altura en escritorio. Las tarjetas quedan solo dentro del contenido. Activación/recuperación y 2FA no repiten el logo sobre los campos: ya está en el panel lateral.
 - **Movimiento:** solo transiciones breves de color y foco. Respetar `prefers-reduced-motion`.
 - **Personas:** avatares con dos iniciales en uno de cinco tonos derivados del nombre (estable para cada persona).
 - **Estados vacíos:** ícono pequeño en un cuadrado de esquinas suaves, explicación concreta y siguiente paso.
@@ -29,6 +29,8 @@ Capa: `web/src/styles/_identity.scss` (se carga al final).
 El dashboard muestra indicadores, pendientes y acciones por contexto. La composición de referencia usa cuatro indicadores personales, actividades/calendario y comunicados/acciones breves; conserva el resumen operativo de administración y la docencia. Mis clases proviene de la matrícula, no de la muestra; no se inventa un promedio general. El ciclo está visible y queda en la URL; portería identifica su alcance de hoy para todos los ciclos. Cero, sin configuración y fallo de carga tienen significados diferentes. Las cifras monetarias usan aplicaciones confirmadas y nunca se confunden con solvencia. Ver ADR-011/013.
 
 El editor de roles usa acciones agrupadas por área, selección completa opcional, motivo y confirmación del número de cuentas afectadas. No deduce permisos del nombre: Director y Secretaría pueden tener todos. Los perfiles escolares se mantienen separados. Ver ADR-012.
+
+- Menú personal: el docente ve el grupo «Docencia» con sus cursos asignados (máximo seis) y la familia «Mis estudiantes» con cada vínculo vigente. Se cargan de `/api/v1/me/courses` y `/api/v1/me`; son atajos de presentación, la autorización sigue en el servidor.
 
 ## Alertas (SweetAlert2)
 

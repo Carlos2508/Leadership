@@ -131,7 +131,7 @@ test('charge tuition by preview, collect with a receipt and show clearance and t
   await guardianPage.getByLabel('Confirmar contraseña', { exact: true }).fill(guardianPassword);
   await guardianPage.getByRole('button', { name: 'Guardar mi contraseña' }).click();
   await login(guardianPage, guardianUser, guardianPassword);
-  await guardianPage.getByRole('link', { name: 'Elisa Sintética ' + suffix }).click();
+  await guardianPage.locator('#content').getByRole('link', { name: 'Elisa Sintética ' + suffix }).click();
   await expect(guardianPage.getByRole('heading', { name: 'Estado de cuenta' })).toBeVisible();
   await expect(guardianPage.locator('.balance-box')).toContainText('0.00');
   await expectAccessible(guardianPage);

@@ -2,6 +2,10 @@
 
 Actualizado: 6 de noviembre de 2026, America/Guatemala.
 
+## Prueba desde cero y primeros pasos (estado vigente)
+
+- Un colegio vacío recorrió un año escolar completo por la interfaz (seis roles, web escritorio/teléfono y app): todo correcto. Inicio guía a un colegio nuevo con «Primeros pasos» hasta tener inscripciones y cargos.
+
 ## Gestión sencilla para Dirección y docentes (estado vigente)
 
 - Dirección: «Ciclos y grados» muestra una guía «Preparar el ciclo» (períodos, secciones, cursos y docentes, inscripciones, inicio) con el atajo de cada paso. Los períodos se generan del mismo largo en una sola operación; secciones y cursos (con sus docentes vigentes) se copian del ciclo anterior. «Nuevo ciclo» propone nombre y fechas un año después y deja el ciclo listo de una vez. «Crear cursos» admite varios grados, un curso por sección y «Todas» las materias; filtro «Solo sin docente». Motivos sugeridos al abrir inscripciones, iniciar el ciclo y asignar docentes (editables y auditados).

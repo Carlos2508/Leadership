@@ -13,6 +13,7 @@ import { CyclePipe } from '../shared/cycle.pipe';
 import { money } from '../core/finance-api';
 import { yearStatusLabels } from '../core/academic-api';
 import { SchoolCalendar } from '../shared/school-calendar';
+import { SetupGuide } from './setup-guide';
 
 interface Attention {
   key: string;
@@ -40,7 +41,7 @@ interface HomeAction {
   fragment?: string;
 }
 @Component({
-  imports: [Shell, Icon, RouterLink, CyclePipe, FormsModule, SchoolCalendar],
+  imports: [Shell, Icon, RouterLink, CyclePipe, FormsModule, SchoolCalendar, SetupGuide],
   templateUrl: './workspace.html',
 })
 export class Workspace {

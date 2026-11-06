@@ -70,7 +70,8 @@
         <span class="dash-live-dot" aria-hidden="true"></span
       ></span>
     </div>
-    @if (!st.years.length && session.can('academic.read')) {
+    <app-setup-guide [stats]="st" />
+    @if (!st.years.length && session.can('academic.read') && !session.can('academic.manage')) {
       <section class="card dash-panel">
         <h2>No hay un ciclo escolar configurado</h2>
         <p class="dash-empty-copy">

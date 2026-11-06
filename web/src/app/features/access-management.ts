@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, inject, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {
@@ -39,8 +39,21 @@ export class AccessManagement {
   reason = '';
   verified = false;
   operation = 'profile';
+  /** Shortcut from the first-steps guide: `invite` opens the invitation, `my-role` the own account's role change. */
+  readonly action = input<string | undefined>();
   constructor() {
-    void this.load();
+    void this.load().then(() => queueMicrotask(() => this.applyAction()));
+  }
+
+  private applyAction(): void {
+    if (this.action() === 'invite') this.openInvite();
+    if (this.action() === 'my-role') {
+      const me = this.data()?.items.find((x) => x.id === this.session.userId());
+      if (!me) return;
+      this.openAccount(me);
+      this.profile = 'administrator';
+      this.reason = 'Configuración inicial del colegio por la dirección.';
+    }
   }
 
   async load(page = 1): Promise<void> {

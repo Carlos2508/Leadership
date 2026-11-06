@@ -1,5 +1,13 @@
 # Handoff para la siguiente sesión
 
+## Prueba desde cero y «Primeros pasos» — 6 de noviembre de 2026, leer primero
+
+- Solicitud: volver a probar todo desde cero, web y app, sin errores y lo más simple posible.
+- Recorrido `.local/qa/desde-cero/` (ignorado): `prepare.ps1` crea una base aislada `SchoolPlatform_E2E_<uuid>` con el `TestHarness` (dueño sintético, contraseña DPAPI en `state.xml`), `host.ps1` la sirve en 5096, `run.ps1` ejecuta `journey.mjs` (año escolar completo por Dirección, Secretaría, Caja, Docente, Estudiante y Familia, solo por la interfaz; el app se prueba con el build web de Flutter detrás de `sameorigin.py` en 5097), `cleanup.ps1` elimina solo esa base. Resultado final: 49/49 en escritorio con app y 47/47 en teléfono, sin errores de consola inesperados ni desbordes, cada paso < 2,5 s. Informe `Reporte-desde-cero.html`.
+- Hallazgo principal: un colegio nuevo no tenía guía (la cuenta inicial solo administra accesos). Nuevo `features/setup-guide.ts` en Inicio: pasos en orden según permisos (rol propio, equipo, grados, ciclo y períodos, materias/cursos/docentes, estudiantes, inscripciones, cuotas) con enlace a cada pantalla; se oculta cuando hay inscripciones y cargos o si el usuario la oculta (`localStorage` por cuenta). Solo lee listas autorizadas. `access-management` acepta `?action=invite` y `?action=my-role` (abre el cambio del propio rol con «administrator» y motivo sugerido; sigue exigiendo guardar, auditoría y cierre de sesiones). E2E `first-steps.spec.ts`.
+- Otros ajustes: cifras de asistencia del estudiante en cuadrícula; guía adaptada al teléfono.
+- Validación: 103 .NET/SQL (la primera corrida falló por disco C: lleno en los archivos de SQL Server; se eliminaron solo las 3 bases `SchoolPlatform_Test_*` de esa corrida, se dejaron las 7 del 5/11), Playwright completo 83 + 1 omisión prevista, Flutter 74.
+
 ## Revisión visual profesional de web y app — 6 de noviembre de 2026, leer primero
 
 - Solicitud: el propietario rechazó el diseño del diálogo «Nuevo ciclo» (casillas negras del navegador, recuadro con título en el borde, lista desplegable para la cantidad) y pidió revisar toda la web y el app con acabado profesional.

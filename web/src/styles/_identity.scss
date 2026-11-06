@@ -1435,3 +1435,9 @@ button.topbar-notification:focus-visible {
     animation: none;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .notify-panel {
+    animation: none;
+  }
+}

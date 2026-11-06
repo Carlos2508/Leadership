@@ -2,6 +2,12 @@
 
 Actualizado: 6 de noviembre de 2026, America/Guatemala.
 
+## Gestión sencilla para Dirección y docentes (estado vigente)
+
+- Dirección: «Ciclos y grados» muestra una guía «Preparar el ciclo» (períodos, secciones, cursos y docentes, inscripciones, inicio) con el atajo de cada paso. Los períodos se generan del mismo largo en una sola operación; secciones y cursos (con sus docentes vigentes) se copian del ciclo anterior. «Nuevo ciclo» propone nombre y fechas un año después y deja el ciclo listo de una vez. «Crear cursos» admite varios grados, un curso por sección y «Todas» las materias; filtro «Solo sin docente». Motivos sugeridos al abrir inscripciones, iniciar el ciclo y asignar docentes (editables y auditados).
+- Docentes: barra común Lista · Asistencia · Actividades · Libreta en cada curso y selector «Cambiar de curso» que conserva la herramienta. En el teléfono, los cuatro estados de asistencia caben en una fila.
+- App conectado: «Ciclo escolar» en la pestaña Colegio (misma guía y atajos, nuevo ciclo, avanzar estado); tarjetas de curso con «Asistencia de hoy pendiente», entregas por revisar y botones directos a Asistencia y Libreta, también en Inicio; cambio de curso sin salir.
+
 ## Campana de notificaciones (estado vigente)
 
 - La campana del encabezado muestra avisos sin leer y pendientes por rol con las mismas reglas del panel; abre cada destino y marca avisos como leídos. También en el app conectado. Recorrido de 8 cuentas y 74 pantallas sin errores ni desbordes.

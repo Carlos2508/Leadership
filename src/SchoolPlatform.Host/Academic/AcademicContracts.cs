@@ -6,6 +6,8 @@ public sealed record VersionRequest(string Version);
 public sealed record PeriodRequest(string? Name, DateOnly StartsOn, DateOnly EndsOn);
 public sealed record GradeRequest(string Code, string Name, string? Stage, int Sequence, bool IsActive = true, string? Version = null);
 public sealed record SectionRequest(Guid GradeLevelId, string Name, string? Shift, int? Capacity, string? Version = null);
+public sealed record GeneratePeriodsRequest(string Version, int Count);
+public sealed record CopyFromYearRequest(Guid SourceYearId);
 
 public sealed record YearSummary(Guid Id, string Label, DateOnly StartsOn, DateOnly EndsOn, string Status, bool IsDefault,
     string Version, int Enrollments);

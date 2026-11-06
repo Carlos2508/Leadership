@@ -18,6 +18,7 @@ Implementado en el sexto incremento (ACA-002). Complementa ADR-005.
 | GET `/api/v1/academic/subjects`, `/api/v1/years/{yearId}/courses?gradeId`, `/api/v1/academic/staff?search` | `academic.read` |
 | POST `/api/v1/academic/subjects`, `/subjects/{id}`, `/api/v1/years/{yearId}/courses` | `academic.manage` + CSRF |
 | POST `/api/v1/courses/{id}/teachers`, `/courses/{id}/teachers/{assignmentId}/end` | `academic.manage`, con motivo |
+| POST `/api/v1/years/{yearId}/courses/copy` (`sourceYearId`, `teachers`): copia cursos por grado/sección (nombre) y, si se pide, docentes vigentes al cierre del origen con motivo auditado | `academic.manage` |
 | GET `/api/v1/courses/{id}/roster?on=` | `academic.read` o docente con asignación no finalizada; si no, 404 |
 | GET `/api/v1/me/courses` | Cuenta activa vinculada a personal con asignaciones |
 | POST `/api/v1/people/{id}/roles` con `role: "staff"` y `position` | `people.manage` |

@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { combineLatest, distinctUntilChanged, map } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi } from '../core/access-api';
@@ -18,6 +18,7 @@ import { InstitutionService } from '../core/institution';
 import { formatDateOnly } from '../core/people-api';
 import { CourseView } from './courses';
 import { Shell } from '../shared/shell';
+import { CourseNav } from '../shared/course-nav';
 import { Icon } from '../shared/icon';
 import { PluralPipe, plural } from '../shared/plural.pipe';
 
@@ -41,12 +42,10 @@ interface Sheet {
 
 /** Daily attendance of a course for the assigned teacher; everyone starts as present until changed. */
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink, PluralPipe],
+  imports: [Shell, Icon, CourseNav, FormsModule, PluralPipe],
   template: `
     <app-shell title="Asistencia">
-      <a class="back-link" [routerLink]="['/workspace/courses', id()]"
-        ><app-icon name="arrow" />Volver a la lista</a
-      >
+      <app-course-nav [courseId]="id()" active="attendance" />
       @if (course(); as c) {
         <div class="page-heading">
           <div>

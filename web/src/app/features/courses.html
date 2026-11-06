@@ -6,7 +6,12 @@
       <p>Cada curso es una materia del ciclo para un grado o una sección. Su lista sigue las inscripciones vigentes.</p>
     </div>
     @if (canManage() && years().length) {
-      <button class="button" (click)="openCreate()" [disabled]="busy()"><app-icon name="book" />Crear cursos</button>
+      <div class="inline-actions">
+        @if (previous() && !courses().length && !gradeFilter) {
+          <button class="button outline" (click)="openCopy()" [disabled]="busy()">Copiar de {{ previous()!.label }}</button>
+        }
+        <button class="button" (click)="openCreate()" [disabled]="busy()"><app-icon name="book" />Crear cursos</button>
+      </div>
     }
   </div>
   @if (notice()) {
@@ -41,6 +46,13 @@
             }
           </select></label
         >
+        @if (unassigned() || onlyUnassigned()) {
+          <label class="checkbox-field filter-check"
+            ><input type="checkbox" name="onlyUnassigned" [ngModel]="onlyUnassigned()" (ngModelChange)="onlyUnassigned.set($event)" /><span
+              >Solo sin docente ({{ unassigned() }})</span
+            ></label
+          >
+        }
       </div>
     </section>
     <div class="detail-grid academic-grid">
@@ -90,11 +102,33 @@
             </div>
           </section>
         } @empty {
-          <section class="card empty-state">
-            <app-icon name="book" />
-            <h2>Sin cursos en este ciclo</h2>
-            <p>{{ canManage() ? 'Usa «Crear cursos» para elegir materias por grado o sección.' : 'Aún no se han organizado cursos.' }}</p>
-          </section>
+          @if (onlyUnassigned()) {
+            <section class="card empty-state">
+              <app-icon name="check" />
+              <h2>Todos los cursos tienen docente</h2>
+              <button class="button outline" (click)="onlyUnassigned.set(false)">Ver todos los cursos</button>
+            </section>
+          } @else {
+            <section class="card empty-state">
+              <app-icon name="book" />
+              <h2>Sin cursos en este ciclo</h2>
+              <p>
+                {{
+                  canManage()
+                    ? previous()
+                      ? 'Copia la organización del ciclo anterior o crea los cursos por grado.'
+                      : 'Usa «Crear cursos» para elegir materias por grado o sección.'
+                    : 'Aún no se han organizado cursos.'
+                }}
+              </p>
+              @if (canManage() && !gradeFilter && previous(); as source) {
+                <div class="inline-actions centered-actions">
+                  <button class="button" (click)="openCopy()" [disabled]="busy()">Copiar de {{ source.label }}</button>
+                  <button class="button outline" (click)="openCreate()" [disabled]="busy()">Crear cursos</button>
+                </div>
+              }
+            </section>
+          }
         }
       </div>
       <aside class="detail-side">
@@ -149,44 +183,76 @@
           }
         }
         @case ('create') {
-          <div class="form-grid">
-            <label class="form-field"
-              ><span>Grado</span
-              ><select name="createGrade" [(ngModel)]="createForm.gradeLevelId" (ngModelChange)="createForm.sectionId = ''">
-                <option value="" disabled>Selecciona</option>
-                @for (grade of grades(); track grade.id) {
-                  @if (grade.isActive) {
-                    <option [value]="grade.id">{{ grade.name }}</option>
-                  }
-                }
-              </select></label
-            >
-            <label class="form-field"
-              ><span>Alcance</span
-              ><select name="createSection" [(ngModel)]="createForm.sectionId" [disabled]="!createForm.gradeLevelId">
-                <option value="">Todo el grado</option>
-                @for (section of sectionsFor(createForm.gradeLevelId); track section.id) {
-                  <option [value]="section.id">Sección {{ section.name }}</option>
-                }
-              </select></label
-            >
-          </div>
           <fieldset class="choice-group">
-            <legend>Materias</legend>
+            <legend class="legend-row">
+              Grados
+              <button type="button" class="text-button" (click)="toggleAll(createForm.grades, ids(activeGrades()))">
+                {{ allChecked(createForm.grades, ids(activeGrades())) ? 'Quitar todos' : 'Todos' }}
+              </button>
+            </legend>
             <div class="checkbox-grid">
-              @for (subject of subjects(); track subject.id) {
-                @if (subject.isActive) {
-                  <label class="checkbox-field"
-                    ><input type="checkbox" [name]="'subject-' + subject.id" [(ngModel)]="createForm.subjects[subject.id]" /><span>{{
-                      subject.name
-                    }}</span></label
-                  >
-                }
+              @for (grade of activeGrades(); track grade.id) {
+                <label class="checkbox-field"
+                  ><input type="checkbox" [name]="'grade-' + grade.id" [(ngModel)]="createForm.grades[grade.id]" /><span
+                    >{{ grade.name }}
+                    @if (sectionsFor(grade.id).length) {
+                      <small>{{ sectionsFor(grade.id).length }} secc.</small>
+                    }
+                  </span></label
+                >
+              } @empty {
+                <p class="muted-copy">Registra primero los grados en Ciclos y grados.</p>
+              }
+            </div>
+          </fieldset>
+          <fieldset class="choice-group">
+            <legend>¿Cómo se imparte?</legend>
+            <label class="radio-option"
+              ><input type="radio" name="perSection" [value]="false" [(ngModel)]="createForm.perSection" /><span
+                >Un curso para todo el grado</span
+              ></label
+            >
+            <label class="radio-option"
+              ><input type="radio" name="perSection" [value]="true" [(ngModel)]="createForm.perSection" /><span
+                >Un curso por cada sección<small>Si un grado no tiene secciones, se crea para todo el grado.</small></span
+              ></label
+            >
+          </fieldset>
+          <fieldset class="choice-group">
+            <legend class="legend-row">
+              Materias
+              <button type="button" class="text-button" (click)="toggleAll(createForm.subjects, ids(activeSubjects()))">
+                {{ allChecked(createForm.subjects, ids(activeSubjects())) ? 'Quitar todas' : 'Todas' }}
+              </button>
+            </legend>
+            <div class="checkbox-grid">
+              @for (subject of activeSubjects(); track subject.id) {
+                <label class="checkbox-field"
+                  ><input type="checkbox" [name]="'subject-' + subject.id" [(ngModel)]="createForm.subjects[subject.id]" /><span>{{
+                    subject.name
+                  }}</span></label
+                >
               } @empty {
                 <p class="muted-copy">Registra primero las materias.</p>
               }
             </div>
           </fieldset>
+          @if (plannedCourses()) {
+            <p class="muted-copy" role="status">
+              Hasta {{ plannedCourses() }} {{ plannedCourses() === 1 ? 'curso' : 'cursos' }}; los que ya existen no se repiten.
+            </p>
+          }
+        }
+        @case ('copy') {
+          <p class="action-explanation">
+            Crea en este ciclo los mismos cursos de {{ previous()?.label }}: misma materia, grado y sección. No cambia los cursos
+            que ya existen.
+          </p>
+          <label class="checkbox-field"
+            ><input type="checkbox" name="copyTeachers" [(ngModel)]="copyTeachers" /><span
+              >Asignar a los mismos docentes<small>Solo quienes seguían asignados al terminar {{ previous()?.label }}.</small></span
+            ></label
+          >
         }
         @case ('assign') {
           <p class="managed-user">
@@ -250,7 +316,9 @@
       }
       <div class="dialog-actions">
         <button class="button outline" type="button" (click)="closeDialog()" [disabled]="busy()">Cancelar</button
-        ><button class="button" type="submit" [disabled]="busy()">{{ busy() ? 'Guardando…' : 'Guardar' }}</button>
+        ><button class="button" type="submit" [disabled]="busy()">
+          {{ busy() ? 'Guardando…' : mode() === 'copy' ? 'Copiar' : mode() === 'create' ? 'Crear cursos' : 'Guardar' }}
+        </button>
       </div>
     </form>
   </dialog>

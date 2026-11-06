@@ -1,12 +1,22 @@
 # Handoff para la siguiente sesión
 
+## Gestión sencilla para Dirección y docentes — 6 de noviembre de 2026, leer primero
+
+- Solicitud: ponerse en el lugar del docente y de Dirección (crear bimestres y todo) para simplificar la gestión, en web y app.
+- Backend (sin migraciones): `AcademicService.GeneratePeriodsAsync` (`POST /api/v1/academic/years/{id}/periods/generate`, `{version,count}`; solo calendario abierto y sin períodos; reparto `SplitCalendar` = floor(i·días/n), igual en web y app) y `CopySectionsAsync` (`POST .../years/{id}/sections/copy`, `{sourceYearId}`; grados activos, no duplica). `CourseService.CopyCoursesAsync` (`POST /api/v1/years/{id}/courses/copy`, `{sourceYearId,teachers}`): misma materia/grado/sección por nombre, omite y cuenta lo no vigente o en conflicto de alcance; docentes vigentes al cierre del origen se asignan desde el inicio del destino con motivo «Copiado del ciclo X» auditado. Todo con `academic.manage`, una transacción, idempotente. Pruebas `AcademicSetupSqlTests` (2).
+- Web: `academic-structure.ts/html` (guía `steps()`, diálogos `generate`/`copy`, `nextCycle`, `splitCalendar`, prellenado de período siguiente y motivos), `courses.ts/html` (creación múltiple, copiar, «Solo sin docente», motivo sugerido), `shared/course-nav.ts` en lista/asistencia/actividades/libreta (lista y actividades recargan al cambiar `id`). Estilos al final de `_people.scss`. E2E ajustados: `academic.spec.ts`, `courses.spec.ts`, `attendance-resilience.spec.ts`, `grade-resilience.spec.ts`.
+- App: `features/connected/academic_page.dart` (+ `academic_setup_test.dart`), `teaching_tab.dart` (`CourseCard`, `CourseSection`, selector de curso), Inicio usa `CourseCard`, Colegio visible también con `academic.read`.
+- Recorrido `qa-gestion.mjs`/`run-gestion.ps1` (Dirección y docente, 1440 y 390 px, solo abre diálogos): 0 errores, 0 desbordes; evidencia `.local/qa/evidencia/gestion-2026-11-06/`. No se creó un ciclo en la base de desarrollo (no hay borrado de ciclos); la creación está cubierta por SQL y E2E.
+- Validación: **103 .NET/SQL**, **74 Flutter** y análisis sin observaciones, build web correcto. Playwright completo: 79 aprobados + 1 omisión prevista; las 2 fallas eran Axe midiendo el panel de la campana durante su animación de entrada (del incremento anterior): la prueba ahora espera la animación y el panel respeta `prefers-reduced-motion`; `announcements`, `academic` y `courses` volvieron a correr: 6/6.
+- Disco C: lleno durante la sesión (ajeno a este trabajo). Compilaciones y temporales de prueba se movieron a `D:\Repos\Leadership\.local\tmp` (ignorado). Si vuelve a pasar, usar `BaseOutputPath`/`TEMP` en D:.
+
 ## Campana de notificaciones y revisión de experiencia — 6 de noviembre de 2026, leer primero
 
 - Solicitud: revisar todos los flujos para que sean sencillos, corregir lo que salga y hacer funcionar la campana del header.
 - Web: `core/notifications.ts` (avisos sin leer de `/me/announcements` + pendientes derivados de `/api/v1/dashboard`, ya autorizado por permiso/recurso), `shell.ts` (botón con contador, panel `role=dialog`, marcar avisos leídos), `announcements.ts` (`?open=<id>` abre y desplaza; sincroniza la campana), estilos al final de `_identity.scss`. Refresca al navegar (mín. 30 s), cada 2 min visible y al volver a la pestaña. E2E `announcements.spec.ts` verifica la campana.
 - App conectado: campana en el encabezado con avisos sin leer que abre la pestaña Avisos (`connectedTabRequestProvider`).
 - Recorrido `qa-ux.mjs`/`run-ux.ps1` (8 cuentas, 74 pantallas, escritorio y 390 px): 0 errores de consola, 0 desbordes, cargas < 1 s; evidencia `.local/qa/evidencia/ux-2026-11-06/`.
-- No se corrió Playwright: el host del puerto 5082 (PID 15580, ajeno) sigue bloqueando `bin`. Correr `Invoke-Web.ps1 test` cuando se detenga.
+- Playwright corrido en el incremento siguiente (salida de compilación en `.local/tmp` por el host ajeno del 5082).
 
 ## App Flutter: diseño de la web y cuenta real — 6 de noviembre de 2026, leer primero
 

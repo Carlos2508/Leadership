@@ -10,6 +10,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/states.dart';
 import '../../shared/page_layout.dart';
+import 'academic_page.dart';
 import 'connected_session.dart';
 import 'connected_shell.dart';
 import 'school_api.dart';
@@ -45,16 +46,39 @@ class _SchoolTabState extends ConsumerState<SchoolTab> {
       children: [
         PageIntro(
           eyebrow: 'Colegio',
-          title: session.can('finance.read') ? 'Estudiantes y caja' : 'Estudiantes',
-          subtitle: 'Busca por nombre o código.',
+          title: session.can('finance.read') ? 'Estudiantes y caja' : 'Colegio',
+          subtitle: canPeople ? 'Busca por nombre o código.' : null,
         ),
-        if (!canPeople)
-          const EmptyState(
-            icon: Icons.lock_outline,
-            title: 'Búsqueda no disponible',
-            message: 'Tu rol no incluye el directorio de personas.',
-          )
-        else ...[
+        if (session.can('academic.read')) ...[
+          AppCard(
+            onTap: () =>
+                Navigator.of(context)
+                    .push(MaterialPageRoute<void>(builder: (_) => const AcademicYearPage())),
+            child: Row(
+              children: [
+                const ToneIcon(icon: Icons.event_note_outlined, tone: AppTone.accent),
+                const SizedBox(width: Spacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Ciclo escolar', style: theme.textTheme.titleSmall),
+                      Text(
+                        session.can('academic.manage')
+                            ? 'Prepara bimestres, secciones, cursos y el inicio de clases'
+                            : 'Bimestres, cursos y estado del ciclo',
+                        style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: colors.muted),
+              ],
+            ),
+          ),
+          const SizedBox(height: Spacing.lg),
+        ],
+        if (canPeople) ...[
           TextField(
             controller: _search,
             textInputAction: TextInputAction.search,

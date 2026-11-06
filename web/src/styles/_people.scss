@@ -1620,3 +1620,232 @@ kbd {
     width: 100%;
   }
 }
+
+/* Cycle setup guide: one list of steps with the shortcut that completes each one. */
+.setup-guide .section-heading {
+  align-items: flex-start;
+}
+.setup-guide h2 {
+  margin: 2px 0 0;
+}
+.setup-steps {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+  display: grid;
+}
+.setup-steps li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  min-height: 44px;
+}
+.setup-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.setup-mark app-icon {
+  width: 16px;
+  height: 16px;
+}
+.setup-steps li.done .setup-mark {
+  border-color: transparent;
+  background: var(--mint);
+  color: var(--primary);
+}
+.setup-steps li.done strong {
+  color: var(--muted);
+}
+.setup-steps .button,
+.setup-steps .text-button {
+  flex-shrink: 0;
+}
+.setup-options {
+  display: grid;
+  gap: 10px;
+}
+.nested-option {
+  margin-left: 28px;
+}
+.count-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.count-select {
+  display: inline-block;
+  width: auto;
+  min-height: 40px;
+  margin: 0;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+}
+.period-preview {
+  list-style: none;
+  margin: 2px 0 4px 28px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #f8faf7;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.period-preview strong {
+  color: var(--ink);
+  font-weight: 650;
+  margin-right: 6px;
+}
+.action-explanation + .form-field + .period-preview,
+.form-field + .period-preview {
+  margin-left: 0;
+}
+@media (max-width: 640px) {
+  .setup-steps li {
+    flex-wrap: wrap;
+  }
+  .setup-steps li > .button,
+  .setup-steps li > .text-button {
+    margin-left: 44px;
+  }
+}
+.legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+.filter-check {
+  align-self: end;
+  min-height: 44px;
+}
+.centered-actions {
+  justify-content: center;
+}
+
+/* Course tools: same tabs on roster, attendance, activities and gradebook, plus a switch to the teacher's other courses. */
+.course-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 18px;
+}
+.course-nav .back-link {
+  margin: 0;
+}
+.course-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.course-tabs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.course-tabs a app-icon {
+  width: 17px;
+  height: 17px;
+}
+.course-tabs a:hover {
+  color: var(--ink);
+  background: #f4f7f3;
+}
+.course-tabs a.active {
+  background: var(--mint);
+  color: var(--primary);
+}
+.course-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+.course-switch select {
+  min-height: 40px;
+  max-width: 280px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+@media (max-width: 640px) {
+  .course-tabs {
+    width: 100%;
+  }
+  .course-tabs a {
+    flex: 1;
+    justify-content: center;
+    padding: 6px 8px;
+  }
+  .course-switch {
+    width: 100%;
+    margin-left: 0;
+  }
+  .course-switch select {
+    flex: 1;
+    max-width: none;
+  }
+}
+.radio-option span small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+}
+@media (max-width: 640px) {
+  /* Phone: the four attendance states in one row, and course tabs without icons so all four fit. */
+  .attendance-options {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    width: 100%;
+    gap: 4px;
+  }
+  .attendance-option {
+    justify-content: center;
+    padding: 8px 2px;
+    font-size: 11px;
+    text-align: center;
+  }
+  .course-tabs a app-icon {
+    display: none;
+  }
+  .course-tabs a {
+    padding: 6px 4px;
+    font-size: 12px;
+  }
+}

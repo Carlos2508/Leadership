@@ -12,6 +12,8 @@ namespace SchoolPlatform.Host.Academic;
 public sealed record SubjectRequest(string Code, string Name, bool IsActive = true, string? Version = null);
 public sealed record SubjectView(Guid Id, string Code, string Name, bool IsActive, string Version);
 public sealed record CreateCoursesRequest(Guid GradeLevelId, Guid? SectionId, Guid[] SubjectIds);
+public sealed record CopyCoursesRequest(Guid SourceYearId, bool Teachers);
+public sealed record CopyCoursesResult(int Created, int Skipped, int Teachers);
 public sealed record TeacherView(Guid AssignmentId, Guid StaffId, string Name, string Role, DateOnly StartsOn, DateOnly? EndsOn);
 public sealed record CourseView(Guid Id, Guid AcademicYearId, string Year, Guid GradeLevelId, string Grade, Guid? SectionId, string? Section,
     Guid SubjectId, string Subject, TeacherView[] Teachers, int Students);
@@ -100,6 +102,95 @@ public sealed partial class CourseService(SchoolDbContext db, SchoolAudit audit,
         await db.SaveChangesAsync(ct);
         return created;
     }
+
+    /// <summary>
+    /// Copies the course plan of another year: same grade, subject and scope (whole grade, or the section with the same
+    /// name). Courses whose section does not exist yet, inactive grades/subjects and scope conflicts are skipped and counted.
+    /// With <see cref="CopyCoursesRequest.Teachers"/>, teachers still assigned when the source year ended are assigned
+    /// again from the start of the target year, with an audited reason. One transaction; running it twice adds nothing.
+    /// </summary>
+    public async Task<CopyCoursesResult> CopyCoursesAsync(Guid actor, Guid yearId, CopyCoursesRequest request, CancellationToken ct)
+    {
+        await audit.RequireAsync(actor, ct, Permissions.AcademicManage);
+        if (request.SourceYearId == yearId) throw OperationException.Invalid("Elige otro ciclo como origen.");
+        var year = await db.Years.AsNoTracking().SingleOrDefaultAsync(x => x.Id == yearId, ct) ?? throw OperationException.NotFound("No encontramos ese ciclo.");
+        if (year.Status == YearStatus.Closed) throw new OperationException(409, "year-closed", "El ciclo está cerrado.");
+        var sourceYear = await db.Years.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.SourceYearId, ct)
+            ?? throw OperationException.NotFound("No encontramos ese ciclo.");
+        var source = await (from c in db.Courses.AsNoTracking()
+                            where c.AcademicYearId == sourceYear.Id
+                            join g in db.Grades on c.GradeLevelId equals g.Id
+                            join s in db.Subjects on c.SubjectId equals s.Id
+                            from section in db.Sections.Where(x => x.Id == c.SectionId).DefaultIfEmpty()
+                            orderby g.Sequence, s.Name
+                            select new
+                            {
+                                c.Id, c.GradeLevelId, c.SubjectId, Section = section == null ? null : section.Name,
+                                Active = g.IsActive && s.IsActive
+                            }).ToArrayAsync(ct);
+        var sections = await db.Sections.AsNoTracking().Where(x => x.AcademicYearId == yearId)
+            .Select(x => new { x.Id, x.GradeLevelId, x.Name }).ToArrayAsync(ct);
+        var existing = await db.Courses.AsNoTracking().Where(x => x.AcademicYearId == yearId)
+            .Select(x => new CourseKey(x.Id, x.GradeLevelId, x.SubjectId, x.SectionId)).ToListAsync(ct);
+        var teachers = request.Teachers
+            ? await db.TeachingAssignments.AsNoTracking()
+                .Where(a => db.Courses.Any(c => c.Id == a.CourseId && c.AcademicYearId == sourceYear.Id) &&
+                            (a.EndsOn == null || a.EndsOn >= sourceYear.EndsOn) &&
+                            db.Staff.Any(s => s.PersonId == a.StaffId && db.Persons.Any(p => p.Id == s.PersonId && p.Status == PersonStatus.Active)))
+                .Select(a => new { a.CourseId, a.StaffId, a.Role }).ToArrayAsync(ct)
+            : [];
+        var assignedNow = request.Teachers
+            ? await db.TeachingAssignments.AsNoTracking()
+                .Where(a => a.EndsOn == null && db.Courses.Any(c => c.Id == a.CourseId && c.AcademicYearId == yearId))
+                .Select(a => new { a.CourseId, a.StaffId }).ToListAsync(ct)
+            : [];
+        var starts = Clamp(Today(), year);
+        var reason = $"Copiado del ciclo {sourceYear.Label}";
+        int created = 0, skipped = 0, assigned = 0;
+        foreach (var item in source)
+        {
+            Guid? sectionId = null;
+            if (item.Section is not null)
+            {
+                sectionId = sections.FirstOrDefault(x => x.GradeLevelId == item.GradeLevelId && x.Name == item.Section)?.Id;
+                if (sectionId is null) { skipped++; continue; }
+            }
+            if (!item.Active) { skipped++; continue; }
+            var sameSubject = existing.Where(x => x.GradeLevelId == item.GradeLevelId && x.SubjectId == item.SubjectId).ToArray();
+            // Same rule as CreateCoursesAsync: a subject is taught to the whole grade or per section, never both.
+            if (sameSubject.Any(x => sectionId is null ? x.SectionId is not null : x.SectionId is null)) { skipped++; continue; }
+            var target = sameSubject.FirstOrDefault(x => x.SectionId == sectionId)?.Id;
+            if (target is null)
+            {
+                target = Guid.NewGuid();
+                db.Courses.Add(new Course
+                {
+                    Id = target.Value, AcademicYearId = yearId, GradeLevelId = item.GradeLevelId, SectionId = sectionId,
+                    SubjectId = item.SubjectId, CreatedAt = time.GetUtcNow()
+                });
+                existing.Add(new CourseKey(target.Value, item.GradeLevelId, item.SubjectId, sectionId));
+                created++;
+            }
+            foreach (var teacher in teachers.Where(t => t.CourseId == item.Id))
+            {
+                if (assignedNow.Any(a => a.CourseId == target && a.StaffId == teacher.StaffId)) continue;
+                db.TeachingAssignments.Add(new TeachingAssignment
+                {
+                    Id = Guid.NewGuid(), CourseId = target.Value, StaffId = teacher.StaffId, Role = teacher.Role, StartsOn = starts,
+                    CreatedAt = time.GetUtcNow(), CreatedBy = actor
+                });
+                assignedNow.Add(new { CourseId = target.Value, teacher.StaffId });
+                audit.Record("TeacherAssigned", actor, "Course", target.Value, reason, teacher.Role);
+                assigned++;
+            }
+        }
+        if (created == 0 && assigned == 0) return new(0, skipped, 0);
+        audit.Record("CoursesCopied", actor, "AcademicYear", yearId, detail: $"{created}/{assigned} desde {sourceYear.Label}");
+        await db.SaveChangesAsync(ct);
+        return new(created, skipped, assigned);
+    }
+
+    private sealed record CourseKey(Guid Id, Guid GradeLevelId, Guid SubjectId, Guid? SectionId);
 
     public async Task<StaffOption[]> StaffAsync(string? search, CancellationToken ct)
     {

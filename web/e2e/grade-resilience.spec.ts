@@ -129,7 +129,7 @@ test('a failed autosave cannot discard grades when changing period or leaving th
   await page.getByRole('button', { name: 'Seguir editando', exact: true }).click();
   await expect(page).toHaveURL(new RegExp('period=' + first));
   await expect(input).toHaveValue('83.5');
-  await page.getByRole('link', { name: 'Volver a la lista', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Herramientas del curso' }).getByRole('link', { name: 'Lista', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('Hay notas sin guardar');
   await page.getByRole('button', { name: 'Seguir editando', exact: true }).click();
   await expect(input).toHaveValue('83.5');

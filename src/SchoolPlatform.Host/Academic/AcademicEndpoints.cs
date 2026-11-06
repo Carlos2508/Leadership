@@ -34,6 +34,10 @@ public static class AcademicEndpoints
         });
         manage.MapPost("/years/{id:guid}/periods", async (Guid id, PeriodRequest request, ClaimsPrincipal user, AcademicService service, CancellationToken ct) =>
             Results.Ok(new { id = await service.AddPeriodAsync(Actor(user), id, request, ct) }));
+        manage.MapPost("/years/{id:guid}/periods/generate", async (Guid id, GeneratePeriodsRequest request, ClaimsPrincipal user, AcademicService service, CancellationToken ct) =>
+            Results.Ok(new { created = await service.GeneratePeriodsAsync(Actor(user), id, request, ct) }));
+        manage.MapPost("/years/{id:guid}/sections/copy", async (Guid id, CopyFromYearRequest request, ClaimsPrincipal user, AcademicService service, CancellationToken ct) =>
+            Results.Ok(new { created = await service.CopySectionsAsync(Actor(user), id, request, ct) }));
         manage.MapPost("/years/{id:guid}/periods/remove-last", async (Guid id, VersionRequest request, ClaimsPrincipal user, AcademicService service, CancellationToken ct) =>
         {
             await service.RemoveLastPeriodAsync(Actor(user), id, request, ct);
@@ -109,6 +113,8 @@ public static class AcademicEndpoints
         });
         manage.MapPost("/years/{yearId:guid}/courses", async (Guid yearId, CreateCoursesRequest request, ClaimsPrincipal user, CourseService service, CancellationToken ct) =>
             Results.Ok(new { created = await service.CreateCoursesAsync(Actor(user), yearId, request, ct) }));
+        manage.MapPost("/years/{yearId:guid}/courses/copy", async (Guid yearId, CopyCoursesRequest request, ClaimsPrincipal user, CourseService service, CancellationToken ct) =>
+            Results.Ok(await service.CopyCoursesAsync(Actor(user), yearId, request, ct)));
         manage.MapPost("/courses/{id:guid}/teachers", async (Guid id, AssignTeacherRequest request, ClaimsPrincipal user, CourseService service, CancellationToken ct) =>
             Results.Ok(new { id = await service.AssignAsync(Actor(user), id, request, ct) }));
         manage.MapPost("/courses/{id:guid}/teachers/{assignmentId:guid}/end", async (Guid id, Guid assignmentId, EndAssignmentRequest request,

@@ -143,6 +143,78 @@ public sealed partial class AcademicService(SchoolDbContext db, SchoolAudit audi
         await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// Splits an empty calendar into <paramref name="request"/>.Count consecutive periods of (almost) equal length, in one
+    /// transaction. It is only a starting point: each period can then be edited while the calendar is still open.
+    /// </summary>
+    public async Task<int> GeneratePeriodsAsync(Guid actor, Guid yearId, GeneratePeriodsRequest request, CancellationToken ct)
+    {
+        await audit.RequireAsync(actor, ct, Permissions.AcademicManage);
+        if (request.Count is < 1 or > 12) throw OperationException.Invalid("Elige entre 1 y 12 períodos.");
+        var year = await LoadYear(yearId, request.Version, ct);
+        if (!YearStatus.AllowsCalendarChanges(year.Status))
+            throw new OperationException(409, "year-locked", "Los períodos de un ciclo activo o cerrado no se modifican desde aquí.");
+        if (await db.Periods.AnyAsync(x => x.AcademicYearId == yearId, ct))
+            throw new OperationException(409, "periods-exist", "El ciclo ya tiene períodos. Edítalos o quita los existentes primero.");
+        var days = year.EndsOn.DayNumber - year.StartsOn.DayNumber + 1;
+        if (days < request.Count) throw OperationException.Invalid("El ciclo es demasiado corto para tantos períodos.");
+        foreach (var (starts, ends, sequence) in SplitCalendar(year.StartsOn, year.EndsOn, request.Count))
+            db.Periods.Add(new AcademicPeriod
+            {
+                Id = Guid.NewGuid(), AcademicYearId = yearId, Sequence = sequence, Name = PeriodName(null, sequence),
+                StartsOn = starts, EndsOn = ends
+            });
+        TouchYear(year);
+        audit.Record("AcademicPeriodsGenerated", actor, "AcademicYear", yearId, detail: $"{request.Count}");
+        await db.SaveChangesAsync(ct);
+        return request.Count;
+    }
+
+    /// <summary>Same arithmetic as the web preview: period i starts at floor(i·days/count).</summary>
+    public static IEnumerable<(DateOnly Starts, DateOnly Ends, int Sequence)> SplitCalendar(DateOnly starts, DateOnly ends, int count)
+    {
+        var days = ends.DayNumber - starts.DayNumber + 1;
+        for (var i = 0; i < count; i++)
+        {
+            var from = starts.AddDays((int)((long)i * days / count));
+            var to = i == count - 1 ? ends : starts.AddDays((int)((long)(i + 1) * days / count) - 1);
+            yield return (from, to, i + 1);
+        }
+    }
+
+    /// <summary>
+    /// Copies the sections of another year (same grade and name; shift and capacity included) for active grades. Existing
+    /// sections are kept as they are, so running it twice adds nothing. No students are moved.
+    /// </summary>
+    public async Task<int> CopySectionsAsync(Guid actor, Guid yearId, CopyFromYearRequest request, CancellationToken ct)
+    {
+        await audit.RequireAsync(actor, ct, Permissions.AcademicManage);
+        if (request.SourceYearId == yearId) throw OperationException.Invalid("Elige otro ciclo como origen.");
+        var year = await db.Years.AsNoTracking().SingleOrDefaultAsync(x => x.Id == yearId, ct) ?? throw YearNotFound();
+        if (year.Status == YearStatus.Closed) throw new OperationException(409, "year-closed", "El ciclo está cerrado.");
+        if (!await db.Years.AnyAsync(x => x.Id == request.SourceYearId, ct)) throw YearNotFound();
+        var source = await (from s in db.Sections.AsNoTracking()
+                            join g in db.Grades on s.GradeLevelId equals g.Id
+                            where s.AcademicYearId == request.SourceYearId && g.IsActive
+                            select s).ToArrayAsync(ct);
+        var existing = await db.Sections.AsNoTracking().Where(x => x.AcademicYearId == yearId)
+            .Select(x => new { x.GradeLevelId, x.Name }).ToArrayAsync(ct);
+        var created = 0;
+        foreach (var s in source.Where(s => !existing.Any(x => x.GradeLevelId == s.GradeLevelId && x.Name == s.Name)))
+        {
+            db.Sections.Add(new Section
+            {
+                Id = Guid.NewGuid(), AcademicYearId = yearId, GradeLevelId = s.GradeLevelId, Name = s.Name, Shift = s.Shift,
+                Capacity = s.Capacity
+            });
+            created++;
+        }
+        if (created == 0) return 0;
+        audit.Record("SectionsCopied", actor, "AcademicYear", yearId, detail: $"{created}");
+        await db.SaveChangesAsync(ct);
+        return created;
+    }
+
     public async Task RemoveLastPeriodAsync(Guid actor, Guid yearId, VersionRequest request, CancellationToken ct)
     {
         await audit.RequireAsync(actor, ct, Permissions.AcademicManage);

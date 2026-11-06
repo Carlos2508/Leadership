@@ -9,9 +9,7 @@ async function login(page: Page, username: string, password: string): Promise<vo
   await page.getByLabel('Usuario', { exact: true }).fill(username);
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(
-    page.getByRole('heading', { name: /^¡Hola,/ }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^¡Hola,/ })).toBeVisible();
 }
 
 async function post(page: Page, path: string, data: object) {
@@ -146,17 +144,13 @@ test('organize courses by section, assign a teacher and show the teacher only th
   await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click();
   await expect(page.locator('.sp-toast')).toContainText('La materia se guardó');
 
-  await page.getByRole('button', { name: 'Crear cursos' }).click();
-  await page
-    .getByRole('dialog')
-    .getByRole('combobox', { name: 'Grado' })
-    .selectOption({ label: gradeName });
-  await page
-    .getByRole('dialog')
-    .getByRole('combobox', { name: 'Alcance' })
-    .selectOption({ label: 'Sección A' });
-  await page.getByRole('dialog').getByRole('checkbox', { name: subject }).check();
-  await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click();
+  await page.getByRole('button', { name: 'Crear cursos' }).first().click();
+  const create = page.getByRole('dialog');
+  await create.getByRole('checkbox', { name: new RegExp('^' + gradeName) }).check();
+  await create.getByRole('radio', { name: /^Un curso por cada sección/ }).check();
+  await create.getByRole('checkbox', { name: subject, exact: true }).check();
+  await expect(create.getByRole('status')).toContainText('Hasta 1 curso');
+  await create.getByRole('button', { name: 'Crear cursos' }).click();
   await expect(page.locator('.sp-toast')).toContainText('Se creó 1 curso');
 
   await page.getByRole('button', { name: `+ Docente para ${subject}` }).click();
@@ -166,6 +160,9 @@ test('organize courses by section, assign a teacher and show the teacher only th
     .fill('Docente ' + suffix);
   await page.getByRole('dialog').getByRole('button', { name: 'Buscar', exact: true }).click();
   await page.getByRole('radio', { name: new RegExp('Marta Docente ' + suffix) }).check();
+  await expect(page.getByRole('dialog').getByLabel('Motivo')).toHaveValue(
+    /Asignación de carga académica/,
+  );
   await page.getByRole('dialog').getByLabel('Motivo').fill(reason);
   await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click();
   await expect(page.locator('.course-item').filter({ hasText: subject })).toContainText(
@@ -186,6 +183,17 @@ test('organize courses by section, assign a teacher and show the teacher only th
   await teacherPage.getByRole('link', { name: `Ver lista de ${subject}` }).click();
   await expect(teacherPage.getByRole('heading', { name: subject, level: 1 })).toBeVisible();
   await expect(teacherPage.locator('tbody')).toContainText('Tomás Sintético ' + suffix);
+  // Same tools on every course page: the tabs keep the course.
+  await teacherPage
+    .getByRole('navigation', { name: 'Herramientas del curso' })
+    .getByRole('link', { name: 'Libreta' })
+    .click();
+  await expect(teacherPage).toHaveURL(/\/grades/);
+  await teacherPage
+    .getByRole('navigation', { name: 'Herramientas del curso' })
+    .getByRole('link', { name: 'Lista' })
+    .click();
+  await expect(teacherPage.getByRole('heading', { name: subject, level: 1 })).toBeVisible();
   await expectAccessible(teacherPage);
   await teacherPage.screenshot({ path: testInfo.outputPath('teacher-roster.png'), fullPage: true });
   expect((await teacherPage.request.get(`/api/v1/years/${year}/courses`)).status()).toBe(403);

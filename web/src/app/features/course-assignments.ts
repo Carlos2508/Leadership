@@ -1,10 +1,10 @@
-import { Component, ElementRef, ViewChild, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, inject, input, signal, effect, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi } from '../core/access-api';
 import { Alerts } from '../core/alerts';
 import { Shell } from '../shared/shell';
+import { CourseNav } from '../shared/course-nav';
 import { Icon } from '../shared/icon';
 import { PluralPipe } from '../shared/plural.pipe';
 
@@ -38,10 +38,10 @@ const statusLabels = { Draft: 'Borrador', Published: 'Publicada', Closed: 'Cerra
 
 /** Course activities for the assigned teacher (and academic staff): create, publish, close and review text submissions. */
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink, PluralPipe],
+  imports: [Shell, Icon, CourseNav, FormsModule, PluralPipe],
   template: `
     <app-shell title="Actividades del curso">
-      <a class="back-link" [routerLink]="['/workspace/courses', id()]"><app-icon name="arrow" />Volver a la lista</a>
+      <app-course-nav [courseId]="id()" active="assignments" />
       @if (notFound()) {
         <section class="card empty-state" role="alert">
           <app-icon name="shield" /><h2>No tienes acceso a este curso</h2>
@@ -203,7 +203,16 @@ export class CourseAssignments {
   feedback = '';
 
   constructor() {
-    queueMicrotask(() => void this.load());
+    // The same page is reused when switching to another course: reload whenever the id changes.
+    effect(() => {
+      this.id();
+      untracked(() => {
+        this.openId.set(null);
+        this.submissions.set([]);
+        this.items.set([]);
+        void this.load();
+      });
+    });
   }
   private root(): string {
     return `/api/v1/courses/${encodeURIComponent(this.id())}`;

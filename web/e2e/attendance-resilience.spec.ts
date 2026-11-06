@@ -164,7 +164,7 @@ test('failed attendance saves preserve marks and notes; leaving waits for the co
   try {
     await page.getByRole('button', { name: 'Guardar asistencia', exact: true }).click();
     await arrived;
-    await page.getByRole('link', { name: 'Volver a la lista', exact: true }).click();
+    await page.getByRole('navigation', { name: 'Herramientas del curso' }).getByRole('link', { name: 'Lista', exact: true }).click();
     await expect(page).toHaveURL(/\/attendance/);
     release();
     await expect(page).toHaveURL(new RegExp(`/workspace/courses/${course}$`));

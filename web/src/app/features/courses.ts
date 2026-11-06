@@ -42,7 +42,7 @@ interface StaffOption {
   name: string;
   position: string;
 }
-type Mode = 'subject' | 'create' | 'assign' | 'unassign';
+type Mode = 'subject' | 'create' | 'assign' | 'unassign' | 'copy';
 
 @Component({
   imports: [Shell, Icon, FormsModule, RouterLink],
@@ -75,9 +75,19 @@ export class Courses {
   readonly editingSubject = signal<SubjectView | null>(null);
   readonly canManage = computed(() => this.session.can('academic.manage'));
   readonly yearLabels = yearStatusLabels;
+  readonly onlyUnassigned = signal(false);
+  readonly unassigned = computed(() => this.courses().filter((c) => !c.teachers.length).length);
+  /** Cycle before the selected one: source for «Copiar de…». */
+  readonly previous = computed<YearSummary | undefined>(() => {
+    const current = this.years().find((x) => x.id === this.selectedYear());
+    return this.years()
+      .filter((x) => current && x.id !== current.id && x.startsOn < current.startsOn)
+      .sort((a, b) => b.startsOn.localeCompare(a.startsOn))[0];
+  });
+  private readonly selectedYear = signal('');
   readonly groups = computed(() => {
     const map = new Map<string, { grade: string; courses: CourseView[] }>();
-    for (const course of this.courses()) {
+    for (const course of this.courses().filter((c) => !this.onlyUnassigned() || !c.teachers.length)) {
       const group = map.get(course.gradeLevelId) ?? { grade: course.grade, courses: [] };
       group.courses.push(course);
       map.set(course.gradeLevelId, group);
@@ -88,7 +98,8 @@ export class Courses {
   yearId = '';
   gradeFilter = '';
   subjectForm = { code: '', name: '', isActive: true };
-  createForm = { gradeLevelId: '', sectionId: '', subjects: {} as Record<string, boolean> };
+  createForm = { grades: {} as Record<string, boolean>, perSection: false, subjects: {} as Record<string, boolean> };
+  copyTeachers = true;
   assignForm = { search: '', staffId: '', role: 'Lead', startsOn: '' };
   reason = '';
 
@@ -129,6 +140,7 @@ export class Courses {
   }
 
   async load(): Promise<void> {
+    this.selectedYear.set(this.yearId);
     const query = this.gradeFilter ? `?gradeId=${this.gradeFilter}` : '';
     const [detail, courses] = await Promise.all([
       this.api.get<YearDetail>(`/api/v1/academic/years/${this.yearId}`),
@@ -152,14 +164,46 @@ export class Courses {
     this.open('subject');
   }
   openCreate(): void {
-    this.createForm = { gradeLevelId: this.gradeFilter, sectionId: '', subjects: {} };
+    this.createForm = {
+      grades: this.gradeFilter ? { [this.gradeFilter]: true } : {},
+      perSection: false,
+      subjects: {},
+    };
     this.open('create');
+  }
+  openCopy(): void {
+    this.copyTeachers = true;
+    this.open('copy');
+  }
+  activeGrades() {
+    return this.grades().filter((x) => x.isActive);
+  }
+  activeSubjects() {
+    return this.subjects().filter((x) => x.isActive);
+  }
+  allChecked(map: Record<string, boolean>, ids: string[]): boolean {
+    return ids.length > 0 && ids.every((id) => map[id]);
+  }
+  toggleAll(map: Record<string, boolean>, ids: string[]): void {
+    const value = !this.allChecked(map, ids);
+    for (const id of ids) map[id] = value;
+  }
+  ids(list: { id: string }[]): string[] {
+    return list.map((x) => x.id);
+  }
+  /** How many courses the dialog would create (before skipping the ones that already exist). */
+  plannedCourses(): number {
+    const subjects = Object.values(this.createForm.subjects).filter(Boolean).length;
+    return Object.keys(this.createForm.grades)
+      .filter((g) => this.createForm.grades[g])
+      .reduce((n, g) => n + subjects * (this.createForm.perSection ? Math.max(1, this.sectionsFor(g).length) : 1), 0);
   }
   openAssign(course: CourseView): void {
     this.selectedCourse.set(course);
     this.assignForm = { search: '', staffId: '', role: course.teachers.length ? 'Assistant' : 'Lead', startsOn: '' };
     this.staff.set([]);
     this.open('assign');
+    this.reason = `Asignación de carga académica ${course.year}`;
     void this.searchStaff();
   }
   openUnassign(course: CourseView, teacher: TeacherView): void {
@@ -180,6 +224,7 @@ export class Courses {
       create: 'Crear cursos',
       assign: 'Asignar docente',
       unassign: 'Finalizar asignación',
+      copy: `Copiar cursos de ${this.previous()?.label ?? 'otro ciclo'}`,
     }[this.mode()];
   }
 
@@ -212,16 +257,59 @@ export class Courses {
         }
         case 'create': {
           const subjectIds = Object.keys(this.createForm.subjects).filter((x) => this.createForm.subjects[x]);
-          if (!this.createForm.gradeLevelId || !subjectIds.length) {
-            this.dialogError.set('Selecciona el grado y al menos una materia.');
+          const gradeIds = this.activeGrades()
+            .map((g) => g.id)
+            .filter((id) => this.createForm.grades[id]);
+          if (!gradeIds.length || !subjectIds.length) {
+            this.dialogError.set('Selecciona al menos un grado y una materia.');
             return;
           }
-          const result = await this.api.post<{ created: number }>(`/api/v1/years/${this.yearId}/courses`, {
-            gradeLevelId: this.createForm.gradeLevelId,
-            sectionId: this.createForm.sectionId || null,
-            subjectIds,
-          });
-          message = result.created ? result.created === 1 ? 'Se creó 1 curso.' : `Se crearon ${result.created} cursos.` : 'Esos cursos ya existían.';
+          // One request per grade or section: each one is atomic on the server and reports its own conflicts.
+          let created = 0;
+          const failed: string[] = [];
+          for (const gradeId of gradeIds) {
+            const sections = this.createForm.perSection ? this.sectionsFor(gradeId) : [];
+            for (const sectionId of sections.length ? sections.map((x) => x.id) : [null]) {
+              try {
+                created += (
+                  await this.api.post<{ created: number }>(`/api/v1/years/${this.yearId}/courses`, {
+                    gradeLevelId: gradeId,
+                    sectionId,
+                    subjectIds,
+                  })
+                ).created;
+              } catch (error) {
+                const grade = this.grades().find((g) => g.id === gradeId)?.name ?? '';
+                const section = sections.find((x) => x.id === sectionId)?.name;
+                failed.push(`${grade}${section ? ' ' + section : ''}: ${this.api.message(error)}`);
+              }
+            }
+          }
+          if (failed.length) {
+            await this.load();
+            this.dialogError.set(
+              `${created ? `Se crearon ${created} cursos. ` : ''}No se pudieron crear en ${failed.join(' · ')}`,
+            );
+            return;
+          }
+          message = created ? (created === 1 ? 'Se creó 1 curso.' : `Se crearon ${created} cursos.`) : 'Esos cursos ya existían.';
+          break;
+        }
+        case 'copy': {
+          const source = this.previous();
+          if (!source) return;
+          const r = await this.api.post<{ created: number; skipped: number; teachers: number }>(
+            `/api/v1/years/${this.yearId}/courses/copy`,
+            { sourceYearId: source.id, teachers: this.copyTeachers },
+          );
+          message =
+            [
+              r.created ? `Se copiaron ${r.created} cursos.` : '',
+              r.teachers ? `${r.teachers} con su docente.` : '',
+              r.skipped ? `${r.skipped} no se copiaron porque su grado, sección o materia ya no está vigente.` : '',
+            ]
+              .filter(Boolean)
+              .join(' ') || 'No había cursos nuevos que copiar.';
           break;
         }
         case 'assign': {

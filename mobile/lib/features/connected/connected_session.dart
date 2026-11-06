@@ -78,7 +78,7 @@ class ConnectedSession {
 
   bool can(String permission) => permissions.contains(permission);
   bool get isStudent => students.length == 1 && students.first.isSelf;
-  bool get hasSchoolModules => can('people.read') || can('finance.read');
+  bool get hasSchoolModules => can('people.read') || can('finance.read') || can('academic.read');
 }
 
 const _serverKey = 'connected.server';

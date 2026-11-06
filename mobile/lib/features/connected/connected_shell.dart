@@ -292,7 +292,6 @@ class ConnectedHomeTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(connectedControllerProvider)!;
-    final theme = Theme.of(context);
     final hour = DateTime.now().hour;
     final greeting = hour < 12 ? 'Buenos días' : (hour < 19 ? 'Buenas tardes' : 'Buenas noches');
     return ConnectedTabPage(
@@ -361,32 +360,12 @@ class ConnectedHomeTab extends ConsumerWidget {
                     childAspectRatio: 1.25,
                     children: tiles,
                   ),
-                for (final course in teaching) ...[
-                  const SizedBox(height: Spacing.md),
-                  AppCard(
-                    child: Row(
-                      children: [
-                        const ToneIcon(icon: Icons.menu_book_outlined, tone: AppTone.accent),
-                        const SizedBox(width: Spacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(course['subject'] as String, style: theme.textTheme.titleSmall),
-                              Text(
-                                '${course['grade']} · ${course['students']} estudiantes · '
-                                '${course['pendingReviews']} por revisar',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: AppColors.of(context).muted,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                for (final course in teaching)
+                  if (session.courses.where((c) => c.id == course['id']).firstOrNull
+                      case final mine?) ...[
+                    const SizedBox(height: Spacing.md),
+                    CourseCard(course: mine, status: course),
+                  ],
                 for (final s in students) ...[
                   const SizedBox(height: Spacing.md),
                   _StudentSummary(data: s),

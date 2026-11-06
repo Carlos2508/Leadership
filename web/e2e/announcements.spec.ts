@@ -164,6 +164,8 @@ test('coordination publishes a notice and the student reads it in the platform',
   const panel = studentPage.getByRole('dialog', { name: 'Notificaciones' });
   await expect(panel).toBeVisible();
   await expect(panel).not.toContainText(title);
+  // Measure contrast once the opening animation has finished (mid-fade colours are not the final ones).
+  await panel.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
   await expectAccessible(studentPage);
   await studentPage.keyboard.press('Escape');
   await expect(panel).toBeHidden();

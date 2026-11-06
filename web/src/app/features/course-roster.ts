@@ -1,6 +1,6 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, inject, input, signal, effect, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi } from '../core/access-api';
 import { SessionService } from '../core/session';
@@ -8,6 +8,7 @@ import { InstitutionService } from '../core/institution';
 import { formatDateOnly } from '../core/people-api';
 import { CourseView } from './courses';
 import { Shell } from '../shared/shell';
+import { CourseNav } from '../shared/course-nav';
 import { Icon } from '../shared/icon';
 import { CyclePipe } from '../shared/cycle.pipe';
 import { UpperCasePipe } from '@angular/common';
@@ -20,12 +21,10 @@ interface Roster {
 
 /** Course roster on a chosen date, for academic staff and for the teacher with an active assignment. */
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink, CyclePipe, UpperCasePipe],
+  imports: [Shell, Icon, CourseNav, FormsModule, CyclePipe, UpperCasePipe],
   template: `
     <app-shell [title]="roster()?.course?.subject ?? 'Curso'">
-      <a class="back-link" [routerLink]="session.can('academic.read') ? '/workspace/courses' : '/workspace'"
-        ><app-icon name="arrow" />Volver</a
-      >
+      <app-course-nav [courseId]="id()" active="roster" />
       @if (notFound()) {
         <section class="card empty-state" role="alert">
           <app-icon name="shield" />
@@ -45,11 +44,6 @@ interface Roster {
                 · {{ teacher.name }}
               }
             </p>
-          </div>
-          <div class="inline-actions">
-            <a class="button outline" [routerLink]="['/workspace/courses', r.course.id, 'attendance']"><app-icon name="check" />Asistencia</a>
-            <a class="button outline" [routerLink]="['/workspace/courses', r.course.id, 'assignments']"><app-icon name="book" />Actividades</a>
-            <a class="button" [routerLink]="['/workspace/courses', r.course.id, 'grades']"><app-icon name="star" />Libreta</a>
           </div>
         </div>
         <section class="card directory-card">
@@ -109,7 +103,14 @@ export class CourseRoster {
   on = '';
 
   constructor() {
-    queueMicrotask(() => void this.load());
+    // The same page is reused when switching to another course: reload whenever the id changes.
+    effect(() => {
+      this.id();
+      untracked(() => {
+        this.roster.set(null);
+        void this.load();
+      });
+    });
   }
   date(value: string | null): string {
     return formatDateOnly(value, this.school.locale.culture);

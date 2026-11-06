@@ -64,6 +64,73 @@
     @if (detail(); as d) {
       <div class="detail-grid academic-grid">
         <div class="detail-main">
+          @if (canManage() && d.year.status !== 'Closed' && progress() < steps().length) {
+            <section class="card detail-card setup-guide" aria-labelledby="setup-title">
+              <div class="section-heading">
+                <div>
+                  <span class="eyebrow">PASO A PASO</span>
+                  <h2 id="setup-title">Preparar {{ d.year.label | cycle }}</h2>
+                </div>
+                <span class="pill" [class.mint]="progress() === steps().length">{{ progress() }} de {{ steps().length }} listos</span>
+              </div>
+              <ol class="setup-steps">
+                @for (step of steps(); track step.key; let i = $index) {
+                  <li [class.done]="step.done">
+                    <span class="setup-mark" aria-hidden="true">
+                      @if (step.done) {
+                        <app-icon name="check" />
+                      } @else {
+                        {{ i + 1 }}
+                      }
+                    </span>
+                    <span class="period-copy"
+                      ><strong>{{ step.title }}</strong><small>{{ step.detail }}</small
+                      ><span class="sr-only">{{ step.done ? 'Listo' : 'Pendiente' }}</span></span
+                    >
+                    @switch (step.key) {
+                      @case ('periods') {
+                        @if (!step.done && (d.year.status === 'Draft' || d.year.status === 'EnrollmentOpen')) {
+                          <button class="button compact-button" (click)="openGenerate()" [disabled]="busy()">Generar</button>
+                        }
+                      }
+                      @case ('sections') {
+                        @if (!step.done && previous()) {
+                          <button class="button outline compact-button" (click)="openCopy()" [disabled]="busy()">
+                            Copiar de {{ previous()!.label }}
+                          </button>
+                        }
+                      }
+                      @case ('courses') {
+                        @if (!courses().length && previous()) {
+                          <button class="button outline compact-button" (click)="openCopy()" [disabled]="busy()">
+                            Copiar de {{ previous()!.label }}
+                          </button>
+                        } @else {
+                          <a class="text-button" routerLink="/workspace/courses" [queryParams]="{ year: d.year.id }"
+                            >{{ step.done ? 'Ver cursos' : courses().length ? 'Asignar docentes' : 'Crear cursos' }}</a
+                          >
+                        }
+                      }
+                      @case ('enrollment') {
+                        @if (d.year.status !== 'Draft') {
+                          <a class="text-button" routerLink="/workspace/enrollment" [queryParams]="{ year: d.year.id }"
+                            >{{ step.done ? 'Ver' : 'Inscribir' }}</a
+                          >
+                        }
+                      }
+                      @case ('start') {
+                        @if (d.year.status === 'Draft' || d.year.status === 'EnrollmentOpen') {
+                          <button class="button compact-button" (click)="openStatus()" [disabled]="busy()">
+                            {{ nextAction[d.year.status] }}
+                          </button>
+                        }
+                      }
+                    }
+                  </li>
+                }
+              </ol>
+            </section>
+          }
           <section class="card detail-card" aria-labelledby="year-detail-title">
             <div class="section-heading">
               <h2 id="year-detail-title">{{ d.year.label | cycle }}</h2>
@@ -137,6 +204,11 @@
               <p class="empty-inline">
                 Sin {{ school.terms.period.toLowerCase() }}s. Son necesarios para iniciar el ciclo.
               </p>
+              @if (canManage() && (d.year.status === 'Draft' || d.year.status === 'EnrollmentOpen')) {
+                <button class="button outline compact-button" (click)="openGenerate()" [disabled]="busy()">
+                  Generar {{ school.terms.period.toLowerCase() }}s automáticamente
+                </button>
+              }
             }
           </section>
 
@@ -272,6 +344,96 @@
               ><span>Fin</span><input name="endsOn" type="date" [(ngModel)]="yearForm.endsOn" required
             /></label>
           </div>
+          @if (!editingId()) {
+            <fieldset class="choice-group setup-options">
+              <legend>Dejarlo listo de una vez</legend>
+              <label class="checkbox-field"
+                ><input type="checkbox" name="setupGenerate" [(ngModel)]="setupForm.generate" /><span
+                  >Generar los {{ school.terms.period.toLowerCase() }}s<small>Del mismo largo; después puedes ajustar sus fechas.</small></span
+                ></label
+              >
+              @if (setupForm.generate) {
+                <label class="count-row nested-option"
+                  ><span>Cantidad</span
+                  ><select name="setupPeriods" class="count-select" [(ngModel)]="setupForm.periods">
+                    @for (n of [2, 3, 4, 5, 6]; track n) {
+                      <option [ngValue]="n">{{ n }} {{ school.terms.period.toLowerCase() }}s</option>
+                    }
+                  </select></label
+                >
+              }
+              @if (setupForm.generate && preview().length) {
+                <ol class="period-preview">
+                  @for (p of preview(); track p.startsOn; let i = $index) {
+                    <li><strong>{{ school.terms.period }} {{ i + 1 }}</strong> {{ date(p.startsOn) }} – {{ date(p.endsOn) }}</li>
+                  }
+                </ol>
+              }
+              @if (latest(); as source) {
+                <label class="checkbox-field"
+                  ><input type="checkbox" name="setupSections" [(ngModel)]="setupForm.sections" /><span
+                    >Copiar las secciones de {{ source.label }}</span
+                  ></label
+                >
+                <label class="checkbox-field"
+                  ><input type="checkbox" name="setupCourses" [(ngModel)]="setupForm.courses" /><span
+                    >Copiar los cursos de {{ source.label }}</span
+                  ></label
+                >
+                <label class="checkbox-field nested-option"
+                  ><input
+                    type="checkbox"
+                    name="setupTeachers"
+                    [(ngModel)]="setupForm.teachers"
+                    [disabled]="!setupForm.courses"
+                  /><span>Con los mismos docentes<small>Solo quienes seguían asignados al terminar {{ source.label }}.</small></span></label
+                >
+              }
+            </fieldset>
+          }
+        }
+        @case ('generate') {
+          <p class="action-explanation">
+            Divide el ciclo en {{ school.terms.period.toLowerCase() }}s del mismo largo. Después puedes editar cada uno
+            (por ejemplo, para respetar vacaciones).
+          </p>
+          <label class="form-field"
+            ><span>Cantidad</span
+            ><select name="generateCount" [(ngModel)]="generateCount">
+              @for (n of [2, 3, 4, 5, 6]; track n) {
+                <option [ngValue]="n">{{ n }} {{ school.terms.period.toLowerCase() }}s</option>
+              }
+            </select></label
+          >
+          <ol class="period-preview">
+            @for (p of preview(); track p.startsOn; let i = $index) {
+              <li><strong>{{ school.terms.period }} {{ i + 1 }}</strong> {{ date(p.startsOn) }} – {{ date(p.endsOn) }}</li>
+            }
+          </ol>
+        }
+        @case ('copy') {
+          <p class="action-explanation">
+            Copia la organización de {{ previous()?.label }}. No mueve estudiantes ni notas, y no cambia lo que ya existe en
+            este ciclo.
+          </p>
+          <fieldset class="choice-group setup-options">
+            <legend>¿Qué copiar?</legend>
+            <label class="checkbox-field"
+              ><input type="checkbox" name="copySections" [(ngModel)]="copyForm.sections" /><span
+                >Secciones<small>Mismos nombres, jornada y cupo.</small></span
+              ></label
+            >
+            <label class="checkbox-field"
+              ><input type="checkbox" name="copyCourses" [(ngModel)]="copyForm.courses" /><span
+                >Cursos<small>Misma materia por grado o por sección.</small></span
+              ></label
+            >
+            <label class="checkbox-field nested-option"
+              ><input type="checkbox" name="copyTeachers" [(ngModel)]="copyForm.teachers" [disabled]="!copyForm.courses" /><span
+                >Con los mismos docentes</span
+              ></label
+            >
+          </fieldset>
         }
         @case ('status') {
           <p class="action-explanation">
@@ -361,7 +523,7 @@
       <div class="dialog-actions">
         <button class="button outline" type="button" (click)="closeDialog()" [disabled]="busy()">Cancelar</button
         ><button class="button" type="submit" [disabled]="busy()">
-          {{ busy() ? 'Guardando…' : mode() === 'status' ? title() : 'Guardar' }}
+          {{ busy() ? 'Guardando…' : submitLabel() }}
         </button>
       </div>
     </form>

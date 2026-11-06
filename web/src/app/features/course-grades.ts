@@ -10,6 +10,7 @@ import { InstitutionService } from '../core/institution';
 import { formatDateOnly } from '../core/people-api';
 import { CourseView } from './courses';
 import { Shell } from '../shared/shell';
+import { CourseNav } from '../shared/course-nav';
 import { Icon } from '../shared/icon';
 import { CyclePipe } from '../shared/cycle.pipe';
 import { UpperCasePipe } from '@angular/common';
@@ -63,10 +64,10 @@ export function parseScore(text: string): number | null | undefined {
  * coordination, which always need a reason and are never autosaved.
  */
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink, CyclePipe, UpperCasePipe],
+  imports: [Shell, Icon, CourseNav, FormsModule, RouterLink, CyclePipe, UpperCasePipe],
   template: `
     <app-shell [title]="sheet()?.course?.subject ?? 'Libreta'">
-      <a class="back-link" [routerLink]="['/workspace/courses', id()]"><app-icon name="arrow" />Volver a la lista</a>
+      <app-course-nav [courseId]="id()" active="grades" />
       @if (error()) {
         <p class="feedback error-feedback" role="alert">{{ error() }}</p>
       }

@@ -16,6 +16,7 @@ Implementado en el cuarto incremento (ACA-001/ENR-001). Decisión en `adr/ADR-00
 | GET `/api/v1/academic/years`, `/years/{id}`, `/grades` | `academic.read` |
 | POST `/api/v1/academic/years`, `/years/{id}`, `/years/{id}/status`, `/years/{id}/default` | `academic.manage` + CSRF |
 | POST `/api/v1/academic/years/{id}/periods`, `/periods/{id}`, `/years/{id}/periods/remove-last` | `academic.manage` |
+| POST `/api/v1/academic/years/{id}/periods/generate` (`version`, `count` 1–12; solo sin períodos) y `/years/{id}/sections/copy` (`sourceYearId`; no duplica) | `academic.manage` |
 | POST `/api/v1/academic/grades`, `/grades/{id}` | `academic.manage` |
 | POST `/api/v1/academic/years/{id}/sections`, `/years/{y}/sections/{id}`, `/…/remove` | `academic.manage` |
 | GET `/api/v1/years/{yearId}/enrollments?gradeId&sectionId&status&search&page` | `academic.read` |

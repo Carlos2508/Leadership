@@ -19,84 +19,189 @@ class TeachingTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(connectedControllerProvider)!;
-    final theme = Theme.of(context);
-    final colors = AppColors.of(context);
+    // Today's status per course (pending reviews, attendance) comes from the same dashboard as the web.
+    final dashboard =
+        ref.watch(apiGetProvider(ConnectedHomeTab.path)).value as Map<String, dynamic>?;
+    final status = {
+      for (final c
+          in (dashboard?['teaching'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>())
+        c['id'] as String: c,
+    };
     return ConnectedTabPage(
-      onRefresh: () => ref.read(connectedControllerProvider.notifier).refresh(),
+      onRefresh: () async {
+        ref.invalidate(apiGetProvider(ConnectedHomeTab.path));
+        await ref.read(connectedControllerProvider.notifier).refresh();
+      },
       children: [
         const PageIntro(
           eyebrow: 'Docencia',
           title: 'Mis cursos',
-          subtitle: 'Libreta, asistencia y tareas.',
+          subtitle: 'Toca un botón para ir directo a la asistencia o la libreta.',
         ),
+        if (session.courses.isEmpty)
+          const EmptyState(
+            icon: Icons.menu_book_outlined,
+            title: 'Sin cursos asignados',
+            message: 'Dirección asigna los cursos desde la plataforma.',
+          ),
         for (final course in session.courses)
           Padding(
             padding: const EdgeInsets.only(bottom: Spacing.md),
-            child: AppCard(
-              onTap: () => Navigator.of(context)
-                  .push(MaterialPageRoute<void>(builder: (_) => CourseDetailPage(course: course))),
-              child: Row(
-                children: [
-                  const ToneIcon(icon: Icons.menu_book_outlined, tone: AppTone.accent),
-                  const SizedBox(width: Spacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(course.subject, style: theme.textTheme.titleSmall),
-                        Text(
-                          '${course.groupLabel} · ${course.students} estudiantes',
-                          style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.chevron_right, color: colors.muted),
-                ],
-              ),
-            ),
+            child: CourseCard(course: course, status: status[course.id]),
           ),
       ],
     );
   }
 }
 
-enum _CourseSection { grades, attendance, tasks }
-
-class CourseDetailPage extends StatefulWidget {
-  const CourseDetailPage({required this.course, super.key});
+/// Course with today's status and direct buttons to the two daily tasks of a teacher.
+class CourseCard extends StatelessWidget {
+  const CourseCard({required this.course, this.status, super.key});
 
   final TeachingCourse course;
-
-  @override
-  State<CourseDetailPage> createState() => _CourseDetailPageState();
-}
-
-class _CourseDetailPageState extends State<CourseDetailPage> {
-  _CourseSection _section = _CourseSection.grades;
+  final Map<String, dynamic>? status;
 
   @override
   Widget build(BuildContext context) {
-    final course = widget.course;
+    final theme = Theme.of(context);
+    final colors = AppColors.of(context);
+    final reviews = status?['pendingReviews'] as int? ?? 0;
+    final recorded = status?['attendanceRecorded'] as int?;
+    final weekday = DateTime.now().weekday <= DateTime.friday;
+    final attendancePending = weekday && recorded == 0 && course.students > 0;
+    void open(CourseSection section) => Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CourseDetailPage(course: course, initial: section),
+      ),
+    );
+    return AppCard(
+      onTap: () => open(attendancePending ? CourseSection.attendance : CourseSection.grades),
+      semanticLabel: '${course.subject}, ${course.groupLabel}',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const ToneIcon(icon: Icons.menu_book_outlined, tone: AppTone.accent),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(course.subject, style: theme.textTheme.titleSmall),
+                    Text(
+                      '${course.groupLabel} · ${course.students} estudiantes',
+                      style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (attendancePending || reviews > 0) ...[
+            const SizedBox(height: Spacing.sm),
+            Wrap(
+              spacing: Spacing.sm,
+              runSpacing: Spacing.xs,
+              children: [
+                if (attendancePending)
+                  const StatusPill(label: 'Asistencia de hoy pendiente', tone: AppTone.accent),
+                if (reviews > 0)
+                  StatusPill(
+                    label: '$reviews ${reviews == 1 ? 'entrega' : 'entregas'} por revisar',
+                    tone: AppTone.blue,
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: Spacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: (attendancePending ? FilledButton.icon : OutlinedButton.icon)(
+                  onPressed: () => open(CourseSection.attendance),
+                  icon: const Icon(Icons.event_available, size: 18),
+                  label: const Text('Asistencia'),
+                ),
+              ),
+              const SizedBox(width: Spacing.sm),
+              Expanded(
+                child: (attendancePending ? OutlinedButton.icon : FilledButton.icon)(
+                  onPressed: () => open(CourseSection.grades),
+                  icon: const Icon(Icons.grade_outlined, size: 18),
+                  label: const Text('Libreta'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+enum CourseSection { grades, attendance, tasks }
+
+class CourseDetailPage extends ConsumerStatefulWidget {
+  const CourseDetailPage({required this.course, this.initial = CourseSection.grades, super.key});
+
+  final TeachingCourse course;
+  final CourseSection initial;
+
+  @override
+  ConsumerState<CourseDetailPage> createState() => _CourseDetailPageState();
+}
+
+class _CourseDetailPageState extends ConsumerState<CourseDetailPage> {
+  late CourseSection _section = widget.initial;
+  late TeachingCourse _course = widget.course;
+
+  @override
+  Widget build(BuildContext context) {
+    final course = _course;
+    final courses = ref.watch(connectedControllerProvider)?.courses ?? const <TeachingCourse>[];
     return DetailPage(
       title: course.subject,
       children: [
         PageIntro(eyebrow: course.groupLabel, title: course.subject),
-        SectionChips<_CourseSection>(
+        if (courses.length > 1) ...[
+          // Switch course without going back; the same tool stays open.
+          DropdownButtonFormField<String>(
+            initialValue: course.id,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Cambiar de curso'),
+            items: [
+              for (final c in courses)
+                DropdownMenuItem(
+                  value: c.id,
+                  child: Text('${c.subject} · ${c.groupLabel}', overflow: TextOverflow.ellipsis),
+                ),
+            ],
+            onChanged: (id) {
+              final next = courses.where((c) => c.id == id).firstOrNull;
+              if (next != null) setState(() => _course = next);
+            },
+          ),
+          const SizedBox(height: Spacing.md),
+        ],
+        SectionChips<CourseSection>(
           options: const {
-            _CourseSection.grades: ('Libreta', Icons.grade_outlined),
-            _CourseSection.attendance: ('Asistencia', Icons.event_available),
-            _CourseSection.tasks: ('Tareas', Icons.assignment_outlined),
+            CourseSection.attendance: ('Asistencia', Icons.event_available),
+            CourseSection.grades: ('Libreta', Icons.grade_outlined),
+            CourseSection.tasks: ('Tareas', Icons.assignment_outlined),
           },
           selected: _section,
           onSelected: (v) => setState(() => _section = v),
         ),
         const SizedBox(height: Spacing.lg),
-        switch (_section) {
-          _CourseSection.grades => GradebookView(courseId: course.id),
-          _CourseSection.attendance => AttendanceView(courseId: course.id),
-          _CourseSection.tasks => _TasksView(courseId: course.id),
-        },
+        KeyedSubtree(
+          key: ValueKey('${course.id}-$_section'),
+          child: switch (_section) {
+            CourseSection.grades => GradebookView(courseId: course.id),
+            CourseSection.attendance => AttendanceView(courseId: course.id),
+            CourseSection.tasks => _TasksView(courseId: course.id),
+          },
+        ),
       ],
     );
   }

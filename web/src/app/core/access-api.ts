@@ -76,7 +76,9 @@ export class AccessApi {
     if (error instanceof HttpErrorResponse) {
       if (error.status === 401) {
         window.location.assign(
-          '/Identity/Account/Login?ReturnUrl=' + encodeURIComponent(window.location.pathname),
+          '/Identity/Account/Login?ReturnUrl=' + encodeURIComponent(
+            window.location.pathname + window.location.search + window.location.hash,
+          ),
         );
         return 'Tu sesión terminó. Ingresa nuevamente.';
       }

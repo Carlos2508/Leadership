@@ -19,7 +19,7 @@
       {{ error() }} <button class="text-button" (click)="init()">Reintentar</button>
     </div>
   }
-  @if (!loading() && !years().length) {
+  @if (!loading() && !error() && !years().length) {
     <section class="card empty-state">
       <app-icon name="calendar" />
       <h2>No hay ciclos escolares</h2>
@@ -33,7 +33,7 @@
       <form class="filters" (ngSubmit)="load()">
         <label class="select-field"
           ><span>Ciclo</span
-          ><select name="year" [(ngModel)]="yearId" (ngModelChange)="changeYear()">
+          ><select name="year" [(ngModel)]="yearId" (ngModelChange)="changeYear()" [disabled]="busy()">
             @for (item of years(); track item.id) {
               <option [value]="item.id">{{ item.label }} · {{ yearLabels[item.status] }}</option>
             }
@@ -78,7 +78,7 @@
           Limpiar filtros
         </button>
       </form>
-      @if (gradeId && yearId && session.can('people.manage')) {
+      @if (gradeId && yearId && detail() && !loading() && !error() && session.can('people.manage')) {
         <div class="card-title-row">
           <p class="muted-copy">Carnets del grado o sección seleccionados, con ubicación vigente en el ciclo.</p>
           <a class="button outline compact-button" [href]="'/api/v1/years/' + yearId + '/cards.pdf?gradeId=' + gradeId + (sectionId ? '&sectionId=' + sectionId : '') + '&layout=sheet'" target="_blank" rel="noopener">Carnets en carta</a>
@@ -180,7 +180,9 @@
             <h2>No hay inscripciones con estos filtros</h2>
             <p>
               {{
-                canEnroll() && open()
+                search || gradeId || sectionId || status !== 'Active'
+                  ? 'Prueba otro nombre o código, o usa «Limpiar filtros» para ver las inscripciones del ciclo.'
+                  : canEnroll() && open()
                   ? 'Usa «Inscribir estudiante» para registrar la primera.'
                   : 'Prueba con otros filtros o selecciona otro ciclo.'
               }}

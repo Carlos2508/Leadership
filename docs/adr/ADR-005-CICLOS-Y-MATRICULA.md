@@ -19,6 +19,7 @@ El legado guarda el ciclo global en configuración y otro en sesión; escrituras
 - Permisos: `academic.read` (consultar estructura, listas e historial), `academic.manage` (ciclos, períodos, grados, secciones) y `enrollment.manage` (inscribir, mover, retirar, reingresar). Perfiles: Secretaría incluye inscripciones; nueva Coordinación académica; Administración institucional incluye todo.
 - Autoservicio: el estudiante ve su ubicación vigente; un encargado solo la ve con la facultad `AcademicRecords`. Sin la facultad, solo ve nombre y código del estudiante vinculado.
 - Las URL llevan el ciclo (`/workspace/enrollment?year=…`, `/api/v1/years/{yearId}/enrollments`); el predeterminado solo se usa para la navegación inicial, nunca decide una escritura.
+- El listado de inscripción conserva también grado/sección/estado/búsqueda/página en la URL y restaura ese contexto con el historial. Una carga fallida retira filas y acciones anteriores y permite reintentar; un ciclo solicitado desconocido no se sustituye por el predeterminado. Ver `QA_EXPERIENCIA_2026-11-05.md`.
 
 ## Pendientes conscientes
 

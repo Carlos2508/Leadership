@@ -32,6 +32,7 @@
             placeholder="Nombre, apellido o código"
             maxlength="100"
             [(ngModel)]="search"
+              (ngModelChange)="searched.set(false); results.set([])"
           /></div></label
       ><button class="button outline" type="submit" [disabled]="searching()">Buscar</button>
     </form>
@@ -49,11 +50,18 @@
           </li>
         }
       </ul>
+    } @else if (searched() && !searching()) {
+      <p class="empty-inline padded" role="status">No encontramos estudiantes con esa búsqueda. Prueba otro nombre, apellido o código.</p>
     }
   </section>
 
   @if (loading() && !statement()) {
     <p class="loading-state card" role="status">Cargando estado de cuenta…</p>
+  } @else if (statementError()) {
+    <section class="card detail-card" aria-label="Estado de cuenta no disponible">
+      <p class="feedback error-feedback" role="alert">{{ statementError() }}</p>
+      <button class="button outline" (click)="retryStatement()">Reintentar estado de cuenta</button>
+    </section>
   } @else if (statement(); as s) {
     <section class="card detail-card statement-card" aria-labelledby="statement-title">
       <div class="section-heading">
@@ -169,14 +177,19 @@
       <h2>Selecciona un estudiante</h2>
       <p>Busca por nombre o código para ver su estado de cuenta.</p>
     </section>
-    <section class="card detail-card" aria-labelledby="today-title">
+    <section class="card detail-card" aria-labelledby="today-title" [attr.aria-busy]="todayLoading()">
       <div class="card-title-row">
         <h2 id="today-title">Recibos de hoy</h2>
         @if (today().length) {
           <span class="pill mint">Total {{ money(todayTotal()) }}</span>
         }
       </div>
-      @if (today().length) {
+      @if (todayLoading()) {
+        <p class="loading-state" role="status">Cargando recibos de hoy…</p>
+      } @else if (todayError()) {
+        <p class="feedback error-feedback" role="alert">{{ todayError() }}</p>
+        <button class="button outline" (click)="loadToday()">Reintentar recibos</button>
+      } @else if (today().length) {
         <ul class="payment-list">
           @for (payment of today(); track payment.id) {
             <li [class.reversed]="payment.reversed">

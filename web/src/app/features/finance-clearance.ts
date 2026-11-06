@@ -1,6 +1,8 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { distinctUntilChanged, map } from 'rxjs';
 import { AccessApi } from '../core/access-api';
 import { InstitutionService } from '../core/institution';
 import { GradeView, YearSummary } from '../core/academic-api';
@@ -25,6 +27,7 @@ import { Icon } from '../shared/icon';
       </div>
       @if (error()) {
         <p class="feedback error-feedback" role="alert">{{ error() }}</p>
+        <button class="button outline" (click)="load()">Reintentar solvencia</button>
       }
       <section class="card directory-card" [attr.aria-busy]="loading()">
         <form class="filters" (ngSubmit)="loadReport()">
@@ -37,7 +40,7 @@ import { Icon } from '../shared/icon';
             </select></label
           ><label class="select-field"
             ><span>Corte</span
-            ><select name="cutoff" [(ngModel)]="cutoffId" (ngModelChange)="loadReport()">
+            ><select name="cutoff" [(ngModel)]="cutoffId" (ngModelChange)="loadReport()" [disabled]="!setup() || loading()">
               <option value="" disabled>Selecciona</option>
               @for (cutoff of setup()?.cutoffs ?? []; track cutoff.id) {
                 <option [value]="cutoff.id">{{ cutoff.name }}</option>
@@ -61,7 +64,9 @@ import { Icon } from '../shared/icon';
             </select></label
           >
         </form>
-        @if (!(setup()?.cutoffs?.length)) {
+        @if (loading()) {
+          <p class="loading-state" role="status">Calculando solvencia…</p>
+        } @else if (!error() && setup() && !setup()!.cutoffs.length) {
           <div class="empty-state">
             <app-icon name="info" />
             <h2>Este ciclo no tiene cortes de solvencia</h2>
@@ -121,19 +126,17 @@ import { Icon } from '../shared/icon';
           } @else {
             <p class="empty-inline padded">No hay estudiantes con estos filtros.</p>
           }
-        } @else if (loading()) {
-          <p class="loading-state" role="status">Calculando solvencia…</p>
         }
       </section>
     </app-shell>
   `,
 })
 export class FinanceClearance {
-  readonly year = input<string | undefined>();
-  readonly cutoff = input<string | undefined>();
   readonly api = inject(AccessApi);
   readonly school = inject(InstitutionService).current;
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private loadRequest = 0;
   readonly years = signal<YearSummary[]>([]);
   readonly grades = signal<GradeView[]>([]);
   readonly setup = signal<FinanceSetup | null>(null);
@@ -147,55 +150,76 @@ export class FinanceClearance {
   status = 'all';
 
   constructor() {
-    queueMicrotask(() => void this.init());
+    this.route.queryParamMap.pipe(
+      map(params => JSON.stringify(['year', 'cutoff', 'grade', 'status'].map(key => params.get(key)))),
+      distinctUntilChanged(),
+      takeUntilDestroyed(),
+    ).subscribe(() => void this.load());
   }
   format(value: number): string {
     return money(value, this.setup()?.currency ?? this.school.locale.currency, this.school.locale.culture);
   }
-  async init(): Promise<void> {
+  async load(): Promise<void> {
+    const request = ++this.loadRequest;
+    const query = this.route.snapshot.queryParamMap;
+    const requestedYear = query.get('year');
+    const requestedCutoff = query.get('cutoff');
+    this.loading.set(true);
+    this.error.set('');
+    this.setup.set(null);
+    this.report.set(null);
+    this.cutoffId = requestedCutoff ?? '';
+    this.gradeId = query.get('grade') ?? '';
+    this.status = query.get('status') ?? 'all';
     try {
-      const [years, grades] = await Promise.all([
-        this.api.get<YearSummary[]>('/api/v1/academic/years'),
-        this.api.get<GradeView[]>('/api/v1/academic/grades'),
-      ]);
-      this.years.set(years);
-      this.grades.set(grades);
-      const selected = years.find((x) => x.id === this.year()) ?? years.find((x) => x.isDefault) ?? years[0];
-      if (!selected) return;
+      if (!this.years().length) {
+        const [years, grades] = await Promise.all([
+          this.api.get<YearSummary[]>('/api/v1/academic/years'),
+          this.api.get<GradeView[]>('/api/v1/academic/grades'),
+        ]);
+        if (request !== this.loadRequest) return;
+        this.years.set(years);
+        this.grades.set(grades);
+      }
+      const selected = requestedYear ? this.years().find(x => x.id === requestedYear)
+        : this.years().find(x => x.isDefault) ?? this.years()[0];
+      this.yearId = selected?.id ?? requestedYear ?? '';
+      if (!selected) {
+        if (requestedYear) this.error.set('No encontramos el ciclo solicitado. Selecciona otro ciclo.');
+        return;
+      }
+      const setup = await this.api.get<FinanceSetup>(`/api/v1/finance/years/${selected.id}/setup`);
+      if (request !== this.loadRequest) return;
+      this.setup.set(setup);
+      const cutoff = requestedCutoff ? setup.cutoffs.find(x => x.id === requestedCutoff) : setup.cutoffs.at(-1);
+      if (requestedCutoff && !cutoff) {
+        this.error.set('El corte solicitado no pertenece a este ciclo. Selecciona otro corte.');
+        return;
+      }
       this.yearId = selected.id;
-      await this.loadSetup(this.cutoff());
+      this.cutoffId = cutoff?.id ?? '';
+      if (!requestedYear || (cutoff && !requestedCutoff)) {
+        await this.router.navigate([], { queryParams: { year: selected.id, cutoff: cutoff?.id ?? null,
+          grade: this.gradeId || null, status: this.status === 'all' ? null : this.status }, replaceUrl: true });
+        return;
+      }
+      if (!cutoff) return;
+      const filters = new URLSearchParams({ status: this.status });
+      if (this.gradeId) filters.set('gradeId', this.gradeId);
+      const report = await this.api.get<ClearanceReport>(`/api/v1/finance/cutoffs/${cutoff.id}/report?${filters}`);
+      if (request === this.loadRequest) this.report.set(report);
     } catch (error) {
-      this.error.set(this.api.message(error));
+      if (request === this.loadRequest) this.error.set(this.api.message(error));
     } finally {
-      this.loading.set(false);
+      if (request === this.loadRequest) this.loading.set(false);
     }
   }
   async changeYear(): Promise<void> {
-    this.report.set(null);
-    await this.loadSetup();
-  }
-  private async loadSetup(preferred?: string): Promise<void> {
-    const setup = await this.api.get<FinanceSetup>(`/api/v1/finance/years/${this.yearId}/setup`);
-    this.setup.set(setup);
-    this.cutoffId = setup.cutoffs.find((x) => x.id === preferred)?.id ?? setup.cutoffs.at(-1)?.id ?? '';
-    await this.loadReport();
+    await this.router.navigate([], { queryParams: { year: this.yearId } });
   }
   async loadReport(): Promise<void> {
-    if (!this.cutoffId) {
-      this.report.set(null);
-      return;
-    }
-    this.loading.set(true);
-    this.error.set('');
-    try {
-      await this.router.navigate([], { queryParams: { year: this.yearId, cutoff: this.cutoffId } });
-      const query = new URLSearchParams({ status: this.status });
-      if (this.gradeId) query.set('gradeId', this.gradeId);
-      this.report.set(await this.api.get<ClearanceReport>(`/api/v1/finance/cutoffs/${this.cutoffId}/report?${query}`));
-    } catch (error) {
-      this.error.set(this.api.message(error));
-    } finally {
-      this.loading.set(false);
-    }
+    const navigated = await this.router.navigate([], { queryParams: { year: this.yearId, cutoff: this.cutoffId || null,
+      grade: this.gradeId || null, status: this.status === 'all' ? null : this.status } });
+    if (!navigated) await this.load();
   }
 }

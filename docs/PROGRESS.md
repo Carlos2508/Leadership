@@ -2,6 +2,27 @@
 
 Actualizado: 5 de noviembre de 2026, America/Guatemala.
 
+## Consolidación de QA y experiencia en Git
+
+El propietario solicitó commit y push de todo lo pendiente. Este commit reúne las dos revisiones de flujos y sus mejoras de experiencia, pruebas y documentación. Las referencias posteriores a cambios sin commit describen el cierre de esas revisiones. Se conserva la validación documentada (89 .NET/SQL, 68 Flutter, 75 E2E y 6 adicionales); se comprobó `git diff --check` sin repetir suites. Evidencias y credenciales locales permanecen ignoradas. No incluye despliegue.
+
+## Revisión completa y experiencia de uso (estado vigente)
+
+- El propietario pidió nuevamente probar todos los flujos y mejorar la experiencia. Informe y matriz de cobertura: `QA_EXPERIENCIA_2026-11-05.md`. Las muestras y pendientes físicos/móviles no se consideran módulos terminados.
+- Asistencia: protección de marcas/observaciones al cambiar día/curso o salir; espera el guardado en curso; cancelación restaura la fecha visible. Fecha explícita en URL, historial, reintento y rechazo de respuestas anteriores. Estados Sin registrar/Registro parcial/Registrada/Cambios sin guardar; totales del borrador, errores junto al formulario y guardado solo cuando hace falta. Los botones avanzan un día calendario sin inventar calendario lectivo.
+- Inscripciones: ciclo y filtros completos en URL/historial; un error retira matrícula y acciones anteriores, permite reintentar y no sustituye ciclos desconocidos. Al vencer una sesión, la vuelta desde ingreso conserva ciclo/filtros/fragmento. Caja explica búsquedas vacías y descarta resultados cuyo término cambió; matrícula orienta a limpiar filtros.
+- **89 pruebas .NET aprobadas con SQL real**, 0 omisiones; **68 Flutter aprobadas**, análisis estático sin observaciones con SDK fijado; build Angular correcto. **75 E2E aprobados y 1 omisión prevista de rendimiento móvil**, 0 fallos, corrida completa de 76 casos (12 nuevos). **6 adicionales aprobados** tras el último ajuste visual de asistencia, con Axe y capturas revisadas en escritorio/móvil y 320/768/1920 px. Advertencia conocida SweetAlert2 CommonJS.
+- Evidencias: `.local/qa/evidencia/experience-2026-11-05/` (133 PNG, secretos MFA enmascarados). SQL final: **0 bases temporales Test/E2E**; `git diff --check` correcto. Sin cambios backend/migraciones, datos de desarrollo o legado. Incremento y QA previo en el working tree sobre `ed6022f`, sin despliegue. Host actualizado `http://localhost:5082`, proceso/logs en `.local/qa/experience-host.json` y `experience-5082*.log`.
+
+## QA continuada de flujos (estado vigente)
+
+- El propietario pidió seguir probando y buscar bugs, y reiteró continuar durante la revisión. Se reprodujeron y corrigieron ocho incidencias documentadas en `QA_FLUJOS_2026-11-05.md`: historial/errores/respuestas tardías de Caja, error del resumen de cobros, pérdida de notas al navegar tras fallar el autoguardado, contexto y errores de ciclos financieros, y color de confirmaciones destructivas.
+- Caja limpia el estado del estudiante anterior, sigue la URL y ofrece reintentos; el fallo de recibos no se presenta como ausencia de pagos. La libreta espera guardados pendientes y cambios escritos durante ellos; los cambios que no se guardaron requieren confirmar su descarte. El historial y la recuperación no mezclan períodos.
+- Configuración financiera y Solvencia siguen el ciclo y corte explícitos, ignoran respuestas anteriores y retiran datos ante errores. Un ciclo inexistente o corte de otro ciclo no se sustituye por otro. Los filtros de solvencia se conservan en URL/historial. La creación de una cuota tras Atrás se comprobó contra el ciclo del comando y SQL.
+- Recorrido financiero ampliado: reversión → deuda/solvencia familiar actualizadas → rechazo de ajuste excesivo → descuento válido → pago del remanente; se conserva el recibo revertido. Roles espera que termine la actualización visual de la selección; el resumen de recibos no supone una base vacía después de otras pruebas.
+- MFA: trazas del recorrido desactivadas, QR/clave/códigos enmascarados en capturas. Evidencias locales en `.local/qa/evidencia/flows-2026-11-05/`; revisión de escritorio/móvil y Axe. Sin migración ni modificación de datos escolares/PHP/Numix.
+- Validación de cierre: **63 E2E aprobados, 1 omisión prevista de rendimiento móvil y 0 fallos**, en corrida completa de 64 casos; **4 adicionales aprobados** tras corregir el color destructivo. Se añadieron 24 casos de regresión. Build Angular correcto, advertencia conocida SweetAlert2 CommonJS; Axe y capturas de escritorio/móvil revisadas. SQL final: **0 bases temporales Test/E2E**. `git diff --check` correcto. Cambios QA en el working tree sobre `ed6022f`, sin migraciones. Host actualizado en `http://localhost:5082`, datos del proceso en `.local/qa/flows-host.json`.
+
 ## Dashboard operativo y roles configurables (estado vigente)
 
 - Rediseño anterior versionado y enviado a `origin/main` como `2f70635` por solicitud del propietario. Este incremento sustituye «Tus módulos» por datos y acciones operativas; ver ADR-011.

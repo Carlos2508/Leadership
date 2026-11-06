@@ -1,6 +1,8 @@
-import { Component, ElementRef, ViewChild, computed, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { distinctUntilChanged, map } from 'rxjs';
 import { AccessApi, PageResult } from '../core/access-api';
 import { Alerts } from '../core/alerts';
 import { SessionService } from '../core/session';
@@ -26,12 +28,14 @@ type Mode = 'enroll' | 'placement' | 'withdraw' | 'reactivate';
   templateUrl: './enrollment-roster.html',
 })
 export class EnrollmentRoster {
-  readonly year = input<string | undefined>();
   readonly api = inject(AccessApi);
   readonly alerts = inject(Alerts);
   readonly session = inject(SessionService);
   readonly school = inject(InstitutionService).current;
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private request = 0;
+  private contextYear = '';
   @ViewChild('enrollmentDialog') private dialog!: ElementRef<HTMLDialogElement>;
   @ViewChild('noticeRef') private noticeRef?: ElementRef<HTMLElement>;
 
@@ -50,6 +54,7 @@ export class EnrollmentRoster {
   readonly searching = signal(false);
   readonly canEnroll = computed(() => this.session.can('enrollment.manage'));
   readonly open = computed(() => {
+    if (this.loading() || this.error()) return false;
     const status = this.detail()?.year.status;
     return status === 'EnrollmentOpen' || status === 'Active';
   });
@@ -65,7 +70,17 @@ export class EnrollmentRoster {
   candidateSearch = '';
 
   constructor() {
-    queueMicrotask(() => void this.init());
+    this.route.queryParamMap
+      .pipe(
+        map((params) =>
+          JSON.stringify(
+            ['year', 'grade', 'section', 'status', 'search', 'page'].map((key) => params.get(key)),
+          ),
+        ),
+        distinctUntilChanged(),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => void this.init());
   }
 
   date(value: string | null): string {
@@ -80,58 +95,86 @@ export class EnrollmentRoster {
   }
 
   async init(): Promise<void> {
+    const request = ++this.request;
+    const params = this.route.snapshot.queryParamMap;
+    const requested = params.get('year');
+    const gradeId = params.get('grade') ?? '';
+    const sectionId = params.get('section') ?? '';
+    const status = params.get('status') ?? 'Active';
+    const search = params.get('search') ?? '';
+    const page = Math.max(1, Number(params.get('page')) || 1);
     this.loading.set(true);
+    this.error.set('');
+    this.data.set(null);
+    this.gradeId = gradeId;
+    this.sectionId = sectionId;
+    this.status = status;
+    this.search = search;
+    if (this.contextYear !== requested) {
+      this.detail.set(null);
+      this.dialog?.nativeElement.close();
+      this.selected.set(null);
+      this.candidates.set([]);
+    }
     try {
-      const [years, grades] = await Promise.all([
-        this.api.get<YearSummary[]>('/api/v1/academic/years'),
-        this.api.get<GradeView[]>('/api/v1/academic/grades'),
-      ]);
-      this.years.set(years);
-      this.grades.set(grades);
-      const selected =
-        years.find((x) => x.id === this.year()) ?? years.find((x) => x.isDefault) ?? years[0];
+      if (!this.years().length) {
+        const [years, grades] = await Promise.all([
+          this.api.get<YearSummary[]>('/api/v1/academic/years'),
+          this.api.get<GradeView[]>('/api/v1/academic/grades'),
+        ]);
+        if (request !== this.request) return;
+        this.years.set(years);
+        this.grades.set(grades);
+      }
+      const selected = requested
+        ? this.years().find((x) => x.id === requested)
+        : (this.years().find((x) => x.isDefault) ?? this.years()[0]);
+      this.yearId = selected?.id ?? requested ?? '';
       if (!selected) {
-        this.loading.set(false);
+        if (requested) this.error.set('No encontramos el ciclo solicitado. Selecciona otro ciclo.');
         return;
       }
-      this.yearId = selected.id;
-      await this.loadYear();
+      if (!requested) {
+        await this.router.navigate([], { queryParams: { year: selected.id }, replaceUrl: true });
+        return;
+      }
+      if (this.detail()?.year.id !== selected.id) {
+        const detail = await this.api.get<YearDetail>(`/api/v1/academic/years/${selected.id}`);
+        if (request !== this.request) return;
+        this.detail.set(detail);
+      }
+      this.contextYear = selected.id;
+      const query = new URLSearchParams({ status, search, page: String(page) });
+      if (gradeId) query.set('gradeId', gradeId);
+      if (sectionId) query.set('sectionId', sectionId);
+      const data = await this.api.get<PageResult<EnrollmentRow>>(
+        `/api/v1/years/${selected.id}/enrollments?${query}`,
+      );
+      if (request === this.request) this.data.set(data);
     } catch (error) {
-      this.error.set(this.api.message(error));
-      this.loading.set(false);
+      if (request === this.request) this.error.set(this.api.message(error));
+    } finally {
+      if (request === this.request) this.loading.set(false);
     }
   }
 
   async changeYear(): Promise<void> {
-    this.gradeId = '';
-    this.sectionId = '';
     await this.router.navigate([], { queryParams: { year: this.yearId } });
-    await this.loadYear();
-  }
-
-  async loadYear(): Promise<void> {
-    this.detail.set(await this.api.get<YearDetail>(`/api/v1/academic/years/${this.yearId}`));
-    await this.load();
   }
 
   async load(page = 1): Promise<void> {
     if (!this.yearId) return;
-    this.loading.set(true);
-    this.error.set('');
-    try {
-      const query = new URLSearchParams({ status: this.status, search: this.search, page: String(page) });
-      if (this.gradeId) query.set('gradeId', this.gradeId);
-      if (this.sectionId) query.set('sectionId', this.sectionId);
-      this.data.set(
-        await this.api.get<PageResult<EnrollmentRow>>(
-          `/api/v1/years/${this.yearId}/enrollments?${query}`,
-        ),
-      );
-    } catch (error) {
-      this.error.set(this.api.message(error));
-    } finally {
-      this.loading.set(false);
-    }
+    const navigated = await this.router.navigate([], {
+      queryParams: {
+        year: this.yearId,
+        grade: this.gradeId || null,
+        section: this.sectionId || null,
+        status: this.status === 'Active' ? null : this.status,
+        search: this.search.trim() || null,
+        page: page > 1 ? page : null,
+      },
+    });
+    if (!navigated) await this.init();
   }
 
   clearFilters(): void {
@@ -146,7 +189,11 @@ export class EnrollmentRoster {
     const today = todayIn(this.school.locale.timeZone);
     const year = this.detail()?.year;
     const clamped =
-      year && today < year.startsOn ? year.startsOn : year && today > year.endsOn ? year.endsOn : today;
+      year && today < year.startsOn
+        ? year.startsOn
+        : year && today > year.endsOn
+          ? year.endsOn
+          : today;
     this.mode.set(mode);
     this.selected.set(row);
     this.dialogError.set('');
@@ -275,7 +322,8 @@ export class EnrollmentRoster {
       this.busy.set(false);
       this.dialog.nativeElement.close();
       this.alerts.success(message);
-      await this.loadYear();
+      this.detail.set(null);
+      await this.init();
     } catch (error) {
       this.dialogError.set(this.api.message(error));
     } finally {

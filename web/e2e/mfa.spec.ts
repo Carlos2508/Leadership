@@ -2,6 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { createHmac, randomUUID } from 'node:crypto';
 
+// Authenticator enrollment and recovery codes must not be retained in trace snapshots.
+test.use({ trace: 'off' });
+
 const reason = 'Autorización institucional sintética para prueba de navegador.';
 
 function totp(formattedKey: string, offset = 0): string {
@@ -58,13 +61,15 @@ test('a member enables two-step verification and the next login asks for the cod
   await expect(member.getByRole('img', { name: /Código QR/ })).toBeVisible();
   const key = (await member.locator('.shared-key').textContent())!.trim();
   await expectAccessible(member);
-  await member.screenshot({ path: testInfo.outputPath('mfa-setup.png'), fullPage: true });
+  await member.screenshot({ path: testInfo.outputPath('mfa-setup.png'), fullPage: true,
+    mask: [member.locator('.qr-box'), member.locator('.shared-key')] });
   await member.getByRole('textbox', { name: /código de 6 dígitos/ }).fill(totp(key));
   await member.getByRole('button', { name: 'Confirmar y activar' }).click();
   await expect(member.locator('.recovery-codes li')).toHaveCount(10);
   await expect(member.getByText('Activa', { exact: true })).toBeVisible();
   await expectAccessible(member);
-  await member.screenshot({ path: testInfo.outputPath('mfa-recovery-codes.png'), fullPage: true });
+  await member.screenshot({ path: testInfo.outputPath('mfa-recovery-codes.png'), fullPage: true,
+    mask: [member.locator('.recovery-codes'), member.locator('input[autocomplete="one-time-code"]')] });
   await member.getByRole('button', { name: 'Ya los guardé' }).click();
 
   await context.clearCookies();

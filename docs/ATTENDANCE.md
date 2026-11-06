@@ -12,6 +12,8 @@ API: GET/POST `/api/v1/courses/{id}/attendance?date=` (docente/personal académi
 
 UI: `/workspace/courses/{id}/attendance` (enlace desde la lista del curso y «Mis cursos») y sección «Asistencia» en el portal.
 
+La fecha consultada queda explícita en `?date=YYYY-MM-DD`; el historial restaura la lista correspondiente. Las marcas modificadas se protegen antes de cambiar fecha/curso o salir; la salida espera un guardado en curso. Los indicadores distinguen registro completo/parcial de cambios sin guardar, y los errores conservan el formulario o presentan reintento sin mostrar filas de otro día. Los botones avanzan un día calendario, sin presumir días lectivos. Ver `QA_EXPERIENCIA_2026-11-05.md`.
+
 Pruebas: `AttendanceSqlTests` (2) y pasos de asistencia en `e2e/learning.spec.ts`.
 
 Pendiente: asistencia por jornada (no por curso), justificaciones con evidencia, alertas a familias y reportes.

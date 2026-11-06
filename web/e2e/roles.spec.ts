@@ -59,9 +59,12 @@ test('custom access roles accept all permissions and update assigned accounts th
     .getByRole('button', { name: new RegExp('Editar') })
     .click();
   await page.getByRole('button', { name: 'Quitar selección', exact: true }).click();
+  // Wait for the bulk change to reach the controls before choosing a permission again.
+  await expect(page.getByRole('dialog').getByRole('checkbox', { checked: true })).toHaveCount(1); // Rol activo only.
   await page
     .getByRole('checkbox', { name: 'Consultar estudiantes, padres y personal', exact: true })
     .check();
+  await expect(page.getByRole('dialog')).toContainText('1 permisos seleccionados.');
   await page
     .getByLabel('Motivo del cambio')
     .fill('Reducir este rol sintético a la consulta de fichas.');

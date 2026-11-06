@@ -13,18 +13,12 @@
   @if (error()) {
     <p class="feedback error-feedback" role="alert">{{ error() }}</p>
   }
-  @if (!loading() && !years().length) {
-    <section class="card empty-state">
-      <app-icon name="calendar" />
-      <h2>No hay ciclos escolares</h2>
-      <p>Crea primero un ciclo en Ciclos y grados.</p>
-    </section>
-  } @else if (setup(); as s) {
+  @if (years().length) {
     <section class="card directory-card">
       <div class="filters">
         <label class="select-field"
           ><span>Ciclo</span
-          ><select name="year" [(ngModel)]="yearId" (ngModelChange)="changeYear()">
+          ><select name="year" [(ngModel)]="yearId" (ngModelChange)="changeYear()" [disabled]="busy()">
             @for (item of years(); track item.id) {
               <option [value]="item.id">{{ item.label }} · {{ yearLabels[item.status] }}</option>
             }
@@ -32,7 +26,18 @@
         >
       </div>
     </section>
-
+  }
+  @if (loading()) {
+    <p class="loading-state card" role="status">Cargando configuración…</p>
+  } @else if (error()) {
+    <button class="button outline" (click)="load()">Reintentar configuración</button>
+  } @else if (!years().length) {
+    <section class="card empty-state">
+      <app-icon name="calendar" />
+      <h2>No hay ciclos escolares</h2>
+      <p>Crea primero un ciclo en Ciclos y grados.</p>
+    </section>
+  } @else if (setup(); as s) {
     <div class="detail-grid academic-grid">
       <div class="detail-main">
         <section class="card detail-card" aria-labelledby="generate-title">
@@ -225,8 +230,6 @@
         </section>
       </aside>
     </div>
-  } @else if (loading()) {
-    <p class="loading-state card" role="status">Cargando configuración…</p>
   }
 
   <dialog #setupDialog class="account-dialog" (cancel)="onCancel($event)" aria-labelledby="setup-dialog-title">

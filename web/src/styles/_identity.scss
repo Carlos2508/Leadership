@@ -12,6 +12,7 @@
   --ink: #202c29;
   --muted: #596862;
   --border: #dde5e1;
+  --danger: #b42318;
   --radius-lg: 14px;
   --radius-md: 10px;
   --ease: ease;
@@ -75,6 +76,11 @@ h2 {
 .button.outline {
   box-shadow: none;
   background: #fff;
+}
+.button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
 }
 .button:hover {
   filter: brightness(0.95);
@@ -370,6 +376,19 @@ h2 {
 }
 .filters .search-field {
   min-width: 160px;
+}
+.day-picker {
+  width: 100%;
+  max-width: 360px;
+  min-width: 0;
+}
+.day-picker .date-field {
+  flex: 1;
+  min-width: 0;
+}
+.day-picker input {
+  width: 100%;
+  min-width: 0;
 }
 .directory-summary {
   font-size: 12px;

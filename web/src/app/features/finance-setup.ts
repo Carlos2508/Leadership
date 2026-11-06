@@ -1,6 +1,8 @@
-import { Component, ElementRef, ViewChild, computed, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { distinctUntilChanged, map } from 'rxjs';
 import { AccessApi } from '../core/access-api';
 import { Alerts } from '../core/alerts';
 import { SessionService } from '../core/session';
@@ -25,12 +27,14 @@ type Mode = 'concept' | 'period' | 'cutoff';
   templateUrl: './finance-setup.html',
 })
 export class FinanceSetup {
-  readonly year = input<string | undefined>();
   readonly api = inject(AccessApi);
   readonly alerts = inject(Alerts);
   readonly session = inject(SessionService);
   readonly school = inject(InstitutionService).current;
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private loadRequest = 0;
+  private contextYear = '';
   @ViewChild('setupDialog') private dialog!: ElementRef<HTMLDialogElement>;
   @ViewChild('noticeRef') private noticeRef?: ElementRef<HTMLElement>;
 
@@ -64,7 +68,11 @@ export class FinanceSetup {
   };
 
   constructor() {
-    queueMicrotask(() => void this.init());
+    this.route.queryParamMap.pipe(
+      map(params => params.get('year')),
+      distinctUntilChanged(),
+      takeUntilDestroyed(),
+    ).subscribe(() => void this.load());
   }
 
   money(value: number): string {
@@ -77,35 +85,51 @@ export class FinanceSetup {
     return this.setup()?.concepts.find((x) => x.id === this.generation.conceptId);
   }
 
-  async init(): Promise<void> {
+  async load(): Promise<void> {
+    const request = ++this.loadRequest;
+    const requested = this.route.snapshot.queryParamMap.get('year');
     this.loading.set(true);
+    this.error.set('');
+    this.setup.set(null);
+    this.preview.set(null);
+    this.dialog?.nativeElement.close();
     try {
-      const [years, grades] = await Promise.all([
-        this.api.get<YearSummary[]>('/api/v1/academic/years'),
-        this.api.get<GradeView[]>('/api/v1/academic/grades'),
-      ]);
-      this.years.set(years);
-      this.grades.set(grades.filter((x) => x.isActive));
-      const selected = years.find((x) => x.id === this.year()) ?? years.find((x) => x.isDefault) ?? years[0];
-      if (selected) {
-        this.yearId = selected.id;
-        await this.load();
+      if (!this.years().length) {
+        const [years, grades] = await Promise.all([
+          this.api.get<YearSummary[]>('/api/v1/academic/years'),
+          this.api.get<GradeView[]>('/api/v1/academic/grades'),
+        ]);
+        if (request !== this.loadRequest) return;
+        this.years.set(years);
+        this.grades.set(grades.filter(x => x.isActive));
       }
+      const selected = requested ? this.years().find(x => x.id === requested)
+        : this.years().find(x => x.isDefault) ?? this.years()[0];
+      this.yearId = selected?.id ?? requested ?? '';
+      if (!selected) {
+        if (requested) this.error.set('No encontramos el ciclo solicitado. Selecciona otro ciclo.');
+        return;
+      }
+      if (!requested) {
+        await this.router.navigate([], { queryParams: { year: selected.id }, replaceUrl: true });
+        return;
+      }
+      if (this.contextYear !== selected.id) {
+        this.contextYear = selected.id;
+        this.generation = { conceptId: '', billingPeriodId: '', amount: null, dueOn: '', description: '', grades: {}, excluded: {} };
+        this.generationError.set('');
+      }
+      const setup = await this.api.get<Setup>(`/api/v1/finance/years/${selected.id}/setup`);
+      if (request === this.loadRequest) this.setup.set(setup);
     } catch (error) {
-      this.error.set(this.api.message(error));
+      if (request === this.loadRequest) this.error.set(this.api.message(error));
     } finally {
-      this.loading.set(false);
+      if (request === this.loadRequest) this.loading.set(false);
     }
   }
 
   async changeYear(): Promise<void> {
-    this.preview.set(null);
     await this.router.navigate([], { queryParams: { year: this.yearId } });
-    await this.load();
-  }
-
-  async load(): Promise<void> {
-    this.setup.set(await this.api.get<Setup>(`/api/v1/finance/years/${this.yearId}/setup`));
   }
 
   openConcept(concept?: ConceptView): void {
@@ -191,7 +215,8 @@ export class FinanceSetup {
   }
 
   async runPreview(): Promise<void> {
-    if (this.busy()) return;
+    if (this.busy() || !this.setup() || this.loading()) return;
+    const request = this.loadRequest;
     this.generationError.set('');
     if (!this.generation.conceptId || !this.generation.amount) {
       this.generationError.set('Selecciona el concepto e indica el importe.');
@@ -199,10 +224,13 @@ export class FinanceSetup {
     }
     this.busy.set(true);
     try {
-      this.preview.set(await this.api.post<GenerationPreview>('/api/v1/finance/charges/preview', this.generationBody()));
+      const preview = await this.api.post<GenerationPreview>('/api/v1/finance/charges/preview', this.generationBody());
+      if (request === this.loadRequest) this.preview.set(preview);
     } catch (error) {
-      this.preview.set(null);
-      this.generationError.set(this.api.message(error));
+      if (request === this.loadRequest) {
+        this.preview.set(null);
+        this.generationError.set(this.api.message(error));
+      }
     } finally {
       this.busy.set(false);
     }

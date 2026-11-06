@@ -1,6 +1,8 @@
 import { Component, ElementRef, OnDestroy, ViewChild, computed, inject, input, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { combineLatest, distinctUntilChanged, map } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi } from '../core/access-api';
 import { Alerts } from '../core/alerts';
@@ -65,7 +67,12 @@ export function parseScore(text: string): number | null | undefined {
   template: `
     <app-shell [title]="sheet()?.course?.subject ?? 'Libreta'">
       <a class="back-link" [routerLink]="['/workspace/courses', id()]"><app-icon name="arrow" />Volver a la lista</a>
-      @if (notFound()) {
+      @if (error()) {
+        <p class="feedback error-feedback" role="alert">{{ error() }}</p>
+      }
+      @if (loading()) {
+        <p class="loading-state card" role="status">Cargando libreta…</p>
+      } @else if (notFound()) {
         <section class="card empty-state" role="alert">
           <app-icon name="shield" />
           <h2>No tienes acceso a esta libreta</h2>
@@ -85,9 +92,6 @@ export function parseScore(text: string): number | null | undefined {
         @if (notice()) {
           <p class="feedback success-feedback" role="status" tabindex="-1" #noticeRef>{{ notice() }}</p>
         }
-        @if (error()) {
-          <p class="feedback error-feedback" role="alert">{{ error() }}</p>
-        }
         <nav class="period-tabs" aria-label="Períodos del ciclo">
           @for (period of s.periods; track period.id) {
             <a
@@ -95,7 +99,6 @@ export function parseScore(text: string): number | null | undefined {
               [queryParams]="{ period: period.id }"
               [class.active]="period.id === s.period.id"
               [attr.aria-current]="period.id === s.period.id ? 'page' : null"
-              (click)="selectPeriod(period.id)"
               >{{ period.name }}
               @if (period.published) {
                 <span class="pill mint">Publicado</span>
@@ -203,22 +206,23 @@ export function parseScore(text: string): number | null | undefined {
           }
         </section>
       } @else {
-        <p class="loading-state card" role="status">Cargando libreta…</p>
+        <button class="button outline" (click)="retryLoad()">Reintentar libreta</button>
       }
     </app-shell>
   `,
 })
 export class CourseGrades implements OnDestroy {
   readonly id = input.required<string>();
-  readonly period = input<string | undefined>();
   readonly api = inject(AccessApi);
   readonly alerts = inject(Alerts);
   readonly school = inject(InstitutionService).current;
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly route = inject(ActivatedRoute);
   @ViewChild('noticeRef') private noticeRef?: ElementRef<HTMLElement>;
   readonly sheet = signal<GradeSheet | null>(null);
   readonly rows = signal<EditableRow[]>([]);
   readonly notFound = signal(false);
+  readonly loading = signal(true);
   readonly busy = signal(false);
   readonly error = signal('');
   readonly notice = signal('');
@@ -227,14 +231,39 @@ export class CourseGrades implements OnDestroy {
   reason = '';
   private timer: ReturnType<typeof setTimeout> | undefined;
   private queued = false;
+  private saving: Promise<void> | null = null;
+  private leaving: Promise<boolean> | null = null;
+  private loadRequest = 0;
 
   constructor() {
-    queueMicrotask(() => void this.load(this.period()));
+    combineLatest([this.route.paramMap, this.route.queryParamMap]).pipe(
+      map(([params, query]) => [params.get('id')!, query.get('period') ?? undefined] as const),
+      distinctUntilChanged((a, b) => a[0] === b[0] && a[1] === b[1]),
+      takeUntilDestroyed(),
+    ).subscribe(([id, period]) => void this.load(period, id));
   }
   ngOnDestroy(): void {
     clearTimeout(this.timer);
-    // Leaving the sheet keeps what was typed: flush the pending autosave (corrections need a reason and are never autosaved).
-    if (this.autosaves() && this.dirty()) void this.save(true);
+    this.loadRequest++;
+  }
+  canLeave(): Promise<boolean> {
+    if (this.leaving) return this.leaving;
+    this.leaving = this.prepareToLeave().finally(() => { this.leaving = null; });
+    return this.leaving;
+  }
+  private async prepareToLeave(): Promise<boolean> {
+    clearTimeout(this.timer);
+    if (this.saving) await this.saving;
+    if (this.autosaves() && this.dirty()) await this.save(true);
+    clearTimeout(this.timer);
+    if (!this.dirty()) return true;
+    return this.alerts.confirm({
+      title: 'Hay notas sin guardar',
+      text: 'Los cambios siguen en esta libreta. Puedes seguir editando y guardarlos antes de salir.',
+      confirmText: 'Salir sin guardar',
+      cancelText: 'Seguir editando',
+      danger: true,
+    });
   }
   date(value: string): string {
     return formatDateOnly(value, this.school.locale.culture);
@@ -324,27 +353,43 @@ export class CourseGrades implements OnDestroy {
         (this.autosaves() ? ' Guardando…' : ''),
     );
   }
-  async selectPeriod(periodId: string): Promise<void> {
-    if (this.autosaves() && this.dirty()) await this.save(true);
-    this.notice.set('');
-    await this.load(periodId);
+  retryLoad(): void {
+    void this.load(this.route.snapshot.queryParamMap.get('period') ?? undefined);
   }
-  async load(periodId?: string): Promise<void> {
+  async load(periodId?: string, courseId = this.id()): Promise<void> {
+    const request = ++this.loadRequest;
+    this.loading.set(true);
+    this.notFound.set(false);
     this.error.set('');
+    this.notice.set('');
+    this.sheet.set(null);
+    this.rows.set([]);
     clearTimeout(this.timer);
     try {
       const query = periodId ? `?periodId=${periodId}` : '';
-      const sheet = await this.api.get<GradeSheet>(`/api/v1/courses/${encodeURIComponent(this.id())}/grades${query}`);
+      const sheet = await this.api.get<GradeSheet>(`/api/v1/courses/${encodeURIComponent(courseId)}/grades${query}`);
+      if (request !== this.loadRequest) return;
       this.sheet.set(sheet);
       this.rows.set(sheet.rows.map((x) => ({ ...x, draftText: x.score === null ? '' : String(x.score), draftStatus: x.status ?? '' })));
       this.reason = '';
       this.saveState.set('');
     } catch (error) {
+      if (request !== this.loadRequest) return;
       if (error instanceof HttpErrorResponse && (error.status === 404 || error.status === 400)) this.notFound.set(true);
       else this.error.set(this.api.message(error));
+    } finally {
+      if (request === this.loadRequest) this.loading.set(false);
     }
   }
-  async save(auto: boolean): Promise<void> {
+  save(auto: boolean): Promise<void> {
+    if (this.saving) {
+      this.queued = true;
+      return this.saving;
+    }
+    this.saving = this.saveChanges(auto).finally(() => { this.saving = null; });
+    return this.saving;
+  }
+  private async saveChanges(auto: boolean): Promise<void> {
     const sheet = this.sheet();
     if (!sheet) return;
     if (this.busy()) {

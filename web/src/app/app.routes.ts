@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { InstitutionService } from './core/institution';
 import { sessionGuard, permissionGuard } from './core/session';
 import { Router } from '@angular/router';
+import { pendingChangesGuard } from './core/pending-changes';
 
 const previewGuard = () =>
   inject(InstitutionService).current.previewEnabled || inject(Router).createUrlTree(['/']);
@@ -99,6 +100,8 @@ export const routes: Routes = [
   {
     path: 'workspace/courses/:id/attendance',
     canActivate: [sessionGuard],
+    canDeactivate: [pendingChangesGuard],
+    runGuardsAndResolvers: 'paramsOrQueryParamsChange',
     loadComponent: () => import('./features/course-attendance').then((x) => x.CourseAttendance),
   },
   {
@@ -109,6 +112,8 @@ export const routes: Routes = [
   {
     path: 'workspace/courses/:id/grades',
     canActivate: [sessionGuard],
+    canDeactivate: [pendingChangesGuard],
+    runGuardsAndResolvers: 'paramsOrQueryParamsChange',
     loadComponent: () => import('./features/course-grades').then((x) => x.CourseGrades),
   },
   {

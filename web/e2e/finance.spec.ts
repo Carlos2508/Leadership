@@ -25,6 +25,7 @@ async function expectAccessible(page: Page): Promise<void> {
 }
 
 test('charge tuition by preview, collect with a receipt and show clearance and the guardian statement', async ({ page, browser }, testInfo) => {
+  test.setTimeout(60_000);
   const owner = process.env['SCHOOLPLATFORM_E2E_USERNAME']!;
   const ownerPassword = process.env['SCHOOLPLATFORM_E2E_PASSWORD']!;
   const suffix = randomUUID().slice(0, 5).toUpperCase();
@@ -138,5 +139,48 @@ test('charge tuition by preview, collect with a receipt and show clearance and t
   await guardianPage.getByRole('link', { name: /Ver recibo/ }).click();
   await expect(guardianPage.getByRole('heading', { name: 'Recibo de pago' })).toBeVisible();
   expect((await guardianPage.request.get('/api/v1/finance/payments')).status()).toBe(403);
+
+  // An authorized reversal restores the debt in both cashier and family views.
+  await page.goto(`/workspace/finance?student=${student}`);
+  await page.getByRole('button', { name: /^Revertir recibo/ }).click();
+  await page.getByRole('dialog').getByLabel('Motivo y autorización').fill(reason);
+  await page.getByRole('dialog').getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(page.locator('.balance-box')).toContainText('450.00');
+  await expect(page.locator('.payment-list .reversed')).toHaveCount(1);
+  await guardianPage.goBack();
+  await expect(guardianPage.locator('.balance-box')).toContainText('450.00');
+  await page.goto(`/workspace/finance/clearance?year=${year}`);
+  await expect(page.locator('tbody')).toContainText('Con saldo pendiente');
+
+  // An excessive adjustment must leave the form and balance intact; a valid discount reduces the debt.
+  await page.goto(`/workspace/finance?student=${student}`);
+  await page.getByRole('button', { name: /^Ajustar / }).click();
+  await page.getByRole('dialog').getByRole('combobox', { name: 'Tipo', exact: true }).selectOption('Discount');
+  await page.getByRole('dialog').getByLabel('Monto', { exact: true }).fill('1000');
+  await page.getByRole('dialog').getByLabel('Motivo y autorización').fill(reason);
+  await page.getByRole('dialog').getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText(/saldo/);
+  await expect(page.locator('.balance-box')).toContainText('450.00');
+  await page.getByRole('dialog').getByLabel('Monto', { exact: true }).fill('100');
+  await page.getByRole('dialog').getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(page.locator('.balance-box')).toContainText('350.00');
+  await guardianPage.reload();
+  await expect(guardianPage.locator('.balance-box')).toContainText('350.00');
+
+  // A replacement payment covers only the remainder; the reversed receipt stays in the history.
+  await page.getByRole('button', { name: 'Registrar pago', exact: true }).click();
+  await page.getByRole('dialog').getByLabel('Nombre de quien paga').fill('Irene Sintética ' + suffix);
+  await expect(page.locator('.allocation-total')).toContainText('350');
+  await page.getByRole('button', { name: 'Confirmar pago' }).click();
+  await expect(page.locator('.sp-alert')).toContainText('Pago registrado');
+  await page.getByRole('button', { name: 'Listo', exact: true }).click();
+  await expect(page.locator('.balance-box')).toContainText('0.00');
+  await expect(page.locator('.payment-list .reversed')).toHaveCount(1);
+  await guardianPage.reload();
+  await expect(guardianPage.locator('.balance-box')).toContainText('0.00');
+  await page.goto(`/workspace/finance/clearance?year=${year}`);
+  await expect(page.locator('tbody')).toContainText('Solvente');
   await guardianContext.close();
 });

@@ -1,5 +1,15 @@
 # Handoff para la siguiente sesión
 
+## App Flutter: diseño de la web y cuenta real — 6 de noviembre de 2026, leer primero
+
+- Solicitud: el app con el mismo diseño que la web, profesional y capaz de hacer lo de la web. Commits `8b6bd28` (diseño) y el de integración; ADR-014.
+- Diseño (`core/theme/*`, `role_shell.dart`, `page_layout.dart`): neutros cálidos sin verdes, botones dorados, barra/riel oscuros con activo dorado translúcido, encabezado oscuro con curva dorada, selección segmentada dorada. Colores solo desde `institution.json` (re-ejecutar `tool/sync_institution.dart` al cambiar marca).
+- Backend: `IdentityAccess/SignInFlow.cs` concentra contraseña, segundo paso y cierre (Razor `Login`, `LoginWith2fa`, `Logout` lo usan). `AppAuthEndpoints.cs` expone `/api/v1/auth/{antiforgery,login,login/second-factor,logout}` con `identity-forms` y `ApiWriteFilter`. Fallos sin revelar si existe el usuario; 423 bloqueo. Pruebas `AppAuthSqlTests` (2) y `MfaSqlTests.App_login_requires_the_second_factor_for_enrolled_accounts`.
+- App: `lib/features/connected/` (`school_api.dart` cookie+XSRF en memoria; `connected_session.dart` sesión real y facultades; pantallas `connected_shell.dart`, `students_tab.dart`, `teaching_tab.dart`, `school_tab.dart`, `connected_login_page.dart`). Rutas `/connect` y `/c` fuera del redirect demo. El modo demo sigue separado.
+- Validación: **101 .NET/SQL**, **72 Flutter**, análisis sin observaciones, build web correcto. Humo real `tool/connected_smoke.dart` contra host de desarrollo 5091 con 5 cuentas `qa-*`: todo correcto y 403/404 donde corresponde. Recorrido visual con proxy de mismo origen; evidencia `.local/qa/evidencia/app-conectada-2026-11-06/`. Se guardó asistencia real de prueba (curso «Lenguaje · QA», 6/11) en la base de desarrollo, datos ficticios.
+- No se corrió Playwright web: el host 5082 (PID ajeno, iniciado 08:02) bloquea `bin`; el formulario Razor refactorizado está cubierto por las pruebas SQL de identidad/MFA. Correr `Invoke-Web.ps1 test` cuando el host se detenga.
+- Pendiente: notificaciones push, archivos/cámara en entregas, módulos de configuración (siguen en web), pruebas en Android/iOS físicos.
+
 ## Menú lateral translúcido — 6 de noviembre de 2026
 
 - El propietario indicó que el menú se veía «montado»: módulos, Mi cuenta y Cerrar sesión tenían fondo opaco sobre el degradado/curva dorada. Bloque final de `_identity.scss`: menú transparente con activo dorado translúcido, lista con scroll propio y pie `.sidebar-footer` (nuevo envoltorio en `shell.ts`) con desenfoque. Paleta sin cambios. Evidencia antes/después en `.local/qa/evidencia/menu-2026-11-06/` (director, familia, estudiante y docente; 1440 y 390 px).

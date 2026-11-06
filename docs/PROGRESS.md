@@ -2,6 +2,11 @@
 
 Actualizado: 6 de noviembre de 2026, America/Guatemala.
 
+## App Flutter con diseño de la web y cuenta real (estado vigente)
+
+- Mismo diseño visual que la web y nuevo modo conectado (ADR-014): ingreso con la cuenta del colegio y MFA, panel por permisos, avisos, ficha de estudiante/familia (notas con solvencia, tareas con entrega, asistencia, portería, estado de cuenta), libreta y asistencia docente, directorio y caja con registro de pago. El servidor autoriza todo; el modo demo queda separado.
+- 101 pruebas .NET/SQL y 72 Flutter aprobadas; humo real con 5 cuentas ficticias correcto. Falta Playwright web (host ajeno bloqueaba `bin`), notificaciones, archivos y pruebas en dispositivos físicos. No se declara terminada la fase MOB.
+
 ## Roles, módulos y flujos completos (estado vigente)
 
 - El propietario pidió quitar el aspecto de página enmarcada, quitar el logo grande de la activación y recorrer todos los flujos por perfil escolar (estudiante, docente, familia) y por roles creados (Dirección con 15 permisos, Subdirección con 10, Secretaría y Caja), sin cambiar la paleta, documentando cada prueba en HTML. Informe: `QA_ROLES_FLUJOS_2026-11-06.md`, incidencias RF-001 a RF-006.

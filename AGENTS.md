@@ -17,6 +17,7 @@ Lee primero `docs/PROGRESS.md`, `docs/HANDOFF.md`, `docs/PROJECT_DEFINITION.md` 
 - No migrar contraseñas, notas, deudas, pagos o tareas por el mero hecho de importar personas.
 - Mantener separadas cuenta, persona, vínculo familiar y matrícula anual.
 - Toda API de negocio exige `ActiveAccount` más autorización por recurso/permiso; ocultar menús no es autorización. No agregar endpoints académicos bajo `AllowAnonymous`.
+- Ingreso del app (ADR-014): `/api/v1/auth/login`, `/login/second-factor`, `/logout` y `/antiforgery` usan `SignInFlow`, igual que los formularios Razor, y emiten la misma cookie de sesión. No crear otro esquema de tokens para personas ni permisos propios del app.
 - Excepción de autenticación de portería (ADR-009): solo `/api/v1/gate/device/whoami` y `/api/v1/gate/device/scan` aceptan el esquema `GateDevice` con bearer revocable; no usarlo en módulos escolares. QR de emparejamiento solo una vez, sin URLs/logs/capturas/persistencia web.
 - Las muestras sintéticas solo existen en `Development`, bajo `/api/v1/preview`. Nunca reutilizarlas como repositorio de producción ni como valores predeterminados ante errores.
 - Conservar resultados ordinarios y revisiones. No publicar una política pendiente como si la hubiera aprobado el colegio.

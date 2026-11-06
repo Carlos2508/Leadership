@@ -126,14 +126,27 @@ class _TabPageState extends ConsumerState<TabPage> {
 
 /// Logo, nombre corto de la institución y acceso al perfil.
 class InstitutionHeader extends ConsumerWidget {
-  const InstitutionHeader({required this.subtitle, super.key});
+  const InstitutionHeader({
+    required this.subtitle,
+    this.initials,
+    this.profileLabel,
+    this.onProfile,
+    super.key,
+  });
 
   final String subtitle;
+
+  /// Connected mode passes its own account; the demo uses the prototype session.
+  final String? initials;
+  final String? profileLabel;
+  final VoidCallback? onProfile;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final institution = ref.watch(institutionProvider);
-    final session = ref.watch(authControllerProvider);
+    final demo = ref.watch(authControllerProvider);
+    final initials = this.initials ?? demo?.initials;
+    final profileLabel = this.profileLabel ?? demo?.displayName;
     final theme = Theme.of(context);
     final colors = AppColors.of(context);
     // Dark brand band, like the web sidebar/top bar: gradient, thin gold border and the gold curve.
@@ -188,20 +201,18 @@ class InstitutionHeader extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  if (session != null)
+                  if (initials != null)
                     Tooltip(
                       message: 'Mi perfil',
                       child: Semantics(
                         button: true,
-                        label: 'Abrir perfil de ${session.displayName}',
+                        label: 'Abrir perfil de $profileLabel',
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
-                          onTap: () => context.push('/profile'),
+                          onTap: onProfile ?? () => context.push('/profile'),
                           child: Padding(
                             padding: const EdgeInsets.all(2),
-                            child: ExcludeSemantics(
-                              child: InitialsAvatar(initials: session.initials),
-                            ),
+                            child: ExcludeSemantics(child: InitialsAvatar(initials: initials)),
                           ),
                         ),
                       ),

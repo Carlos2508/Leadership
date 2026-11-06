@@ -216,8 +216,8 @@ abstract final class AppTheme {
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: SegmentedButton.styleFrom(
-          selectedBackgroundColor: colors.tone(AppTone.brand).background,
-          selectedForegroundColor: isDark ? palette.accent : palette.deep,
+          selectedBackgroundColor: palette.accent.withValues(alpha: isDark ? 0.32 : 0.3),
+          selectedForegroundColor: isDark ? Colors.white : palette.deep,
           side: BorderSide(color: colors.border),
           textStyle: textTheme.labelMedium,
         ),

@@ -26,6 +26,7 @@ builder.Services.AddScoped<SecurityAudit>();
 builder.Services.AddScoped<AccountAccessService>();
 builder.Services.AddScoped<AccessRoleService>();
 builder.Services.AddScoped<MfaService>();
+builder.Services.AddScoped<SignInFlow>();
 builder.Services.AddOptions<AccountAccessOptions>().BindConfiguration("AccountAccess")
     .Validate(x => x.ActivationMinutes is >= 1 and <= 4320 && x.RecoveryMinutes is >= 1 and <= 60,
         "Vigencia de códigos fuera del rango permitido.")
@@ -198,6 +199,7 @@ app.UseRateLimiter();
 app.UseAntiforgery();
 app.MapRazorPages().RequireRateLimiting("identity-forms");
 app.MapAccountAccess();
+app.MapAppAuth();
 app.MapPeople();
 SchoolPlatform.Host.Academic.AcademicEndpoints.MapAcademic(app);
 SchoolPlatform.Host.Academic.AcademicEndpoints.MapCourses(app);

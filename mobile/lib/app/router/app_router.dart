@@ -16,6 +16,8 @@ import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/recovery_page.dart';
 import '../../features/auth/presentation/welcome_page.dart';
+import '../../features/connected/connected_login_page.dart';
+import '../../features/connected/connected_shell.dart';
 import '../../features/finance/presentation/cashier_search_page.dart';
 import '../../features/finance/presentation/evidence_form_page.dart';
 import '../../features/finance/presentation/evidences_review_page.dart';
@@ -104,7 +106,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final session = ref.read(authControllerProvider);
       final location = state.matchedLocation;
-      if (location == '/gate-reader') return null;
+      // Gate reader and the connected app manage their own sessions (ADR-009, ADR-014).
+      if (location == '/gate-reader' || location == '/connect' || location == '/c') return null;
       if (session == null) {
         if (_publicPaths.contains(location)) {
           if (location == '/welcome' && ref.read(welcomeSeenProvider)) return '/login';
@@ -122,6 +125,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/gate-reader', builder: (_, _) => const GateReaderPage()),
+      GoRoute(path: '/connect', builder: (_, _) => const ConnectedLoginPage()),
+      GoRoute(path: '/c', builder: (_, _) => const ConnectedHome()),
       GoRoute(path: '/', redirect: (_, _) => '/welcome'),
       GoRoute(path: '/welcome', builder: (_, _) => const WelcomePage()),
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),

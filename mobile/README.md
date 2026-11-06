@@ -74,9 +74,26 @@ flutter build web --release --no-web-resources-cdn
 
 Las pruebas usan una configuración institucional neutra y un reloj fijo; no dependen de la marca sincronizada.
 
+## App conectada con la cuenta del colegio (ADR-014)
+
+En el ingreso, **«Ingresar con mi cuenta del colegio»** abre `/connect`: dirección HTTPS del colegio (o `http://localhost`/`10.0.2.2` en desarrollo), usuario y contraseña de la plataforma web y, si la cuenta tiene autenticador, el código o un código de recuperación. Usa los endpoints `/api/v1/auth/*`, que comparten `SignInFlow` con el formulario web: misma cookie de sesión, permisos SQL, MFA y auditoría. Cookie y token antifalsificación solo en memoria; no se guardan contraseñas.
+
+Pestañas según la sesión real (`/api/v1/session`, `/api/v1/me`, `/api/v1/me/courses`):
+
+| Cuenta | Qué puede hacer en el app |
+| --- | --- |
+| Estudiante | Inicio, Mi ficha (notas publicadas con solvencia, tareas con entrega de texto, asistencia y portería), avisos |
+| Familia | Inicio con resumen de cada hijo, ficha por estudiante según facultades (académico / pagos con estado de cuenta), avisos |
+| Docente | Inicio con sus cursos, libreta por período (captura con versión y motivo si ya está publicado), asistencia del día y avance de tareas, avisos |
+| Roles del colegio | Panel con indicadores por permiso; Colegio: directorio (`people.read`), estado de cuenta (`finance.read`) y registro de pago con clave de idempotencia (`finance.collect`) |
+
+Todo lo que no se ve en el app sigue en la web (configuración, roles, inscripciones, publicación de notas, cargos, reportes). El servidor autoriza cada consulta; ocultar una pestaña no es autorización.
+
+Prueba contra un host de desarrollo: `dart run tool/connected_smoke.dart http://127.0.0.1:5091` con `QA_PASS_<CUENTA>` en el ambiente (cuentas ficticias `qa-*`). Flutter web solo puede usar la API desde el mismo origen del host.
+
 ## Pendiente para una app real
 
-Autenticación OIDC con PKCE y tokens en almacenamiento seguro, cliente HTTP con contratos de la API, carga real de archivos/cámara, notificaciones push, caché por usuario con borrado al cerrar sesión, pruebas en dispositivos Android/iOS físicos y accesibilidad con lector de pantalla.
+Notificaciones push, carga de archivos/cámara en entregas, carga real de archivos/cámara, notificaciones push, caché por usuario con borrado al cerrar sesión, pruebas en dispositivos Android/iOS físicos y accesibilidad con lector de pantalla.
 
 ## Lector de portería conectado
 

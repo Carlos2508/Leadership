@@ -321,6 +321,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
             ),
             const SizedBox(height: Spacing.md),
+            OutlinedButton.icon(
+              onPressed: _submitting ? null : () => context.go('/connect'),
+              icon: const Icon(Icons.cloud_done_outlined),
+              label: const Text('Ingresar con mi cuenta del colegio'),
+            ),
+            const SizedBox(height: Spacing.sm),
             TextButton(
               onPressed: _submitting ? null : () => context.push('/gate-reader'),
               child: const Text('Lector de portería'),

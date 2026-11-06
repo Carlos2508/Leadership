@@ -22,6 +22,6 @@ Los IDs conservan trazabilidad con §20 del plan maestro. La aclaración más re
 | PERF | Compresión, caché de bundles y navegación | Implementado y medido localmente; sin Redis. No equivale a carga/latencia de producción |
 | Piloto | Restauración, conciliación, capacitación y corte | Pendiente; entregar evidencias antes de activar operación real |
 | MOB-000 | Prototipo Flutter navegable con datos ficticios | Implementado en `mobile/` (ADR-008); no integra API ni cuenta como MOB |
-| MOB / EXT | Flutter y módulos adicionales | Lector de portería conectado mediante token de dispositivo. Los otros módulos permanecen como prototipo; falta integración de identidad/datos y pruebas físicas |
+| MOB / EXT | Flutter y módulos adicionales | Lector de portería con token de dispositivo (ADR-009). App conectada con la cuenta del colegio (ADR-014): ingreso con MFA, panel, avisos, ficha estudiantil/familiar, libreta y asistencia docente, directorio y caja. Pendiente: notificaciones, archivos, módulos de configuración y pruebas en dispositivos físicos |
 
 La fase operativa sigue parcial por CI remoto, despliegue/endurecimiento, plan de respaldos de producción, licencia, equipos y piloto. IAM, personas, matrícula, cursos, finanzas/solvencia, notas por período, tareas/archivos, asistencia y avisos tienen flujos persistentes y pruebas; no son todas las funcionalidades de cada fase. Para notas anuales/recuperaciones/promoción se necesita política aprobada. La experiencia general Flutter sigue siendo prototipo, salvo el lector real de portería.

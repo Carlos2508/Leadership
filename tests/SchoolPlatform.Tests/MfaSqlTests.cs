@@ -110,6 +110,30 @@ public sealed class MfaSqlTests : SqlTestBase
     }
 
     [Fact]
+    public async Task App_login_requires_the_second_factor_for_enrolled_accounts()
+    {
+        using var admin = await SignIn(OwnerName);
+        var (key, _) = await Enroll(admin);
+        using var app = App.Browser();
+        var token = (await app.GetFromJsonAsync<JsonElement>("/api/v1/auth/antiforgery")).GetProperty("token").GetString()!;
+        async Task<HttpResponseMessage> AppPost(string path, object body)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = JsonContent.Create(body) };
+            request.Headers.Add("X-XSRF-TOKEN", token);
+            return await app.SendAsync(request);
+        }
+        var password = await AppPost("/api/v1/auth/login", new { username = OwnerName, password = Password });
+        Assert.Equal("second-factor", (await password.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("status").GetString());
+        // The pending second step is not a session.
+        Assert.Equal(HttpStatusCode.Unauthorized, (await app.GetAsync("/api/v1/session")).StatusCode);
+        var wrong = await AppPost("/api/v1/auth/login/second-factor", new { code = "000000" });
+        Assert.Equal("second-factor-failed", (await wrong.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+        var ok = await AppPost("/api/v1/auth/login/second-factor", new { code = Totp(key, 1) });
+        Assert.Equal("signed-in", (await ok.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("status").GetString());
+        Assert.Equal(HttpStatusCode.OK, (await app.GetAsync("/api/v1/access/accounts")).StatusCode);
+    }
+
+    [Fact]
     public async Task Users_disable_with_a_code_and_managers_reset_a_lost_authenticator()
     {
         var userId = await Account("synthetic-member");

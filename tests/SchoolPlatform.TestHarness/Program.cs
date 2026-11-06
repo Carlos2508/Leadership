@@ -40,6 +40,25 @@ if (args is ["prepare"])
 else if (args is ["cleanup"])
 {
     if (db.Database.GetDbConnection().Database != database) throw new InvalidOperationException("Database ownership mismatch.");
+    if (Environment.GetEnvironmentVariable("SCHOOLPLATFORM_E2E_MIGRATION") == "1")
+    {
+        // Only backup files generated for this exact, randomly named E2E catalog.
+        await using var sql = new SqlConnection(connection.ConnectionString);
+        await sql.OpenAsync();
+        await using var list = new SqlCommand("SELECT mf.physical_device_name FROM msdb.dbo.backupset bs JOIN msdb.dbo.backupmediafamily mf ON mf.media_set_id=bs.media_set_id WHERE bs.database_name=@database", sql);
+        list.Parameters.AddWithValue("@database", database);
+        var files = new List<string>();
+        await using (var reader = await list.ExecuteReaderAsync())
+            while (await reader.ReadAsync()) files.Add(reader.GetString(0));
+        foreach (var file in files.Distinct())
+        {
+            var name = file.Replace('\\', '/').Split('/').Last();
+            if (!Regex.IsMatch(name, "^" + database + "_migration_[a-f0-9]{32}\\.bak$")) continue;
+            await using var remove = new SqlCommand("EXEC master.dbo.xp_delete_file 0,@path", sql);
+            remove.Parameters.AddWithValue("@path", file);
+            await remove.ExecuteNonQueryAsync();
+        }
+    }
     await db.Database.EnsureDeletedAsync();
 }
 else throw new InvalidOperationException("Use prepare or cleanup.");

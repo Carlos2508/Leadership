@@ -48,3 +48,21 @@ $caught = false;
 try { roster_extract($query, $control, '42 OR 1=1', 'synthetic-source'); } catch (RuntimeException $e) { $caught = true; }
 roster_require($caught, 'invalid-year-accepted');
 echo "7 synthetic exporter scenarios passed; no database connected.\n";
+
+$config = tempnam(sys_get_temp_dir(), 'roster_config_test_');
+$marker = $config . '.must-not-exist';
+try {
+    $prefix = '<?php $active_group = \'default\'; file_put_contents(' . var_export($marker,true) . ', \'never execute\'); ';
+    file_put_contents($config, $prefix . '$db[\'default\'] = array(\'hostname\'=>\'localhost\',\'database\'=>\'synthetic\',\'username\'=>\'reader\',\'password\'=>\'quote\\\'slash\\\\end\');');
+    $detected = roster_config($config);
+    roster_require($detected['user'] === 'reader' && $detected['password'] === "quote'slash\\end" && !file_exists($marker), 'config-was-executed-or-escaped-incorrectly');
+    file_put_contents($config, $prefix . '$db[\'default\'][\'hostname\']=\'localhost\'; $db[\'default\'][\'database\']=\'synthetic\'; $db[\'default\'][\'username\']=\'reader\'; $db[\'default\'][\'password\']=\'\';');
+    roster_require(roster_config($config)['password'] === '', 'direct-config-unreadable');
+    file_put_contents($config, $prefix . '$db[\'default\'] = array(\'hostname\'=>\'localhost\',\'database\'=>\'synthetic\',\'username\'=>\'reader\',\'password\'=>\'\'); $db[\'default\'][\'password\']=getenv(\'SECRET\');');
+    $caught=false; try { roster_config($config); } catch (RuntimeException $e) { $caught=true; }
+    roster_require($caught && !file_exists($marker), 'dynamic-config-not-rejected');
+    file_put_contents($config, '<?php $db[\'default\']=array(\'hostname\'=>\'localhost\',\'database\'=>\'synthetic\',\'username\'=>\'reader\',\'password\'=>\'\'); $active_group=\'other\';');
+    $caught=false; try { roster_config($config); } catch (RuntimeException $e) { $caught=true; }
+    roster_require($caught, 'other-active-group-not-rejected');
+    echo "4 synthetic config detection scenarios passed; no PHP configuration executed and no database connected.\n";
+} finally { unlink($config); if (file_exists($marker)) { unlink($marker); } }

@@ -1,5 +1,7 @@
 # Migración inicial de estudiantes y familias: guía de uso
 
+**Forma recomendada para el propietario:** abrir **`Migrar estudiantes.cmd`** y seguir [los tres pasos del asistente](MIGRAR_EN_3_PASOS.md). Detecta el origen local, propone el padrón, permite revisar por grupos, prepara el esquema aditivo cuando falta y realiza respaldo/plan/aplicación/conciliación desde la misma pantalla. No requiere editar los archivos o comandos descritos abajo; esta guía conserva el modo avanzado.
+
 Actualizado: 6 de noviembre de 2026, America/Guatemala. Operador: propietario/desarrollador.
 
 El flujo de consola ya está implementado: **extraer → revisar → planificar → aplicar → conciliar**. Guarda personas estables, encargados/vínculos confirmados, matrícula del ciclo explícito y una cuenta por persona **inactiva, sin contraseña ni código de activación**. Ningún parentesco concede facultades automáticamente. El propietario activa después cada acceso mediante el código individual existente.

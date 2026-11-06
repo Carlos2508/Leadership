@@ -10,14 +10,15 @@ using SchoolPlatform.Host.People;
 using SchoolPlatform.Host.Preview;
 using SchoolPlatform.Host.SchoolData;
 
-var hostArgs = args.Where(x => x is not "--initialize-database" and not "--create-operator" and not "--provision-owner" and not "--import-people" and not "--import-roster").ToArray();
+var hostArgs = args.Where(x => x is not "--initialize-database" and not "--create-operator" and not "--provision-owner" and not "--import-people" and not "--import-roster" and not "--migration-assistant").ToArray();
 var builder = WebApplication.CreateBuilder(hostArgs);
 // Console import errors must not leak SQL exception values through framework logging.
-if (args.Contains("--import-roster")) builder.Logging.ClearProviders();
+if (args.Contains("--import-roster") || args.Contains("--migration-assistant")) builder.Logging.ClearProviders();
 var configDirectory = Path.Combine(AppContext.BaseDirectory, "config");
 builder.Configuration.AddJsonFile(Path.Combine(configDirectory, "institution.json"), optional: false, reloadOnChange: false)
     .AddJsonFile(Path.Combine(configDirectory, "institution.local.json"), optional: true, reloadOnChange: false)
     .AddEnvironmentVariables().AddCommandLine(hostArgs);
+if (args.Contains("--migration-assistant")) builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["MigrationAssistant:Enabled"] = "true" });
 builder.Services.AddSingleton<IValidateOptions<InstitutionOptions>, InstitutionValidator>();
 builder.Services.AddOptions<InstitutionOptions>().BindConfiguration("Institution").ValidateOnStart();
 builder.Services.AddProblemDetails();
@@ -46,6 +47,11 @@ builder.Services.AddScoped<PeopleService>();
 builder.Services.AddScoped<SchoolPlatform.Host.LegacyImport.LegacyPeopleImporter>();
 builder.Services.AddScoped<RosterAccountProvisioner>();
 builder.Services.AddScoped<SchoolPlatform.Host.LegacyImport.InitialRosterImporter>();
+builder.Services.AddOptions<SchoolPlatform.Host.LegacyImport.MigrationAssistantOptions>().BindConfiguration("MigrationAssistant");
+builder.Services.AddSingleton<SchoolPlatform.Host.LegacyImport.AssistantStorage>();
+builder.Services.AddScoped<SchoolPlatform.Host.LegacyImport.IAssistantSource, SchoolPlatform.Host.LegacyImport.AssistantSource>();
+builder.Services.AddScoped<SchoolPlatform.Host.LegacyImport.IAssistantBackup, SchoolPlatform.Host.LegacyImport.AssistantBackup>();
+builder.Services.AddScoped<SchoolPlatform.Host.LegacyImport.MigrationAssistantService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Academic.AcademicService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Academic.EnrollmentService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Academic.CourseService>();
@@ -85,7 +91,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
 }).AddEntityFrameworkStores<IdentityDbContext>().AddDefaultTokenProviders();
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    options.Cookie.Name = "SchoolPlatform.Session";
+    // Same Identity scheme/SignInFlow, isolated name so opening the local tool does not replace another localhost session.
+    options.Cookie.Name = args.Contains("--migration-assistant") ? "SchoolPlatform.MigrationSession" : "SchoolPlatform.Session";
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
@@ -239,6 +246,7 @@ app.MapRazorPages().RequireRateLimiting("identity-forms");
 app.MapAccountAccess();
 app.MapAppAuth();
 app.MapPeople();
+SchoolPlatform.Host.LegacyImport.MigrationAssistantEndpoints.MapMigrationAssistant(app);
 SchoolPlatform.Host.Academic.AcademicEndpoints.MapAcademic(app);
 SchoolPlatform.Host.Academic.AcademicEndpoints.MapCourses(app);
 SchoolPlatform.Host.Finance.FinanceEndpoints.MapFinance(app);

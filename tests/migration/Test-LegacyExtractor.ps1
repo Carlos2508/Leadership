@@ -1,4 +1,4 @@
-param([string]$MariaDbBin = 'C:/xampp/mysql/bin', [string]$PhpPath = 'C:/xampp/php/php.exe')
+param([string]$MariaDbBin = 'C:/xampp/mysql/bin', [string]$PhpPath = 'C:/xampp/php/php.exe', [switch]$RunAssistantE2E)
 $ErrorActionPreference = 'Stop'
 $repo = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $fixtureBase = Join-Path $repo '.local/qa'
@@ -33,6 +33,11 @@ try {
     $outputFile = Join-Path $fixtureTarget 'raw.json'
     & $PhpPath (Join-Path $repo 'scripts/Export-LegacyRoster.php') '--year=42' '--source=synthetic-source' "--output=$outputFile"
     if ($LASTEXITCODE -ne 0) { throw 'Falló extracción sintética.' }
+    $configPath = Join-Path $fixtureTarget 'database.php'
+    $literalConfig = '<?php $active_group = ''default''; $db[''default''] = array(''hostname''=>''127.0.0.1'',''port''=>''' + $port + ''',''database''=>''SchoolPlatform_MigrationFixture'',''username''=>''roster_reader'',''password''=>'''');'
+    [System.IO.File]::WriteAllText($configPath, $literalConfig)
+    & $PhpPath (Join-Path $repo 'scripts/Export-LegacyRoster.php') "--config-file=$configPath" --inspect | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Falló detección literal de la conexión sintética.' }
     $rawText = Get-Content -LiteralPath $outputFile -Raw
     $raw = $rawText | ConvertFrom-Json
     if ($raw.students.Count -ne 3 -or $raw.families.Count -ne 1 -or $raw.historicalRelations.Count -ne 2 -or
@@ -51,6 +56,25 @@ try {
     & $PhpPath (Join-Path $repo 'scripts/Export-LegacyRoster.php') '--year=999' '--source=synthetic-source' "--output=$(Join-Path $fixtureTarget 'bad-year.json')" 2>&1 | Out-Null
     if ($LASTEXITCODE -eq 0 -or (Test-Path -LiteralPath (Join-Path $fixtureTarget 'bad-year.json'))) { throw 'Ciclo desconocido produjo exportación.' }
     Write-Output 'MariaDB real aislado: extracción, alcance, ceros, familias cruzadas, sección nula, confidenciales excluidos, borrador pendiente y rechazo de escritura/ciclo desconocido: correctos.'
+    if ($RunAssistantE2E) {
+        $priorMigration = $env:SCHOOLPLATFORM_E2E_MIGRATION
+        $priorConfig = $env:SCHOOLPLATFORM_E2E_LEGACY_CONFIG
+        $priorPort = $env:SCHOOLPLATFORM_E2E_PORT
+        try {
+            $env:SCHOOLPLATFORM_E2E_MIGRATION = '1'; $env:SCHOOLPLATFORM_E2E_LEGACY_CONFIG = $configPath
+            foreach ($project in @('desktop','mobile')) {
+                $browserListener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback,0)
+                $browserListener.Start(); $env:SCHOOLPLATFORM_E2E_PORT = [string]$browserListener.LocalEndpoint.Port; $browserListener.Stop()
+                Push-Location $repo
+                try { & (Join-Path $repo 'scripts/Invoke-Web.ps1') -NpmArguments @('test','--','migration-assistant.spec.ts',"--project=$project") } finally { Pop-Location }
+                $exit = $LASTEXITCODE
+                $evidence = Join-Path $repo ".local/qa/evidencia/migration-assistant/$project"
+                New-Item -ItemType Directory -Path $evidence -Force | Out-Null
+                Get-ChildItem (Join-Path $repo 'web/test-results') -Filter '*.png' -Recurse | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $evidence $_.Name) -Force }
+                if ($exit -ne 0) { throw "Falló QA visual $project." }
+            }
+        } finally { $env:SCHOOLPLATFORM_E2E_MIGRATION=$priorMigration; $env:SCHOOLPLATFORM_E2E_LEGACY_CONFIG=$priorConfig; $env:SCHOOLPLATFORM_E2E_PORT=$priorPort }
+    }
 } finally {
     $env:LEGACY_DSN = $oldDsn; $env:LEGACY_DB_USER = $oldUser; $env:LEGACY_DB_PASSWORD = $oldPassword
     if ($server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force; $server.WaitForExit() }

@@ -28,5 +28,7 @@ export default function setup(): () => void {
     const database = process.env['SCHOOLPLATFORM_E2E_DATABASE']!;
     if (/^SchoolPlatform_E2E_[a-f0-9]{32}$/.test(database))
       rmSync(join(tmpdir(), database + '_files'), { recursive: true, force: true });
+    if (/^SchoolPlatform_E2E_[a-f0-9]{32}$/.test(database))
+      rmSync(join(tmpdir(), database + '_migration'), { recursive: true, force: true });
   };
 }

@@ -2,6 +2,14 @@
 
 Actualizado: 6 de noviembre de 2026, America/Guatemala.
 
+## Migración fácil: asistente local de tres pasos — estado vigente
+
+- El propietario pidió eliminar la operación técnica manual. Nuevo acceso `Migrar estudiantes.cmd` → navegador local HTTPS con ingreso habitual → origen/ciclo → revisión por grupos/excepciones → importar. Guía corta `MIGRAR_EN_3_PASOS.md`. El modo de consola anterior se conserva como opción avanzada.
+- Detecta configuración PHP literal sin ejecutarla/mostrar secretos; propone nombres/familias/códigos, muestra conteos por ciclo, guarda revisiones privadas por operador y permite grado/sección por grupo. Destaca nombres ambiguos y encargados repetidos para consolidación explícita. No decide promoción ni continuidad por notas. Borradores, claves e información escolar no se guardan en Git ni en almacenamiento del navegador.
+- Prepara solo el esquema aditivo del padrón/rol SQL vacío cuando faltan, sin crear roles por nombre para autorizar. Modo `--migration-assistant` separado del host normal, solo loopback, `ActiveAccount` + tres permisos SQL + CSRF/MFA. Misma autenticación Identity/SignInFlow, cookie local aislada. Respaldo COPY_ONLY verificado automático antes de apply y conciliación después; fallo de respaldo impide la carga. Bloqueo privado de archivo y SQL para dos ventanas/procesos.
+- Validación: **125 .NET/SQL aprobadas**, ocho específicas nuevas del asistente; **7 escenarios de extractor + 4 de detección PHP** correctos; recorrido real con MariaDB sintético y SQL E2E en escritorio/móvil, con Axe, capturas y cuentas pendientes. Guía/evidencia en `QA_MIGRATION_2027.md`; artefacto listo en `.local/migration-tool/`.
+- Sigue la rama aislada `feat/legacy-migration-2027`; sin tocar el trabajo del otro agente, despliegue, lectura de personas reales del legado o carga escolar real. Solo se prepara la herramienta para que el propietario revise su padrón y confirme la carga desde la pantalla.
+
 ## Importador inicial 2027 listo en rama aislada — estado vigente
 
 - El propietario pidió implementar y probar lo que antes era estudio. `--import-roster` v2 y wrappers PowerShell/PHP: extracción acotada de lectura, borrador con decisiones pendientes, plan sin escrituras, apply atómico y reconcile independiente. Guía `MIGRATION_2027.md`; ADR-015 y `QA_MIGRATION_2027.md`. El estudio original se conserva como `MIGRATION_2027_STUDY.md`.

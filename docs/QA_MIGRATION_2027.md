@@ -2,9 +2,23 @@
 
 Fecha: 6 de noviembre de 2026, America/Guatemala. Rama: `feat/legacy-migration-2027`.
 
+## Asistente local de tres pasos — incremento vigente
+
+Por solicitud del propietario se añadió `Migrar estudiantes.cmd` y `/workspace/migration` para no tener que editar JSON, conocer GUIDs, copiar hashes o ejecutar SQL. El host normal no expone sus endpoints: requieren modo local habilitado, conexión loopback, sesión activa y `people.manage` + `enrollment.manage` + `accounts.manage`, con CSRF y las reglas MFA existentes. Los borradores pertenecen al operador; otro gestor no puede reabrirlos por ID.
+
+- Suite completa .NET/SQL: **125 aprobadas, 0 omitidas**, incluyendo ocho pruebas nuevas del asistente y las 16 del importador anterior. Las ocho comprueban revisión explícita, credenciales ausentes del cuerpo/archivos, API/cookie/CSRF/permisos, borradores privados, fallos de origen sin datos de reemplazo, respaldo obligatorio, plan invalidado al editar, dos pestañas, preparación exclusiva del esquema aditivo y deshabilitación en el host normal.
+- Respaldo real de una base sintética: `BACKUP ... COPY_ONLY, CHECKSUM`, `RESTORE VERIFYONLY` y existencia comprobada del lado SQL Server. Se retira solo su archivo con nombre aleatorio del fixture; no se asume que el servidor comparta el sistema de archivos del cliente.
+- Detector PHP: **cuatro escenarios adicionales correctos**, para configuración literal en array/asignaciones, escapes, grupos activos y rechazo de expresiones dinámicas. Se comprueba que el archivo PHP no se ejecuta, aunque incluya una instrucción con efecto observable. Se conservan los **siete escenarios anteriores** del extractor.
+- Recorrido Playwright con MariaDB real independiente y SQL Server E2E: detección automática desde configuración sintética, selección de ciclo/grado/sección, ceros iniciales, guardado y reanudación, revisión, confirmación, respaldo real, importación, conciliación y cinco cuentas pendientes. Se ejecuta por separado en escritorio y móvil, con base nueva para cada recorrido; Axe y ausencia de desborde forman parte de la prueba.
+- Evidencias visuales privadas: `.local/qa/evidencia/migration-assistant/desktop/` y `mobile/`, cuatro PNG por dispositivo. Sin claves, QR de activación ni personas reales. El proceso local usa cookie con nombre aislado para no reemplazar otras sesiones de localhost.
+
+Se corrigieron durante QA los selectores de prueba (etiquetas de select y valores internos de Angular), la visibilidad de las excepciones familiares y la comprobación de respaldos desde el servidor. Los puertos de E2E son aleatorios para no detener el host de otra sesión. El harness retira exclusivamente su propio catálogo y los backups del patrón de ese catálogo; la instancia MariaDB sintética se detiene y retira en `finally`.
+
+Reproducir el recorrido completo: `./tests/migration/Test-LegacyExtractor.ps1 -RunAssistantE2E`. El selector de origen muestra conteos y evita proponer un ciclo vacío. No hubo lecturas personales del legado ni carga real: toda la detección/extracción de QA usa una configuración y base sintéticas.
+
 Esta evidencia utiliza exclusivamente datos sintéticos. No hubo conexión a MariaDB del legado, lectura de sus fichas reales, modificaciones de PHP, importaciones escolares reales ni despliegue. Se leyeron archivos fuente del legado para contrastar estructura y se ejecutó **otra instancia MariaDB** desde los binarios instalados, con `--no-defaults`, directorio aleatorio propio y puerto de loopback aleatorio.
 
-## Resultados
+## Resultados del núcleo de consola (incremento anterior)
 
 | Comprobación | Resultado |
 | --- | --- |
@@ -69,7 +83,7 @@ C:/xampp/php/php.exe tests/migration/exporter-test.php
 
 `-MariaDbBin`/`-PhpPath` permiten otras ubicaciones de binarios en la prueba MariaDB. No instala servicios ni usa el directorio de datos del legado. La prueba prepara su esquema/lector SELECT, genera el raw y borrador, comprueba rechazos y retira únicamente su proceso/directorio aleatorio. Las carpetas temporales/artefactos se mantienen ignorados.
 
-Evidencia local: `.local/qa/test-results/migration-validation.trx` (suite completa) y `migration-final.trx` (validación específica posterior). No hay capturas o interfaz nueva en este incremento, por lo que no se ejecutaron E2E visuales de Angular/Flutter. Las cookies/autorización se comprobaron por HTTP en las pruebas SQL y por la consola real.
+Evidencia local de consola: `.local/qa/test-results/migration-validation.trx` (suite completa) y `migration-final.trx` (validación específica posterior); `assistant-full.trx` corresponde al incremento del asistente. El primer incremento no tenía pantalla; el asistente actual sí incluye las capturas y E2E descritos arriba. Las cookies/autorización también se comprobaron por HTTP y por la consola real. No se modificó Flutter.
 
 ## Qué falta para operar con el padrón real
 

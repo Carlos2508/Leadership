@@ -20,7 +20,15 @@ public sealed class InitialRosterImporter(SchoolDbContext db, IdentityDbContext 
     IOptions<AccountAccessOptions> access, TimeProvider time)
 {
     public async Task<RosterReport> RunAsync(byte[] content, string mode, string? expectedPlanSha256,
-        RosterOperator credentials, CancellationToken ct = default)
+        RosterOperator credentials, CancellationToken ct = default) =>
+        await RunCoreAsync(content, mode, expectedPlanSha256, () => OperatorAsync(credentials, ct), ct);
+
+    // Only the authenticated, resource-authorized local assistant calls this; actor ID comes from its cookie, never its body.
+    internal Task<RosterReport> RunForAccountAsync(byte[] content, string mode, string? expectedPlanSha256, Guid actorId, CancellationToken ct) =>
+        RunCoreAsync(content, mode, expectedPlanSha256, () => ActiveOperatorAsync(actorId, ct), ct);
+
+    private async Task<RosterReport> RunCoreAsync(byte[] content, string mode, string? expectedPlanSha256,
+        Func<Task<ApplicationUser>> authorize, CancellationToken ct)
     {
         Require(mode is "plan" or "apply" or "reconcile", "invalid-mode");
         var file = RosterJson.Read(content);
@@ -41,7 +49,7 @@ public sealed class InitialRosterImporter(SchoolDbContext db, IdentityDbContext 
                 IF @result < 0 THROW 51000, 'Account operation busy', 1;
                 """, ct);
             await EnrollmentWriteScope.LockAsync(db, ct);
-            var actor = await OperatorAsync(credentials, ct);
+            var actor = await authorize();
             var sha = Hash(content);
             var previous = await db.RosterBatches.AsNoTracking().SingleOrDefaultAsync(b => b.Id == file.Manifest.BatchId, ct);
             if (previous is not null)
@@ -133,6 +141,17 @@ public sealed class InitialRosterImporter(SchoolDbContext db, IdentityDbContext 
         if (requiresMfa)
             Require(actor.TwoFactorEnabled && !string.IsNullOrWhiteSpace(c.SecondFactorCode) &&
                 await users.VerifyTwoFactorTokenAsync(actor, users.Options.Tokens.AuthenticatorTokenProvider, c.SecondFactorCode), "operator-mfa-required");
+        return actor;
+    }
+
+    internal async Task<ApplicationUser> ActiveOperatorAsync(Guid id, CancellationToken ct)
+    {
+        var actor = await identity.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == id && u.IsActive && u.PasswordHash != null, ct);
+        Require(actor is not null, "invalid-operator");
+        await audit.RequireAsync(id, ct, Permissions.PeopleManage, Permissions.EnrollmentManage, Permissions.ManageAccounts);
+        var requiresMfa = access.Value.RequireMfaForPermissions.Intersect(new[]
+            { Permissions.PeopleManage, Permissions.EnrollmentManage, Permissions.ManageAccounts }).Any();
+        Require(!requiresMfa || actor.TwoFactorEnabled, "operator-mfa-required");
         return actor;
     }
 

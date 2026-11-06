@@ -35,28 +35,26 @@ abstract final class AppTheme {
     final isDark = brightness == Brightness.dark;
     final colors = AppColors.from(palette, brightness);
 
-    final seeded = ColorScheme.fromSeed(seedColor: palette.primary, brightness: brightness);
-    final scheme = isDark
-        ? seeded.copyWith(
-            secondary: palette.accent,
-            onSecondary: colors.onAccent,
-            surface: const Color(0xFF101713),
-            surfaceContainerLowest: const Color(0xFF0C120F),
-            surfaceContainerLow: colors.cardBackground,
-            outlineVariant: colors.border,
-          )
-        : seeded.copyWith(
-            primary: palette.primary,
-            onPrimary: Colors.white,
-            secondary: palette.accent,
-            onSecondary: colors.onAccent,
-            surface: palette.surface,
-            onSurface: const Color(0xFF193B2B),
-            surfaceContainerLowest: Colors.white,
-            surfaceContainerLow: Colors.white,
-            outlineVariant: colors.border,
-            onSurfaceVariant: colors.muted,
-          );
+    // Same system as the web: ivory content, white cards, charcoal text and gold actions (light);
+    // charcoal surfaces with the same gold in dark mode. Brand colors come from institution.json only.
+    final seeded = ColorScheme.fromSeed(seedColor: palette.accent, brightness: brightness);
+    final ink = isDark ? const Color(0xFFF1EFEB) : const Color(0xFF16191C);
+    final scheme = seeded.copyWith(
+      primary: isDark ? palette.accent : palette.deep,
+      onPrimary: isDark ? palette.deep : Colors.white,
+      secondary: palette.accent,
+      onSecondary: colors.onAccent,
+      tertiary: palette.accent,
+      surface: isDark ? palette.deep : palette.surface,
+      onSurface: ink,
+      onSurfaceVariant: colors.muted,
+      surfaceContainerLowest: isDark ? const Color(0xFF0A0D0F) : Colors.white,
+      surfaceContainerLow: colors.cardBackground,
+      surfaceContainer: colors.cardBackground,
+      surfaceContainerHigh: isDark ? const Color(0xFF1C2226) : const Color(0xFFF3F0EA),
+      outline: colors.border,
+      outlineVariant: colors.border,
+    );
 
     final base = ThemeData(
       useMaterial3: true,
@@ -120,6 +118,10 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          backgroundColor: palette.accent,
+          foregroundColor: colors.onAccent,
+          disabledBackgroundColor: Color.lerp(palette.accent, scheme.surface, 0.55),
+          disabledForegroundColor: colors.onAccent.withValues(alpha: 0.55),
           minimumSize: const Size(64, 50),
           padding: buttonPadding,
           shape: buttonShape,
@@ -140,7 +142,7 @@ abstract final class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? const Color(0xFF17201B) : Colors.white,
+        fillColor: isDark ? colors.cardBackground : Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -152,7 +154,7 @@ abstract final class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.primary, width: 2),
+          borderSide: BorderSide(color: palette.accent, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -171,49 +173,57 @@ abstract final class AppTheme {
         selectedColor: colors.tone(AppTone.brand).background,
         backgroundColor: colors.cardBackground,
       ),
+      // Navigation mirrors the web sidebar: dark gradient surface, gold translucent pill on the active item.
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: colors.cardBackground,
+        backgroundColor: palette.deep,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: colors.tone(AppTone.brand).background,
+        indicatorColor: palette.accent.withValues(alpha: 0.24),
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: palette.accent.withValues(alpha: 0.42)),
+        ),
         elevation: 0,
-        height: 68,
+        height: 70,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => textTheme.labelSmall?.copyWith(
             letterSpacing: 0,
-            fontSize: 12,
-            color: states.contains(WidgetState.selected)
-                ? (isDark ? scheme.primary : palette.deep)
-                : colors.muted,
+            fontSize: 11.5,
+            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
+            color: states.contains(WidgetState.selected) ? Colors.white : const Color(0xFFB9B7B2),
           ),
         ),
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
-            color: states.contains(WidgetState.selected)
-                ? (isDark ? scheme.primary : palette.deep)
-                : colors.muted,
+            size: 23,
+            color: states.contains(WidgetState.selected) ? palette.accent : const Color(0xFFB9B7B2),
           ),
         ),
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: colors.cardBackground,
-        indicatorColor: colors.tone(AppTone.brand).background,
-        selectedIconTheme: IconThemeData(color: isDark ? scheme.primary : palette.deep),
-        unselectedIconTheme: IconThemeData(color: colors.muted),
-        selectedLabelTextStyle: textTheme.labelLarge?.copyWith(
-          color: isDark ? scheme.primary : palette.deep,
+        backgroundColor: palette.deep,
+        indicatorColor: palette.accent.withValues(alpha: 0.24),
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: palette.accent.withValues(alpha: 0.42)),
         ),
-        unselectedLabelTextStyle: textTheme.labelLarge?.copyWith(color: colors.muted),
+        selectedIconTheme: IconThemeData(color: palette.accent),
+        unselectedIconTheme: const IconThemeData(color: Color(0xFFB9B7B2)),
+        selectedLabelTextStyle: textTheme.labelLarge?.copyWith(color: Colors.white),
+        unselectedLabelTextStyle: textTheme.labelLarge?.copyWith(
+          color: const Color(0xFFB9B7B2),
+          fontWeight: FontWeight.w500,
+        ),
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: SegmentedButton.styleFrom(
           selectedBackgroundColor: colors.tone(AppTone.brand).background,
-          selectedForegroundColor: isDark ? scheme.primary : palette.deep,
+          selectedForegroundColor: isDark ? palette.accent : palette.deep,
           side: BorderSide(color: colors.border),
           textStyle: textTheme.labelMedium,
         ),
       ),
       tabBarTheme: TabBarThemeData(
-        labelColor: isDark ? scheme.primary : palette.deep,
+        labelColor: isDark ? palette.accent : palette.deep,
         unselectedLabelColor: colors.muted,
         labelStyle: textTheme.labelLarge,
         unselectedLabelStyle: textTheme.labelLarge,
@@ -239,7 +249,7 @@ abstract final class AppTheme {
         subtitleTextStyle: textTheme.bodySmall?.copyWith(color: colors.muted, fontSize: 13),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: isDark ? const Color(0xFF141C17) : Colors.white,
+        backgroundColor: isDark ? colors.cardBackground : Colors.white,
         surfaceTintColor: Colors.transparent,
         showDragHandle: true,
         shape: const RoundedRectangleBorder(
@@ -247,13 +257,13 @@ abstract final class AppTheme {
         ),
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: isDark ? const Color(0xFF141C17) : Colors.white,
+        backgroundColor: isDark ? colors.cardBackground : Colors.white,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: isDark ? const Color(0xFFE3EBE3) : palette.deep,
+        backgroundColor: isDark ? const Color(0xFFF1EFEB) : palette.deep,
         contentTextStyle: textTheme.bodyMedium?.copyWith(
           color: isDark ? palette.deep : Colors.white,
           fontWeight: FontWeight.w600,
@@ -267,7 +277,7 @@ abstract final class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
-        color: isDark ? scheme.primary : palette.primary,
+        color: palette.accent,
         linearTrackColor: colors.border,
       ),
       pageTransitionsTheme: const PageTransitionsTheme(

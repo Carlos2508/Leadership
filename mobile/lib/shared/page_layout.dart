@@ -136,51 +136,104 @@ class InstitutionHeader extends ConsumerWidget {
     final session = ref.watch(authControllerProvider);
     final theme = Theme.of(context);
     final colors = AppColors.of(context);
+    // Dark brand band, like the web sidebar/top bar: gradient, thin gold border and the gold curve.
     return Padding(
       padding: const EdgeInsets.only(top: Spacing.md, bottom: Spacing.lg),
-      child: Row(
-        children: [
-          InstitutionLogo(path: institution.mainLogo),
-          const SizedBox(width: Spacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  institution.shortName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium,
-                ),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
-                ),
-              ],
-            ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(Radii.lg),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [colors.heroStart, colors.heroEnd],
           ),
-          if (session != null)
-            Tooltip(
-              message: 'Mi perfil',
-              child: Semantics(
-                button: true,
-                label: 'Abrir perfil de ${session.displayName}',
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () => context.push('/profile'),
-                  child: Padding(
-                    padding: const EdgeInsets.all(2),
-                    child: ExcludeSemantics(child: InitialsAvatar(initials: session.initials)),
+          border: Border.all(color: colors.accent.withValues(alpha: 0.22)),
+          boxShadow: [
+            BoxShadow(
+              color: colors.deep.withValues(alpha: 0.18),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(Radii.lg),
+          child: CustomPaint(
+            painter: _GoldCurvePainter(colors.accent),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 12, 16),
+              child: Row(
+                children: [
+                  InstitutionLogo(path: institution.mainLogo),
+                  const SizedBox(width: Spacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          institution.shortName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+                        ),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.accent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  if (session != null)
+                    Tooltip(
+                      message: 'Mi perfil',
+                      child: Semantics(
+                        button: true,
+                        label: 'Abrir perfil de ${session.displayName}',
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => context.push('/profile'),
+                          child: Padding(
+                            padding: const EdgeInsets.all(2),
+                            child: ExcludeSemantics(
+                              child: InitialsAvatar(initials: session.initials),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
-        ],
+          ),
+        ),
       ),
     );
   }
+}
+
+/// Thin gold curve along the bottom edge (the same motif as the web menu), purely decorative.
+class _GoldCurvePainter extends CustomPainter {
+  const _GoldCurvePainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(size.width * 0.38, size.height)
+      ..quadraticBezierTo(size.width * 0.78, size.height - 4, size.width, size.height - 22)
+      ..lineTo(size.width, size.height)
+      ..close();
+    canvas.drawPath(path, Paint()..color = color.withValues(alpha: 0.9));
+  }
+
+  @override
+  bool shouldRepaint(covariant _GoldCurvePainter oldDelegate) => oldDelegate.color != color;
 }
 
 /// Introducción de página: fecha/contexto, título grande y subtítulo.

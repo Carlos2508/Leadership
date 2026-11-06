@@ -53,7 +53,9 @@ class RoleShell extends ConsumerWidget {
         body: navigationShell,
         bottomNavigationBar: DecoratedBox(
           decoration: BoxDecoration(
-            border: Border(top: BorderSide(color: AppColors.of(context).border)),
+            border: Border(
+              top: BorderSide(color: AppColors.of(context).accent.withValues(alpha: 0.18)),
+            ),
           ),
           child: NavigationBar(
             selectedIndex: navigationShell.currentIndex,
@@ -78,29 +80,32 @@ class RoleShell extends ConsumerWidget {
     return Scaffold(
       body: Row(
         children: [
-          SafeArea(
-            right: false,
-            child: NavigationRail(
-              extended: extended,
-              minExtendedWidth: 220,
-              selectedIndex: navigationShell.currentIndex,
-              onDestinationSelected: (index) => _onSelect(ref, index),
-              labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
-              leading: Padding(
-                padding: const EdgeInsets.only(top: 12, bottom: 20),
-                child: InstitutionLogo(path: institution.mainLogo, size: extended ? 56 : 44),
+          ColoredBox(
+            color: AppColors.of(context).deep,
+            child: SafeArea(
+              right: false,
+              child: NavigationRail(
+                extended: extended,
+                minExtendedWidth: 220,
+                selectedIndex: navigationShell.currentIndex,
+                onDestinationSelected: (index) => _onSelect(ref, index),
+                labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+                leading: Padding(
+                  padding: const EdgeInsets.only(top: 12, bottom: 20),
+                  child: InstitutionLogo(path: institution.mainLogo, size: extended ? 56 : 44),
+                ),
+                destinations: [
+                  for (final d in destinations)
+                    NavigationRailDestination(
+                      icon: Icon(d.icon),
+                      selectedIcon: Icon(d.selectedIcon),
+                      label: Text(d.label),
+                    ),
+                ],
               ),
-              destinations: [
-                for (final d in destinations)
-                  NavigationRailDestination(
-                    icon: Icon(d.icon),
-                    selectedIcon: Icon(d.selectedIcon),
-                    label: Text(d.label),
-                  ),
-              ],
             ),
           ),
-          VerticalDivider(width: 1, color: AppColors.of(context).border),
+          VerticalDivider(width: 1, color: AppColors.of(context).accent.withValues(alpha: 0.18)),
           Expanded(child: navigationShell),
         ],
       ),

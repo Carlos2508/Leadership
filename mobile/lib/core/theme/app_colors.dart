@@ -32,7 +32,7 @@ class AppColors extends ThemeExtension<AppColors> {
 
   factory AppColors.from(BrandPalette palette, Brightness brightness) {
     final dark = brightness == Brightness.dark;
-    final card = dark ? const Color(0xFF17201B) : Colors.white;
+    final card = dark ? const Color(0xFF161B1F) : Colors.white;
 
     TonePair tone(Color base, {Color? lightForeground}) {
       if (dark) {
@@ -48,11 +48,11 @@ class AppColors extends ThemeExtension<AppColors> {
       deep: palette.deep,
       accent: palette.accent,
       onAccent: _readableOn(palette.accent, palette.deep),
-      muted: dark ? const Color(0xFFA3B4A7) : const Color(0xFF607461),
-      border: dark ? const Color(0xFF2A3730) : const Color(0xFFE3EBE3),
+      muted: dark ? const Color(0xFF9EA4A9) : const Color(0xFF6B6F73),
+      border: dark ? const Color(0xFF272D32) : const Color(0xFFE7E2D6),
       cardBackground: card,
-      heroStart: dark ? Color.lerp(palette.primary, Colors.black, 0.25)! : palette.primary,
-      heroEnd: dark ? Color.lerp(palette.deep, Colors.black, 0.4)! : palette.deep,
+      heroStart: Color.lerp(palette.deep, Colors.white, dark ? 0.04 : 0.07)!,
+      heroEnd: Color.lerp(palette.deep, palette.accent, 0.16)!,
       tones: {
         AppTone.brand: tone(palette.primary, lightForeground: palette.deep),
         AppTone.accent: tone(
@@ -66,8 +66,8 @@ class AppColors extends ThemeExtension<AppColors> {
         AppTone.warning: tone(const Color(0xFFB66C10)),
         AppTone.danger: tone(const Color(0xFFB63232)),
         AppTone.neutral: dark
-            ? const TonePair(Color(0xFF243029), Color(0xFFC9D6CC))
-            : const TonePair(Color(0xFFF0F3EF), Color(0xFF3F5245)),
+            ? const TonePair(Color(0xFF22282D), Color(0xFFCDD1D4))
+            : const TonePair(Color(0xFFF1EEE7), Color(0xFF45494D)),
       },
     );
   }

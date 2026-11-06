@@ -99,6 +99,11 @@ public sealed class DocumentOptions
     public string[] CardRules { get; set; } = [];
     /// <summary>Back of the student ID card: e.g. what to do if found (optional).</summary>
     public string CardNotice { get; set; } = "";
+    /// <summary>
+    /// Minimum passing score approved by the school (optional). Only when set do report cards color results as passed or
+    /// to reinforce; empty means no pass/fail judgement is printed.
+    /// </summary>
+    public decimal? PassingScore { get; set; }
 }
 
 public sealed class AssetOptions
@@ -166,6 +171,7 @@ public sealed class InstitutionValidator(IWebHostEnvironment environment) : IVal
         if (options.Contact.Website.Length > 0 &&
             (!Uri.TryCreate(options.Contact.Website, UriKind.Absolute, out var uri) || uri.Scheme != "https"))
             errors.Add("El sitio institucional debe ser una URL HTTPS.");
+        if (options.Documents.PassingScore is < 0 or > 100) errors.Add("Documents:PassingScore debe estar entre 0 y 100.");
         foreach (var url in new[] { options.Contact.Social.Facebook, options.Contact.Social.Instagram, options.Contact.Social.YouTube,
                      options.Contact.Social.TikTok })
             if (url.Length > 0 && (!Uri.TryCreate(url, UriKind.Absolute, out var social) || social.Scheme != "https"))

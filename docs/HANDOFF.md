@@ -248,3 +248,7 @@ Ver `docs/DESIGN.md`. Tipografías Fraunces/Figtree autoalojadas (`wwwroot/fonts
 ## Página pública y guía de negocio (2026-11-05)
 
 `/` es ahora una página pública profesional (ver `docs/BRANDING.md`): contacto con llamada directa, correo, «Cómo llegar», mapa bajo demanda y accesos «Ingresar a mi espacio». Nuevas opciones `Institution:Contact` y `Institution:Public`. Guía de lógica de negocio en PDF: `docs/manual/Logica_de_negocio.pdf`, generada desde `docs/manual/logica-de-negocio.html` con `node scripts/Build-Manual.mjs` (usar el Node de `.tools`).
+
+## PDFs rediseñados (rama `feat/pdf-premium`, 2026-11-05)
+
+Recibos, boletines, libreta y carnets con el sistema visual de documentos de `docs/DESIGN.md` (banda grafito, acento institucional, Figtree incrustada). Cantidad en letras en recibos; boletín en matriz materias × períodos; `Documents:PassingScore` opcional. Nuevas pruebas `DocumentDesignTests`. Trabajado en un worktree aparte mientras otra sesión cambiaba la paleta de la interfaz.

@@ -54,3 +54,7 @@ La referencia vigente (ADR-013) incluye portada con curva e imagen, pilares, mis
 Teléfono, correo y dirección proceden de los carnets aportados; el teléfono y la dirección coinciden con el [listado público de MINEDUC consultado](https://infopublica.mineduc.gob.gt/mineduc/images/c/c8/DIGEACE_DIGEACE_GUATEMALA_INCISO2C_2023_VERSION09.pdf). WhatsApp e Instagram reproducen el paquete entregado. No se agregaron horarios, tarifas ni niveles no comprobados. Misión, visión y presentación nuevas son redacción autorizada para esta solicitud, no documentos oficiales investigados. Los enlaces del pie para privacidad/términos son consultas por correo, no políticas publicadas.
 
 Las imágenes aportadas son ilustrativas, como indica el paquete. Las rutas, procedencia y licencia de las fuentes se documentan en `reference/REFERENCE_DESIGN_ASSETS.md`. Para otra instalación se deben sustituir todos estos contenidos y recursos en la misma configuración, incluidos los campos nuevos de `Public`.
+
+## Documentos
+
+`Institution:Documents:PassingScore` (opcional, 0–100): nota mínima aprobada por el colegio. Solo si se define, los boletines colorean cada resultado como aprobado o por reforzar y muestran la leyenda. Vacío = sin juicio de aprobación (política pendiente). El diseño de los PDF está en `docs/DESIGN.md`.

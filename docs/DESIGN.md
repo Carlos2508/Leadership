@@ -55,3 +55,24 @@ Reglas:
 - Contraste AA verificado por Axe en todas las pruebas E2E (escritorio y móvil). El ámbar de «lectura repetida» usa `#8d570d`.
 - Foco visible (`outline` naranja de 3 px) conservado; los anillos de foco de los campos son adicionales.
 - Los toasts se anuncian como estado; los modales atrapan el foco y lo devuelven al cerrar.
+
+
+## Documentos PDF (recibos, boletines, libreta y carnets)
+
+Generados en el servidor con QuestPDF (`Documents/PdfDocuments.cs`). Sistema visual propio de los documentos, independiente del color de la interfaz:
+
+- **Banda superior grafito** (`#1B2025`) con el logo en una insignia blanca circular (funciona con cualquier logo), el nombre de la institución, una etiqueta en el color de acento y un título con una palabra destacada en acento («Boletín de *calificaciones*», «Recibo *No. 000123*»). Arcos decorativos del acento al fondo y una línea de acento debajo.
+- **Franja de datos** en tono cálido (`#FBF8F1`) con etiquetas en acento oscuro y valores grandes.
+- **Títulos de sección** con barra vertical de acento; **tablas** con encabezado grafito, filas alternas, y la columna principal destacada en acento.
+- **Banda inferior grafito** con el nombre corto y el lema del colegio, el nombre del documento, la fecha de generación y la paginación.
+- Tipografía **Figtree** estática (400–900) incrustada en el ensamblado (`Documents/Fonts`, licencia OFL); no depende de fuentes del servidor.
+- El **acento** sale de `Institution:Theme:Accent`; los documentos no usan el color primario, de modo que un cambio de paleta del sitio no los descompone.
+
+Contenido:
+
+- **Recibo:** número con 6 dígitos, estado («PAGO CONFIRMADO» o «ANULADO» con marca de agua), detalle por concepto y estudiante, total destacado y **cantidad en letras** (quetzales, dólares y otras monedas comunes), contacto, línea de firma (con el usuario emisor solo en la copia interna) y la nota «Comprobante interno de pago. No es una factura fiscal».
+- **Boletín:** horizontal, materias × períodos publicados con el último disponible resaltado; «Pendiente», «Exonerado» y «Retenido» se escriben, no se colorean como nota. **Sin promedios ni redondeos**. Los colores aprobado/por reforzar aparecen **solo** si el colegio configura `Institution:Documents:PassingScore` (vacío por defecto).
+- **Libreta del curso:** lista con situación y nota del período y línea de firma docente.
+- **Carnet CR80:** frente con banda grafito, foto o iniciales con marco de acento, código del estudiante, QR y banda inferior con el lema y la vigencia; reverso con aviso, normas, teléfono de emergencia, dirección y código de barras dentro de un recuadro.
+
+Pruebas: `DocumentDesignTests` genera documentos con datos sintéticos (cantidad en letras, copias familiar/interna, boletín con y sin nota mínima, retenido, libreta y carnets). Con `SCHOOLPLATFORM_PDF_DUMP=<carpeta>` guarda copias para revisión visual.

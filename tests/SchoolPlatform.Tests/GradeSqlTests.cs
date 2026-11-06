@@ -206,7 +206,7 @@ public sealed class GradeSqlTests : SqlTestBase
         Assert.Contains("Recibo de pago", receiptText);
         Assert.Contains(OwnerName, receiptText);
         Assert.Contains("Gloria Encargada", receiptText);
-        Assert.Contains($"No. {receipt.Receipt.Number}", receiptText);
+        Assert.Contains($"No. {receipt.Receipt.Number:D6}", receiptText);
         var familyReceipt = await PdfText(guardian, $"/api/v1/me/students/{student}/receipts/{receipt.PaymentId}/receipt.pdf");
         Assert.Contains("Gloria Encargada", familyReceipt);
         Assert.DoesNotContain(OwnerName, familyReceipt);

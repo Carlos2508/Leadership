@@ -13,10 +13,13 @@ using SchoolPlatform.Host.SchoolData;
 
 namespace SchoolPlatform.Tests;
 
-/// <summary>Controllable clock: starts at the real time and moves only when a test advances it.</summary>
+/// <summary>
+/// Controllable clock: starts today at 15:00 UTC (mid-morning in the Americas) and moves only when a test advances it,
+/// so tests that add tens of minutes never cross the school's midnight, whatever time the suite runs.
+/// </summary>
 public sealed class ManualClock : TimeProvider
 {
-    private DateTimeOffset now = DateTimeOffset.UtcNow;
+    private DateTimeOffset now = new(DateTime.UtcNow.Date.AddHours(15), TimeSpan.Zero);
     public override DateTimeOffset GetUtcNow() => now;
     public void Advance(TimeSpan by) => now += by;
 }

@@ -30,6 +30,7 @@ El dashboard muestra indicadores, pendientes y acciones por contexto. La composi
 
 El editor de roles usa acciones agrupadas por área, selección completa opcional, motivo y confirmación del número de cuentas afectadas. No deduce permisos del nombre: Director y Secretaría pueden tener todos. Los perfiles escolares se mantienen separados. Ver ADR-012.
 
+- Menú lateral: los módulos van sin fondo propio sobre el degradado oscuro (sin bloques opacos); solo el activo lleva el tratamiento dorado (degradado translúcido, borde, brillo y marca lateral). La lista se desplaza sola con desvanecido inferior y «Mi cuenta/Cerrar sesión» forman un pie translúcido con desenfoque, siempre visible sobre la curva dorada. El birrete decorativo queda al 8 % de opacidad. Colores solo desde `--deep`/`--accent`.
 - Menú personal: el docente ve el grupo «Docencia» con sus cursos asignados (máximo seis) y la familia «Mis estudiantes» con cada vínculo vigente. Se cargan de `/api/v1/me/courses` y `/api/v1/me`; son atajos de presentación, la autorización sigue en el servidor.
 
 ## Alertas (SweetAlert2)

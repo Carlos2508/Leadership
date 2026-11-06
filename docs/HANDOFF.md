@@ -1,5 +1,9 @@
 # Handoff para la siguiente sesión
 
+## Menú lateral translúcido — 6 de noviembre de 2026
+
+- El propietario indicó que el menú se veía «montado»: módulos, Mi cuenta y Cerrar sesión tenían fondo opaco sobre el degradado/curva dorada. Bloque final de `_identity.scss`: menú transparente con activo dorado translúcido, lista con scroll propio y pie `.sidebar-footer` (nuevo envoltorio en `shell.ts`) con desenfoque. Paleta sin cambios. Evidencia antes/después en `.local/qa/evidencia/menu-2026-11-06/` (director, familia, estudiante y docente; 1440 y 390 px).
+
 ## Roles, módulos y flujos — 6 de noviembre de 2026, leer primero
 
 - Solicitud: página sin aspecto de tarjeta, sin logo grande en «Tengo un código…», recorrido de todos los flujos por perfil escolar y por roles creados con permisos totales/parciales, sin cambiar paleta, documentado en HTML. Informe `QA_ROLES_FLUJOS_2026-11-06.md` (RF-001 a RF-006).

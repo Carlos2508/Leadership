@@ -238,15 +238,17 @@ import { SessionService } from '../core/session';
           <a class="sidebar-home" routerLink="/"><app-icon name="arrow" />Volver al inicio</a>
         }
         @if (!preview()) {
-          <a class="sidebar-account" routerLink="/workspace/security"
-            ><app-icon name="user" />Mi cuenta</a
-          >
-        }
-        @if (!preview() && session.token()) {
-          <form class="sidebar-logout" action="/Identity/Account/Logout" method="post">
-            <input type="hidden" name="__RequestVerificationToken" [value]="session.token()" />
-            <button type="submit"><app-icon name="logout" />Cerrar sesión</button>
-          </form>
+          <div class="sidebar-footer">
+            <a class="sidebar-account" routerLink="/workspace/security" routerLinkActive="active" ariaCurrentWhenActive="page"
+              ><app-icon name="user" />Mi cuenta</a
+            >
+            @if (session.token()) {
+              <form class="sidebar-logout" action="/Identity/Account/Logout" method="post">
+                <input type="hidden" name="__RequestVerificationToken" [value]="session.token()" />
+                <button type="submit"><app-icon name="logout" />Cerrar sesión</button>
+              </form>
+            }
+          </div>
         }
         <div class="sidebar-art" aria-hidden="true">
           <app-icon name="school" /><svg viewBox="0 0 260 130" preserveAspectRatio="none">

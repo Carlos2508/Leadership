@@ -10,12 +10,15 @@ using SchoolPlatform.Host.People;
 using SchoolPlatform.Host.Preview;
 using SchoolPlatform.Host.SchoolData;
 
-var hostArgs = args.Where(x => x is not "--initialize-database" and not "--create-operator" and not "--provision-owner" and not "--import-people").ToArray();
+var hostArgs = args.Where(x => x is not "--initialize-database" and not "--create-operator" and not "--provision-owner" and not "--import-people" and not "--import-roster" and not "--migration-assistant").ToArray();
 var builder = WebApplication.CreateBuilder(hostArgs);
+// Console import errors must not leak SQL exception values through framework logging.
+if (args.Contains("--import-roster") || args.Contains("--migration-assistant")) builder.Logging.ClearProviders();
 var configDirectory = Path.Combine(AppContext.BaseDirectory, "config");
 builder.Configuration.AddJsonFile(Path.Combine(configDirectory, "institution.json"), optional: false, reloadOnChange: false)
     .AddJsonFile(Path.Combine(configDirectory, "institution.local.json"), optional: true, reloadOnChange: false)
     .AddEnvironmentVariables().AddCommandLine(hostArgs);
+if (args.Contains("--migration-assistant")) builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["MigrationAssistant:Enabled"] = "true" });
 builder.Services.AddSingleton<IValidateOptions<InstitutionOptions>, InstitutionValidator>();
 builder.Services.AddOptions<InstitutionOptions>().BindConfiguration("Institution").ValidateOnStart();
 builder.Services.AddProblemDetails();
@@ -42,6 +45,13 @@ builder.Services.AddDbContext<SchoolDbContext>((services, options) => options.Us
 builder.Services.AddScoped<SchoolAudit>();
 builder.Services.AddScoped<PeopleService>();
 builder.Services.AddScoped<SchoolPlatform.Host.LegacyImport.LegacyPeopleImporter>();
+builder.Services.AddScoped<RosterAccountProvisioner>();
+builder.Services.AddScoped<SchoolPlatform.Host.LegacyImport.InitialRosterImporter>();
+builder.Services.AddOptions<SchoolPlatform.Host.LegacyImport.MigrationAssistantOptions>().BindConfiguration("MigrationAssistant");
+builder.Services.AddSingleton<SchoolPlatform.Host.LegacyImport.AssistantStorage>();
+builder.Services.AddScoped<SchoolPlatform.Host.LegacyImport.IAssistantSource, SchoolPlatform.Host.LegacyImport.AssistantSource>();
+builder.Services.AddScoped<SchoolPlatform.Host.LegacyImport.IAssistantBackup, SchoolPlatform.Host.LegacyImport.AssistantBackup>();
+builder.Services.AddScoped<SchoolPlatform.Host.LegacyImport.MigrationAssistantService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Academic.AcademicService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Academic.EnrollmentService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Academic.CourseService>();
@@ -81,7 +91,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
 }).AddEntityFrameworkStores<IdentityDbContext>().AddDefaultTokenProviders();
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    options.Cookie.Name = "SchoolPlatform.Session";
+    // Same Identity scheme/SignInFlow, isolated name so opening the local tool does not replace another localhost session.
+    options.Cookie.Name = args.Contains("--migration-assistant") ? "SchoolPlatform.MigrationSession" : "SchoolPlatform.Session";
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
@@ -148,6 +159,40 @@ builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.GzipCompress
 builder.Services.AddHealthChecks().AddCheck<SchoolPlatform.Host.Common.ReadinessCheck>("sql", tags: ["ready"]);
 
 var app = builder.Build();
+if (args.Contains("--import-roster"))
+{
+    try
+    {
+        await using var scope = app.Services.CreateAsyncScope();
+        var expectedCatalog = app.Configuration["Roster:Database"];
+        var actualCatalog = scope.ServiceProvider.GetRequiredService<SchoolDbContext>().Database.GetDbConnection().Database;
+        if (string.IsNullOrWhiteSpace(expectedCatalog) || !string.Equals(expectedCatalog, actualCatalog, StringComparison.OrdinalIgnoreCase))
+            throw new SchoolPlatform.Host.LegacyImport.RosterImportException("target-database-confirmation-required");
+        var input = app.Configuration["Roster:File"] ?? throw new SchoolPlatform.Host.LegacyImport.RosterImportException("file-required");
+        if (new FileInfo(input).Length is 0 or > 20_000_000) throw new SchoolPlatform.Host.LegacyImport.RosterImportException("invalid-file-size");
+        var credentials = new SchoolPlatform.Host.LegacyImport.RosterOperator(
+            app.Configuration["Roster:Actor"] ?? "",
+            Environment.GetEnvironmentVariable("ROSTER_OPERATOR_PASSWORD") ?? "",
+            Environment.GetEnvironmentVariable("ROSTER_OPERATOR_TOTP"));
+        var report = await scope.ServiceProvider.GetRequiredService<SchoolPlatform.Host.LegacyImport.InitialRosterImporter>()
+            .RunAsync(await File.ReadAllBytesAsync(input), app.Configuration["Roster:Mode"] ?? "plan", app.Configuration["Roster:PlanSha256"], credentials);
+        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(report, SchoolPlatform.Host.LegacyImport.RosterJson.Options));
+        // Explicit reconcile reports subsequent changes; it never undoes activations or business edits.
+        if (report.Observations.Length > 0) Environment.ExitCode = 2;
+    }
+    catch (Exception exception)
+    {
+        // SQL uniqueness/errors can contain personal values; never print an exception/stack or the input document.
+        Console.Error.WriteLine(exception switch
+        {
+            SchoolPlatform.Host.LegacyImport.RosterImportException expected => expected.Code,
+            SchoolPlatform.Host.Common.OperationException expected => expected.Code,
+            _ => "roster-operation-failed"
+        });
+        Environment.ExitCode = 1;
+    }
+    return;
+}
 if (args.Contains("--initialize-database") || args.Contains("--create-operator") || args.Contains("--provision-owner"))
 {
     await DevelopmentSetup.RunAsync(app, args.Contains("--create-operator") || args.Contains("--provision-owner"),
@@ -201,6 +246,7 @@ app.MapRazorPages().RequireRateLimiting("identity-forms");
 app.MapAccountAccess();
 app.MapAppAuth();
 app.MapPeople();
+SchoolPlatform.Host.LegacyImport.MigrationAssistantEndpoints.MapMigrationAssistant(app);
 SchoolPlatform.Host.Academic.AcademicEndpoints.MapAcademic(app);
 SchoolPlatform.Host.Academic.AcademicEndpoints.MapCourses(app);
 SchoolPlatform.Host.Finance.FinanceEndpoints.MapFinance(app);

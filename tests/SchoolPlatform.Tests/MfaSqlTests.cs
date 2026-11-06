@@ -14,7 +14,7 @@ public sealed class MfaSqlTests : SqlTestBase
         new() { ["AccountAccess:RequireMfaForPermissions:0"] = Permissions.ManageAccounts };
 
     // RFC 6238 TOTP (SHA-1, 30 s, 6 digits) computed independently from Identity.
-    private static string Totp(string formattedKey, long offset = 0)
+    internal static string Totp(string formattedKey, long offset = 0)
     {
         var key = Base32(formattedKey.Replace(" ", "").ToUpperInvariant());
         var step = DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 30 + offset;

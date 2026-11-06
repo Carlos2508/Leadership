@@ -1,0 +1,493 @@
+<app-shell title="Migrar estudiantes">
+  <div class="migration-assistant">
+    <header class="page-heading">
+      <div>
+        <p class="eyebrow">PREPARACIÓN DEL NUEVO CICLO</p>
+        <h1>Migrar estudiantes</h1>
+        <p>Trae estudiantes y encargados. Activa sus accesos poco a poco, después.</p>
+      </div>
+    </header>
+    <ol class="ma-steps" aria-label="Pasos de la migración">
+      <li [class.current]="step() === 1">1. Origen y ciclo</li>
+      <li [class.current]="step() === 2">2. Revisar</li>
+      <li [class.current]="step() >= 3">3. Importar</li>
+    </ol>
+    @if (loading()) {
+      <p role="status">Revisando la instalación…</p>
+    }
+    @if (error()) {
+      <section class="ma-panel">
+        <p role="alert">{{ error() }}</p>
+        <button class="button outline" (click)="load()">Reintentar</button>
+      </section>
+    }
+    @if (busy()) {
+      <p class="ma-progress" role="status" aria-live="polite">{{ busy() }}</p>
+    }
+    @if (catalog(); as c) {
+      <fieldset [disabled]="!!busy()" class="ma-body">
+        @if (step() === 1) {
+          <section class="ma-panel">
+            <h2>¿De dónde traeremos los estudiantes?</h2>
+            <p>
+              El asistente puede reconocer la conexión de la plataforma anterior en este equipo.
+            </p>
+            <button class="button" (click)="connect()">
+              {{ sourceYears().length ? 'Volver a conectar' : 'Buscar plataforma anterior' }}
+            </button>
+            <details class="ma-details">
+              <summary>Usar otra conexión</summary>
+              <label class="ma-check"
+                ><input type="checkbox" [(ngModel)]="manual" /> Configurar la conexión
+                manualmente</label
+              >
+              @if (manual) {
+                <div class="ma-grid">
+                  <label>Servidor<input [(ngModel)]="connection.host" /></label
+                  ><label>Base anterior<input [(ngModel)]="connection.database" /></label
+                  ><label
+                    >Usuario de lectura<input
+                      [(ngModel)]="connection.username"
+                      autocomplete="off" /></label
+                  ><label
+                    >Contraseña<input
+                      type="password"
+                      [(ngModel)]="connection.password"
+                      autocomplete="off" /></label
+                  ><label>Puerto<input type="number" [(ngModel)]="connection.port" /></label>
+                </div>
+              }
+            </details>
+          </section>
+          @if (sourceYears().length) {
+            <section class="ma-panel">
+              <h2>Elige el ciclo</h2>
+              <div class="ma-grid">
+                <label
+                  >Ciclo de la plataforma anterior<select [(ngModel)]="sourceYearId">
+                    @for (y of sourceYears(); track y.schoolyearID) {
+                      <option [value]="y.schoolyearID" [disabled]="y.students === 0">
+                        {{ y.schoolyear }} · {{ y.students }} estudiantes
+                      </option>
+                    }
+                  </select></label
+                >
+                <label
+                  >Ciclo de destino<select
+                    [ngModel]="targetYearId()"
+                    (ngModelChange)="targetYearId.set($event)"
+                  >
+                    <option value="">Elegir ciclo</option>
+                    @for (y of openYears(); track y.id) {
+                      <option [value]="y.id">{{ y.label }}</option>
+                    }
+                  </select></label
+                >
+                <label
+                  >Formato habitual de los nombres<select [(ngModel)]="nameFormat">
+                    <option value="two-surnames">Nombres y dos apellidos</option>
+                    <option value="one-surname">Nombres y un apellido</option>
+                    <option value="surname-comma-name">Apellidos, nombres</option>
+                  </select></label
+                >
+              </div>
+              <p class="ma-hint">
+                La separación de nombres es una propuesta. Podrás corregir las excepciones antes de
+                importar.
+              </p>
+              @if (selectedYear(); as y) {
+                <p>
+                  Destino: <strong>{{ y.label }}</strong> · del {{ y.startsOn }} al {{ y.endsOn }}
+                </p>
+              }
+              @if (session.can('academic.manage')) {
+                <details class="ma-details">
+                  <summary>El ciclo todavía no existe</summary>
+                  <div class="ma-grid">
+                    <label>Nombre del ciclo<input [(ngModel)]="yearForm.label" /></label
+                    ><label
+                      >Fecha real de inicio<input
+                        type="date"
+                        [(ngModel)]="yearForm.startsOn" /></label
+                    ><label
+                      >Fecha real de fin<input type="date" [(ngModel)]="yearForm.endsOn"
+                    /></label>
+                  </div>
+                  <button
+                    class="button outline"
+                    (click)="createYear()"
+                    [disabled]="!yearForm.startsOn || !yearForm.endsOn"
+                  >
+                    Crear y abrir inscripciones
+                  </button>
+                </details>
+              }
+              <button class="button" (click)="read()" [disabled]="!sourceYearId || !targetYearId()">
+                Preparar estudiantes y familias
+              </button>
+            </section>
+          }
+          @if (recent().length) {
+            <section class="ma-panel">
+              <h2>Continúa donde te quedaste</h2>
+              @for (r of recent(); track r.runId) {
+                <button class="button outline" (click)="resume(r)">
+                  Abrir revisión de {{ r.yearLabel }} · {{ r.students.length }} estudiantes
+                </button>
+              }
+            </section>
+          }
+        }
+        @if (review(); as r) {
+          @if (step() === 2) {
+            <section class="ma-panel">
+              <div class="ma-title">
+                <div>
+                  <h2>Revisa lo importante</h2>
+                  <p>
+                    <strong>{{ included() }} estudiantes</strong> seleccionados para
+                    {{ r.yearLabel }}. Ninguna cuenta tendrá acceso todavía.
+                  </p>
+                </div>
+                <button class="button outline" (click)="save()">Guardar y continuar después</button>
+              </div>
+              <label
+                >Fecha de ingreso en {{ r.yearLabel
+                }}<input type="date" [(ngModel)]="r.enrolledOn" (ngModelChange)="changed()"
+              /></label>
+              <h3>Grado de destino por grupo</h3>
+              <p>Elige una vez por grado. Puedes cambiar estudiantes individuales abajo.</p>
+              <div class="ma-grade-grid">
+                @for (g of groups(); track g.id) {
+                  <div>
+                    <label
+                      ><span
+                        >{{ g.name }} <small>· {{ g.count }} estudiantes</small></span
+                      ><select [ngModel]="g.grade" (ngModelChange)="mapGrade(g.id, $event)">
+                        <option value="">Elegir destino</option>
+                        @for (grade of c.grades; track grade.id) {
+                          <option [value]="grade.id">{{ grade.name }}</option>
+                        }
+                        <option value="exclude">No continúan</option>
+                      </select></label
+                    >
+                    <label
+                      >Sección para {{ g.name
+                      }}<select
+                        [ngModel]="g.section"
+                        (ngModelChange)="mapSection(g.id, g.grade, $event)"
+                        [disabled]="!g.grade || g.grade === 'exclude'"
+                      >
+                        <option [ngValue]="null">Sin sección</option>
+                        @for (section of groupSections(g.grade); track section.id) {
+                          <option [ngValue]="section.id">{{ section.name }}</option>
+                        }
+                      </select></label
+                    >
+                  </div>
+                }
+              </div>
+              @if (session.can('academic.manage')) {
+                <button class="button outline" (click)="copyGrades()">
+                  Crear grados del origen que falten
+                </button>
+              }
+            </section>
+            <section class="ma-panel">
+              <h2>Estudiantes</h2>
+              <div class="ma-title">
+                <label
+                  >Buscar estudiante<input
+                    type="search"
+                    [ngModel]="search()"
+                    (ngModelChange)="search.set($event)"
+                    placeholder="Nombre o código" /></label
+                ><label class="ma-check"
+                  ><input
+                    type="checkbox"
+                    [ngModel]="warningsOnly()"
+                    (ngModelChange)="warningsOnly.set($event)"
+                  />
+                  Ver solo propuestas que revisar</label
+                >
+              </div>
+              <div class="ma-students">
+                @if (!students().length) {
+                  <p>
+                    No hay estudiantes señalados con estos filtros. Las propuestas sin incidencias
+                    ya están preparadas.
+                  </p>
+                  <button class="button outline" (click)="warningsOnly.set(false); search.set('')">
+                    Ver todos los estudiantes
+                  </button>
+                }
+                @for (s of students(); track s.legacyId) {
+                  <article class="ma-person" [class.excluded]="!s.include">
+                    <label class="ma-check ma-person-title"
+                      ><input
+                        type="checkbox"
+                        [(ngModel)]="s.include"
+                        (ngModelChange)="changed()"
+                      /><strong>{{ s.fullName }}</strong></label
+                    >
+                    @if (s.notices.length) {
+                      <p class="ma-notice">{{ s.notices.join(' · ') }}</p>
+                    }
+                    @if (s.include) {
+                      <div class="ma-grid">
+                        <label
+                          >Nombres<input
+                            [(ngModel)]="s.givenNames"
+                            (ngModelChange)="changed()" /></label
+                        ><label
+                          >Apellidos<input
+                            [(ngModel)]="s.familyNames"
+                            (ngModelChange)="changed()" /></label
+                        ><label
+                          >Código<input [(ngModel)]="s.code" (ngModelChange)="changed()" /></label
+                        ><label
+                          >Grado<select
+                            [(ngModel)]="s.gradeId"
+                            (ngModelChange)="s.sectionId = null; changed()"
+                          >
+                            <option [ngValue]="null">Elegir grado</option>
+                            @for (grade of c.grades; track grade.id) {
+                              <option [ngValue]="grade.id">{{ grade.name }}</option>
+                            }
+                          </select></label
+                        ><label
+                          >Sección<select [(ngModel)]="s.sectionId" (ngModelChange)="changed()">
+                            <option [ngValue]="null">Sin sección</option>
+                            @for (section of sections(s); track section.id) {
+                              <option [ngValue]="section.id">{{ section.name }}</option>
+                            }
+                          </select></label
+                        ><label
+                          >Nacimiento, si se conoce<input
+                            type="date"
+                            [(ngModel)]="s.birthDate"
+                            (ngModelChange)="changed()"
+                        /></label>
+                      </div>
+                      <div class="ma-person-options">
+                        <button class="text-button" (click)="clearDate(s)">
+                          Dejar nacimiento pendiente</button
+                        ><label class="ma-check"
+                          ><input
+                            type="checkbox"
+                            [(ngModel)]="s.distinctPersonConfirmed"
+                            (ngModelChange)="changed()"
+                          />
+                          Si coincide el nombre, confirmé que es otra persona</label
+                        >
+                      </div>
+                    }
+                  </article>
+                }
+              </div>
+              @if (filteredStudentCount() > students().length) {
+                <button class="button outline" (click)="limit.set(limit() + 25)">
+                  Mostrar más estudiantes
+                </button>
+              }
+            </section>
+            <section class="ma-panel">
+              <h2>Padres y encargados</h2>
+              <label class="ma-check"
+                ><input
+                  type="checkbox"
+                  [ngModel]="familyWarningsOnly()"
+                  (ngModelChange)="familyWarningsOnly.set($event)"
+                />
+                Mostrar solo familias señaladas</label
+              >
+              <p>
+                Un adulto de la misma ficha familiar se comparte entre hermanos. Los teléfonos y
+                correos compartidos quedan pendientes de verificar; no se atribuyen a una persona
+                automáticamente.
+              </p>
+              @if (!r.families.length) {
+                <p>
+                  No hay referencias familiares en este padrón. Los estudiantes pueden importarse
+                  sin encargado.
+                </p>
+              }
+              @for (family of familyRows(); track family.legacyId) {
+                <details class="ma-family" [open]="family.notices.length > 0">
+                  <summary>
+                    Familia de {{ familyChildren(family.legacyId) || 'estudiantes excluidos' }}
+                    <small>· {{ family.adults.length }} adultos propuestos</small>
+                  </summary>
+                  @if (family.notices.length) {
+                    <p class="ma-notice">{{ family.notices.join(' · ') }}</p>
+                  }
+                  @if (!family.adults.length) {
+                    <p>Continuará sin encargado identificado. Podrás registrarlo después.</p>
+                  }
+                  @for (adult of family.adults; track adult.key) {
+                    <div class="ma-person">
+                      <label class="ma-check"
+                        ><input
+                          type="checkbox"
+                          [(ngModel)]="adult.include"
+                          (ngModelChange)="changed()"
+                        />
+                        {{ adult.kind === 'Father' ? 'Padre' : 'Madre' }}:
+                        {{ adult.fullName }}</label
+                      >
+                      @if (adult.include) {
+                        @if (adultMatches(adult).length || adult.sameAsKey) {
+                          <label
+                            >Este encargado aparece en otra ficha<select
+                              [(ngModel)]="adult.sameAsKey"
+                              (ngModelChange)="changed()"
+                            >
+                              <option [ngValue]="null">Conservar como persona independiente</option>
+                              @for (match of adultMatches(adult); track match.key) {
+                                <option [ngValue]="match.key">
+                                  Es la misma persona: {{ match.fullName }}
+                                </option>
+                              }
+                            </select></label
+                          >
+                        }
+                        @if (!adult.sameAsKey) {
+                          <div class="ma-grid">
+                            <label
+                              >Nombres del encargado<input
+                                [(ngModel)]="adult.givenNames"
+                                (ngModelChange)="changed()" /></label
+                            ><label
+                              >Apellidos del encargado<input
+                                [(ngModel)]="adult.familyNames"
+                                (ngModelChange)="changed()"
+                            /></label>
+                          </div>
+                          <label class="ma-check"
+                            ><input
+                              type="checkbox"
+                              [(ngModel)]="adult.distinctPersonConfirmed"
+                              (ngModelChange)="changed()"
+                            />
+                            Si coincide el nombre, confirmé que es otra persona</label
+                          >
+                        } @else {
+                          <p>
+                            Se guardará una sola persona y cuenta para los estudiantes de ambas
+                            fichas.
+                          </p>
+                        }
+                      }
+                    </div>
+                  }
+                </details>
+              }
+              @if (!familyRows().length && r.families.length) {
+                <p>
+                  Las familias sin incidencias están preparadas. Desmarca el filtro si quieres
+                  revisarlas todas.
+                </p>
+              }
+              @if (filteredFamilies().length > familyRows().length) {
+                <button class="button outline" (click)="familyLimit.set(familyLimit() + 20)">
+                  Mostrar más familias
+                </button>
+              }
+            </section>
+            <section class="ma-panel ma-next">
+              <h2>Todo quedará sin acceso</h2>
+              <p>
+                Solo se traerán las personas y la matrícula de {{ r.yearLabel }}. No se trasladan
+                notas, deudas, pagos ni contraseñas.
+              </p>
+              <label class="ma-check"
+                ><input type="checkbox" [(ngModel)]="r.confirmed" /> Confirmo los estudiantes que
+                continúan, sus grados y los nombres y vínculos propuestos.</label
+              >
+              <div class="ma-actions">
+                <button
+                  class="button"
+                  (click)="check()"
+                  [disabled]="!r.confirmed || included() === 0"
+                >
+                  Comprobar y continuar</button
+                ><button class="button outline" (click)="verify()">
+                  Verificar si ya se importó
+                </button>
+              </div>
+            </section>
+          }
+          @if (plan(); as p) {
+            @if (!result()) {
+              <section class="ma-panel ma-ready">
+                <p class="eyebrow">COMPROBACIÓN CORRECTA</p>
+                <h2>Listo para {{ p.yearLabel }}</h2>
+                <div class="ma-totals">
+                  <div>
+                    <strong>{{ p.students }}</strong
+                    ><span>estudiantes</span>
+                  </div>
+                  <div>
+                    <strong>{{ p.guardians }}</strong
+                    ><span>encargados</span>
+                  </div>
+                  <div>
+                    <strong>{{ p.accounts }}</strong
+                    ><span>accesos inactivos</span>
+                  </div>
+                </div>
+                <p>
+                  El asistente hará el respaldo, la carga y la comprobación final. Si hay un fallo
+                  al guardar, se revierte el lote completo.
+                </p>
+                <p class="ma-hint">
+                  Destino: {{ p.server }} / {{ p.database }} · Ciclo {{ p.yearLabel }}
+                </p>
+                <div class="ma-actions">
+                  <button class="button" (click)="apply()">Importar estudiantes</button
+                  ><button class="button outline" (click)="backToReview()">Volver a revisar</button>
+                </div>
+              </section>
+            }
+          }
+          @if (result(); as done) {
+            <section class="ma-panel ma-ready">
+              <p class="eyebrow">
+                {{
+                  done.report.observations.length ? 'RESULTADO GUARDADO' : 'IMPORTACIÓN VERIFICADA'
+                }}
+              </p>
+              <h2>{{ done.report.students }} estudiantes en {{ done.report.yearLabel }}</h2>
+              <p>
+                {{ done.report.guardians }} encargados · {{ done.report.accounts }} cuentas
+                preparadas.
+              </p>
+              <p>
+                {{
+                  done.backupVerified
+                    ? 'Respaldo creado y verificado.'
+                    : 'Consulta el respaldo de la operación original.'
+                }}
+              </p>
+              @if (done.report.observations.length) {
+                <p role="status">
+                  El padrón ya existía y tiene cambios posteriores. Se conservaron las activaciones
+                  y modificaciones realizadas después.
+                </p>
+              } @else {
+                <p>
+                  Los accesos siguen inactivos. Puedes ir activándolos uno por uno desde Cuentas.
+                </p>
+              }
+              <div class="ma-actions">
+                <a class="button" routerLink="/workspace/students">Ver estudiantes</a
+                ><a class="button outline" routerLink="/workspace/access">Activar accesos después</a
+                ><button class="button outline" (click)="verify()">Volver a verificar</button>
+              </div>
+            </section>
+          }
+        }
+      </fieldset>
+    }
+  </div>
+</app-shell>

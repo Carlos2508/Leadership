@@ -1,0 +1,216 @@
+{
+  "formatVersion": 2,
+  "manifest": {
+    "batchId": "00000000-0000-4000-8000-000000000001",
+    "schoolId": "00000000-0000-4000-8000-000000000002",
+    "source": "legacy-school-local",
+    "sourceYearId": "synthetic-source-year",
+    "sourceYearLabel": "2026",
+    "exportedAt": "2026-11-06T18:00:00Z",
+    "sourceSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "scope": "initial-students-guardians-enrollments-pending-accounts",
+    "targetYearId": "00000000-0000-4000-8000-000000000027",
+    "targetYearLabel": "2027"
+  },
+  "candidates": [
+    {
+      "legacyStudentId": "synthetic-s1",
+      "decision": "include",
+      "personKey": "student-1",
+      "reason": "Continuidad y grado destino confirmados en este ejemplo ficticio.",
+      "familyLegacyId": "synthetic-family1"
+    },
+    {
+      "legacyStudentId": "synthetic-s2",
+      "decision": "include",
+      "personKey": "student-2",
+      "reason": "Continuidad y grado destino confirmados en este ejemplo ficticio.",
+      "familyLegacyId": "synthetic-family1"
+    },
+    {
+      "legacyStudentId": "synthetic-s3",
+      "decision": "include",
+      "personKey": "student-3",
+      "reason": "Continúa sin encargado identificado en este ejemplo ficticio.",
+      "familyLegacyId": null
+    },
+    {
+      "legacyStudentId": "synthetic-s4",
+      "decision": "exclude",
+      "personKey": null,
+      "reason": "No continúa en este ejemplo ficticio.",
+      "familyLegacyId": null
+    }
+  ],
+  "people": [
+    {
+      "key": "student-1",
+      "givenNames": "Alumna Uno",
+      "familyNames": "Ejemplo Sintético",
+      "birthDate": null,
+      "studentCode": "SYN-001",
+      "profiles": [
+        "student"
+      ],
+      "contacts": [],
+      "pendingUsername": "e-syn-001",
+      "distinctPersonConfirmed": false
+    },
+    {
+      "key": "student-2",
+      "givenNames": "Alumno Dos",
+      "familyNames": "Ejemplo Sintético",
+      "birthDate": null,
+      "studentCode": "SYN-002",
+      "profiles": [
+        "student"
+      ],
+      "contacts": [],
+      "pendingUsername": "e-syn-002",
+      "distinctPersonConfirmed": false
+    },
+    {
+      "key": "student-3",
+      "givenNames": "Alumna Tres",
+      "familyNames": "Caso Sintético",
+      "birthDate": null,
+      "studentCode": "SYN-003",
+      "profiles": [
+        "student"
+      ],
+      "contacts": [],
+      "pendingUsername": "e-syn-003",
+      "distinctPersonConfirmed": false
+    },
+    {
+      "key": "guardian-1",
+      "givenNames": "Adulto Uno",
+      "familyNames": "Ejemplo Sintético",
+      "birthDate": null,
+      "studentCode": null,
+      "profiles": [
+        "guardian"
+      ],
+      "contacts": [],
+      "pendingUsername": "p-syn-001",
+      "distinctPersonConfirmed": false
+    },
+    {
+      "key": "guardian-2",
+      "givenNames": "Adulta Dos",
+      "familyNames": "Caso Sintético",
+      "birthDate": null,
+      "studentCode": null,
+      "profiles": [
+        "guardian"
+      ],
+      "contacts": [],
+      "pendingUsername": "p-syn-002",
+      "distinctPersonConfirmed": false
+    }
+  ],
+  "legacyAliases": [
+    {
+      "entity": "student",
+      "legacyId": "synthetic-s1",
+      "discriminator": "person",
+      "personKey": "student-1"
+    },
+    {
+      "entity": "student",
+      "legacyId": "synthetic-s2",
+      "discriminator": "person",
+      "personKey": "student-2"
+    },
+    {
+      "entity": "student",
+      "legacyId": "synthetic-s3",
+      "discriminator": "person",
+      "personKey": "student-3"
+    },
+    {
+      "entity": "parents",
+      "legacyId": "synthetic-family1",
+      "discriminator": "reviewed-adult-1",
+      "personKey": "guardian-1"
+    },
+    {
+      "entity": "parents",
+      "legacyId": "synthetic-family1",
+      "discriminator": "reviewed-adult-2",
+      "personKey": "guardian-2"
+    }
+  ],
+  "relationships": [
+    {
+      "studentKey": "student-1",
+      "guardianKey": "guardian-1",
+      "kind": "Father",
+      "startsOn": "2027-02-01",
+      "faculties": [],
+      "reviewed": true
+    },
+    {
+      "studentKey": "student-1",
+      "guardianKey": "guardian-2",
+      "kind": "Mother",
+      "startsOn": "2027-02-01",
+      "faculties": [],
+      "reviewed": true
+    },
+    {
+      "studentKey": "student-2",
+      "guardianKey": "guardian-1",
+      "kind": "Father",
+      "startsOn": "2027-02-01",
+      "faculties": [],
+      "reviewed": true
+    }
+  ],
+  "enrollments": [
+    {
+      "studentKey": "student-1",
+      "academicYearId": "00000000-0000-4000-8000-000000000027",
+      "gradeLevelId": "00000000-0000-4000-8000-000000000005",
+      "sectionId": null,
+      "enrolledOn": "2027-02-01",
+      "reviewed": true
+    },
+    {
+      "studentKey": "student-2",
+      "academicYearId": "00000000-0000-4000-8000-000000000027",
+      "gradeLevelId": "00000000-0000-4000-8000-000000000003",
+      "sectionId": null,
+      "enrolledOn": "2027-02-01",
+      "reviewed": true
+    },
+    {
+      "studentKey": "student-3",
+      "academicYearId": "00000000-0000-4000-8000-000000000027",
+      "gradeLevelId": "00000000-0000-4000-8000-000000000005",
+      "sectionId": null,
+      "enrolledOn": "2027-02-01",
+      "reviewed": true
+    }
+  ],
+  "accountPreparation": {
+    "mode": "pending-without-secrets",
+    "roleKey": "replace-with-reviewed-zero-administrative-permissions-role-key",
+    "requireEmptyEffectiveAdministrativePermissions": true,
+    "isActive": false,
+    "passwordHash": null,
+    "issueActivationCodes": false,
+    "sendMessages": false
+  },
+  "families": [
+    {
+      "legacyFamilyId": "synthetic-family1",
+      "decision": "include",
+      "personKeys": [
+        "guardian-1",
+        "guardian-2"
+      ],
+      "reason": "Titulares identificados en este ejemplo completamente sintético."
+    }
+  ]
+}

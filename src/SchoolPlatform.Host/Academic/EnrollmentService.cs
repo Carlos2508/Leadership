@@ -96,6 +96,7 @@ public sealed class EnrollmentService(SchoolDbContext db, SchoolAudit audit, Tim
 
     public async Task<Guid> EnrollAsync(Guid actor, EnrollRequest request, CancellationToken ct)
     {
+        await using var write = await EnrollmentWriteScope.BeginAsync(db, ct);
         await audit.RequireAsync(actor, ct, Permissions.EnrollmentManage);
         var reason = Optional(request.Reason);
         var year = await OpenYear(request.AcademicYearId, ct);
@@ -121,11 +122,13 @@ public sealed class EnrollmentService(SchoolDbContext db, SchoolAudit audit, Tim
         db.Enrollments.Add(enrollment);
         audit.Record("StudentEnrolled", actor, "Enrollment", enrollment.Id, reason, $"{year.Label}");
         await db.SaveChangesAsync(ct);
+        await write.CommitAsync(ct);
         return enrollment.Id;
     }
 
     public async Task ChangePlacementAsync(Guid actor, Guid id, PlacementRequest request, CancellationToken ct)
     {
+        await using var write = await EnrollmentWriteScope.BeginAsync(db, ct);
         await audit.RequireAsync(actor, ct, Permissions.EnrollmentManage);
         var reason = Reasons.Require(request.Reason);
         var (enrollment, year, current) = await LoadActive(id, request.Version, ct);
@@ -138,10 +141,12 @@ public sealed class EnrollmentService(SchoolDbContext db, SchoolAudit audit, Tim
         await ReplacePlacementAsync(actor, enrollment, current, request.EffectiveOn, request.GradeLevelId, request.SectionId, reason, ct, () =>
             audit.Record("EnrollmentPlacementChanged", actor, "Enrollment", enrollment.Id, reason,
                 current.GradeLevelId == request.GradeLevelId ? "Section" : "Grade"));
+        await write.CommitAsync(ct);
     }
 
     public async Task WithdrawAsync(Guid actor, Guid id, WithdrawRequest request, CancellationToken ct)
     {
+        await using var write = await EnrollmentWriteScope.BeginAsync(db, ct);
         await audit.RequireAsync(actor, ct, Permissions.EnrollmentManage);
         var reason = Reasons.Require(request.Reason);
         var (enrollment, year, current) = await LoadActive(id, request.Version, ct);
@@ -154,10 +159,12 @@ public sealed class EnrollmentService(SchoolDbContext db, SchoolAudit audit, Tim
         enrollment.UpdatedAt = time.GetUtcNow();
         audit.Record("StudentWithdrawn", actor, "Enrollment", enrollment.Id, reason, request.EffectiveOn.ToString("yyyy-MM-dd"));
         await db.SaveChangesAsync(ct);
+        await write.CommitAsync(ct);
     }
 
     public async Task ReactivateAsync(Guid actor, Guid id, PlacementRequest request, CancellationToken ct)
     {
+        await using var write = await EnrollmentWriteScope.BeginAsync(db, ct);
         await audit.RequireAsync(actor, ct, Permissions.EnrollmentManage);
         var reason = Reasons.Require(request.Reason);
         var enrollment = await db.Enrollments.SingleOrDefaultAsync(x => x.Id == id, ct) ?? throw EnrollmentNotFound();
@@ -179,6 +186,7 @@ public sealed class EnrollmentService(SchoolDbContext db, SchoolAudit audit, Tim
         });
         audit.Record("StudentReenrolled", actor, "Enrollment", enrollment.Id, reason, request.EffectiveOn.ToString("yyyy-MM-dd"));
         await db.SaveChangesAsync(ct);
+        await write.CommitAsync(ct);
     }
 
     // ---- helpers
@@ -188,7 +196,7 @@ public sealed class EnrollmentService(SchoolDbContext db, SchoolAudit audit, Tim
     {
         // Two statements in one transaction: close the open placement before inserting the next one
         // (the filtered unique index allows a single open placement).
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await using var transaction = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
         current.EndsOn = effectiveOn;
         enrollment.UpdatedAt = time.GetUtcNow();
         await db.SaveChangesAsync(ct);
@@ -199,7 +207,7 @@ public sealed class EnrollmentService(SchoolDbContext db, SchoolAudit audit, Tim
         });
         recordAudit();
         await db.SaveChangesAsync(ct);
-        await transaction.CommitAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
     }
 
     private async Task<(Enrollment, AcademicYear, EnrollmentPlacement)> LoadActive(Guid id, string version, CancellationToken ct)

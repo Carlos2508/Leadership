@@ -8,6 +8,11 @@ const previewGuard = () =>
   inject(InstitutionService).current.previewEnabled || inject(Router).createUrlTree(['/']);
 export const routes: Routes = [
   {
+    path: 'workspace/roles',
+    canActivate: [permissionGuard('accounts.manage')],
+    loadComponent: () => import('./features/access-roles').then((x) => x.AccessRoles),
+  },
+  {
     path: 'workspace/gate',
     canActivate: [permissionGuard('attendance.gate')],
     loadComponent: () => import('./features/gate-kiosk').then((x) => x.GateKiosk),

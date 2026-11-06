@@ -212,3 +212,35 @@
     font-size: 10px;
   }
 }
+
+.role-description {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 6px;
+  max-width: 400px;
+}
+.role-permission-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.role-permission-heading h3 {
+  font-size: 16px;
+  margin: 0;
+}
+.role-permission-group {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+.role-permission-group .checkbox-field {
+  align-items: flex-start;
+  line-height: 1.6;
+}
+.role-permission-group input {
+  flex-shrink: 0;
+}
+.role-school-note { color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 24px; }

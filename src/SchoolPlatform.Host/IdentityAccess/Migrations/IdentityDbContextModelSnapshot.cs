@@ -154,6 +154,57 @@ namespace SchoolPlatform.Host.IdentityAccess.Migrations
                     b.ToTable("AspNetUserTokens", "iam");
                 });
 
+            modelBuilder.Entity("SchoolPlatform.Host.IdentityAccess.AccessRole", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(80)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("Label")
+                        .IsUnique();
+
+                    b.ToTable("AccessRoles", "iam");
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.IdentityAccess.AccessRolePermission", b =>
+                {
+                    b.Property<string>("RoleKey")
+                        .HasMaxLength(80)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<string>("Permission")
+                        .HasMaxLength(80)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(80)");
+
+                    b.HasKey("RoleKey", "Permission");
+
+                    b.ToTable("AccessRolePermissions", "iam");
+                });
+
             modelBuilder.Entity("SchoolPlatform.Host.IdentityAccess.AccountAccessGrant", b =>
                 {
                     b.Property<Guid>("Id")
@@ -223,6 +274,24 @@ namespace SchoolPlatform.Host.IdentityAccess.Migrations
                     b.HasIndex("Permission", "UserId");
 
                     b.ToTable("AccountPermissions", "iam");
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.IdentityAccess.AccountRoleAssignment", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RoleKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(80)");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("RoleKey");
+
+                    b.ToTable("AccountRoleAssignments", "iam");
                 });
 
             modelBuilder.Entity("SchoolPlatform.Host.IdentityAccess.ApplicationUser", b =>
@@ -401,6 +470,15 @@ namespace SchoolPlatform.Host.IdentityAccess.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SchoolPlatform.Host.IdentityAccess.AccessRolePermission", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.IdentityAccess.AccessRole", null)
+                        .WithMany()
+                        .HasForeignKey("RoleKey")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SchoolPlatform.Host.IdentityAccess.AccountAccessGrant", b =>
                 {
                     b.HasOne("SchoolPlatform.Host.IdentityAccess.ApplicationUser", null)
@@ -418,6 +496,21 @@ namespace SchoolPlatform.Host.IdentityAccess.Migrations
 
             modelBuilder.Entity("SchoolPlatform.Host.IdentityAccess.AccountPermission", b =>
                 {
+                    b.HasOne("SchoolPlatform.Host.IdentityAccess.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.IdentityAccess.AccountRoleAssignment", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.IdentityAccess.AccessRole", null)
+                        .WithMany()
+                        .HasForeignKey("RoleKey")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SchoolPlatform.Host.IdentityAccess.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")

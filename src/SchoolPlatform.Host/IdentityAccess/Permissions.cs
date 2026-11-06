@@ -28,47 +28,6 @@ public static class Permissions
 
 public sealed record AccessProfile(string Key, string Label, string[] Permissions);
 
-public static class AccessProfiles
-{
-    public static readonly AccessProfile[] All =
-    [
-        new("basic", "Cuenta básica", []),
-        new("access-manager", "Gestión de accesos", [Permissions.ManageAccounts]),
-        new("auditor", "Consulta de auditoría", [Permissions.ReadAudit]),
-        new("access-owner", "Gestión de accesos y auditoría", [Permissions.ManageAccounts, Permissions.ReadAudit]),
-        new("people-reader", "Consulta de personas y familias", [Permissions.PeopleRead]),
-        new("registrar", "Secretaría: personas, familias e inscripciones",
-            [Permissions.PeopleRead, Permissions.PeopleManage, Permissions.AcademicRead, Permissions.EnrollmentManage]),
-        new("academic-coordinator", "Coordinación académica: ciclos, grados, secciones y avisos",
-            [Permissions.PeopleRead, Permissions.AcademicRead, Permissions.AcademicManage, Permissions.CommunicationPublish]),
-        new("cashier", "Caja: cobros y recibos",
-            [Permissions.PeopleRead, Permissions.AcademicRead, Permissions.FinanceRead, Permissions.FinanceCollect]),
-        new("finance-manager", "Administración financiera",
-            [Permissions.PeopleRead, Permissions.AcademicRead, Permissions.FinanceRead, Permissions.FinanceCharges,
-             Permissions.FinanceCollect, Permissions.FinanceReverse]),
-        new("gatekeeper", "Portería: entradas y salidas con carnet", [Permissions.AttendanceGate]),
-        new("attendance-supervisor", "Control de asistencia: portería, reportes y dispositivos",
-            [Permissions.PeopleRead, Permissions.AttendanceGate, Permissions.AttendanceRead, Permissions.AttendanceManage]),
-        new("administrator", "Administración institucional",
-            [Permissions.ManageAccounts, Permissions.ReadAudit, Permissions.PeopleRead, Permissions.PeopleManage,
-             Permissions.AcademicRead, Permissions.AcademicManage, Permissions.EnrollmentManage,
-             Permissions.FinanceRead, Permissions.FinanceCharges, Permissions.FinanceCollect, Permissions.FinanceReverse,
-             Permissions.CommunicationPublish, Permissions.AttendanceGate, Permissions.AttendanceRead, Permissions.AttendanceManage])
-    ];
-
-    public const string Custom = "custom";
-
-    public static AccessProfile Get(string key) => All.FirstOrDefault(x => x.Key == key)
-        ?? throw new AccessOperationException(400, "invalid-profile", "Selecciona un perfil de acceso válido.");
-    public static string Resolve(IEnumerable<string> permissions)
-    {
-        var values = permissions.ToHashSet(StringComparer.Ordinal);
-        // A permission set that matches no current profile (e.g. after a profile gained a permission) is shown as custom,
-        // never silently reported as a basic account.
-        return All.FirstOrDefault(x => values.SetEquals(x.Permissions))?.Key ?? Custom;
-    }
-}
-
 public sealed class AccountPermission
 {
     public Guid UserId { get; set; }

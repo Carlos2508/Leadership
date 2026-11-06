@@ -11,7 +11,13 @@ public static class AccountAccessEndpoints
     {
         var group = app.MapGroup("/api/v1/access").RequireAuthorization(Permissions.ManageAccounts)
             .AddEndpointFilter<ApiWriteFilter>();
-        group.MapGet("/profiles", () => Results.Ok(AccessProfiles.All));
+        group.MapGet("/profiles", (AccessRoleService roles, CancellationToken ct) => roles.ProfilesAsync(ct));
+        group.MapGet("/roles", (AccessRoleService roles, CancellationToken ct) => roles.ListAsync(ct));
+        group.MapGet("/permissions", () => PermissionCatalog.All);
+        group.MapPost("/roles", async (SaveRoleRequest request, ClaimsPrincipal actor, AccessRoleService roles, CancellationToken ct) =>
+            Results.Ok(new { key = await roles.SaveAsync(Actor(actor), null, request, ct) }));
+        group.MapPost("/roles/{key}", async (string key, SaveRoleRequest request, ClaimsPrincipal actor, AccessRoleService roles, CancellationToken ct) =>
+            Results.Ok(new { key = await roles.SaveAsync(Actor(actor), key, request, ct) }));
         group.MapGet("/accounts", (string? search, int? page, AccountAccessService service, CancellationToken ct) =>
             service.ListAsync(search, page ?? 1, ct));
         group.MapPost("/invitations", async (InviteRequest request, ClaimsPrincipal actor, AccountAccessService service, CancellationToken ct) =>

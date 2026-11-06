@@ -144,7 +144,8 @@ import { SessionService } from '../core/session';
               class="nav-section"
               [open]="
                 router.url.startsWith('/workspace/access') ||
-                router.url.startsWith('/workspace/audit')
+                router.url.startsWith('/workspace/audit') ||
+                router.url.startsWith('/workspace/roles')
               "
             >
               <summary>
@@ -153,6 +154,12 @@ import { SessionService } from '../core/session';
                 >
               </summary>
               @if (session.can('accounts.manage')) {
+                <a
+                  routerLink="/workspace/roles"
+                  routerLinkActive="active"
+                  ariaCurrentWhenActive="page"
+                  ><app-icon name="shield" />Roles y permisos</a
+                >
                 <a
                   routerLink="/workspace/access"
                   routerLinkActive="active"

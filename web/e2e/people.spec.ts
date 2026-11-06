@@ -140,9 +140,9 @@ test('register a family, grant explicit faculties and show linked students to th
   await page.screenshot({ path: testInfo.outputPath('person-detail.png'), fullPage: true });
 
   await signIn(guardian, guardianUser, guardianPassword);
-  await expect(guardian.getByRole('heading', { name: 'Andrea ' + family })).toBeVisible();
-  const linked = guardian.locator('.relationship-row').filter({ hasText: 'Valeria ' + family });
-  await expect(linked).toContainText('Información académica');
+  await expect(guardian.getByRole('heading', { level: 1 })).toContainText('Andrea');
+  const linked = guardian.locator('.dash-student').filter({ hasText: 'Valeria ' + family });
+  await expect(linked.getByRole('link', { name: 'Ver notas, tareas y asistencia' })).toBeVisible();
   await expect(guardian.getByRole('link', { name: 'Estudiantes', exact: true })).toHaveCount(0);
   expect((await guardian.request.get('/api/v1/people')).status()).toBe(403);
   await expectAccessible(guardian);

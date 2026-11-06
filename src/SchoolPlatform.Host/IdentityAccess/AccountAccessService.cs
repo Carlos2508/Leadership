@@ -22,7 +22,7 @@ public sealed class AccountAccessService(IdentityDbContext db, UserManager<Appli
         var rows = await query.OrderBy(x => x.UserName).ThenBy(x => x.Id).Skip((page - 1) * pageSize).Take(pageSize)
             .Select(x => new { x.Id, x.UserName, x.IsActive, HasPassword = x.PasswordHash != null, x.ConcurrencyStamp, x.TwoFactorEnabled }).ToArrayAsync(ct);
         var ids = rows.Select(x => x.Id).ToArray();
-        var permissions = await db.AccountPermissions.AsNoTracking().Where(x => ids.Contains(x.UserId)).ToArrayAsync(ct);
+        var assignments = await db.AccountRoleAssignments.AsNoTracking().Where(x => ids.Contains(x.UserId)).ToArrayAsync(ct);
         var now = time.GetUtcNow();
         var codes = await db.AccessGrants.AsNoTracking().Where(x => ids.Contains(x.UserId) && x.ConsumedAt == null &&
             x.RevokedAt == null && x.ExpiresAt > now).Select(x => new { x.UserId, x.Purpose, x.ExpiresAt }).ToArrayAsync(ct);
@@ -30,7 +30,7 @@ public sealed class AccountAccessService(IdentityDbContext db, UserManager<Appli
         {
             var code = codes.Where(c => c.UserId == x.Id).OrderByDescending(c => c.ExpiresAt).FirstOrDefault();
             return new AccountSummary(x.Id, x.UserName!, !x.HasPassword ? "Pending" : x.IsActive ? "Active" : "Suspended",
-                AccessProfiles.Resolve(permissions.Where(p => p.UserId == x.Id).Select(p => p.Permission)), x.ConcurrencyStamp!,
+                assignments.SingleOrDefault(a => a.UserId == x.Id)?.RoleKey ?? "custom", x.ConcurrencyStamp!,
                 code?.ExpiresAt, code?.Purpose, x.TwoFactorEnabled);
         }).ToArray(), total, page, pageSize);
     }
@@ -38,11 +38,11 @@ public sealed class AccountAccessService(IdentityDbContext db, UserManager<Appli
     public async Task<IssueCodeResult> InviteAsync(Guid actorId, InviteRequest request, CancellationToken ct = default)
     {
         var reason = Reason(request.Reason);
-        var profile = AccessProfiles.Get(request.Profile);
         if (string.IsNullOrWhiteSpace(request.Username) || request.Username.Length > 100)
             throw Invalid("El usuario debe contener entre 1 y 100 caracteres.");
         await using var transaction = await BeginOperationAsync(ct);
         await RequireManagerAsync(actorId, ct);
+        var profile = await ProfileAsync(request.Profile, ct);
         if (await users.FindByNameAsync(request.Username.Trim()) is not null)
             throw new AccessOperationException(409, "username-taken", "Ese usuario ya existe. Elige otro nombre de usuario.");
         var user = new ApplicationUser { Id = Guid.NewGuid(), UserName = request.Username.Trim(), IsActive = false };
@@ -58,9 +58,9 @@ public sealed class AccountAccessService(IdentityDbContext db, UserManager<Appli
     public async Task ChangeProfileAsync(Guid actorId, Guid userId, AccountChangeRequest request, CancellationToken ct = default)
     {
         var reason = Reason(request.Reason);
-        var profile = AccessProfiles.Get(request.Profile ?? "");
         await using var transaction = await BeginOperationAsync(ct);
         await RequireManagerAsync(actorId, ct);
+        var profile = await ProfileAsync(request.Profile ?? "", ct);
         var user = await TargetAsync(userId, request.Version, ct);
         await ProtectLastManagerAsync(user, user.IsActive, profile.Permissions.Contains(Permissions.ManageAccounts), ct);
         var previous = await db.AccountPermissions.Where(x => x.UserId == userId).ToArrayAsync(ct);
@@ -194,7 +194,12 @@ public sealed class AccountAccessService(IdentityDbContext db, UserManager<Appli
             throw new AccessOperationException(409, "username-taken", "El usuario ya existe; no se modificará su contraseña ni sus permisos.");
         var user = new ApplicationUser { Id = Guid.NewGuid(), UserName = username.Trim(), IsActive = true };
         Check(await users.CreateAsync(user, password));
-        SetProfile(user.Id, AccessProfiles.Get("access-owner"));
+        var ownerRole = await db.AccessRoles.Where(r => r.IsActive &&
+                db.AccessRolePermissions.Any(p => p.RoleKey == r.Key && p.Permission == Permissions.ManageAccounts) &&
+                db.AccessRolePermissions.Any(p => p.RoleKey == r.Key && p.Permission == Permissions.ReadAudit))
+            .OrderBy(r => db.AccessRolePermissions.Count(p => p.RoleKey == r.Key)).ThenBy(r => r.Key).Select(r => r.Key).FirstOrDefaultAsync(ct)
+            ?? throw Invalid("No hay un rol activo que permita preparar al primer gestor.");
+        SetProfile(user.Id, await ProfileAsync(ownerRole, ct));
         audit.Record("OwnerProvisioned", null, user.Id, "Preparación inicial de esta instalación.", "access-owner");
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
@@ -245,8 +250,19 @@ public sealed class AccountAccessService(IdentityDbContext db, UserManager<Appli
         return user;
     }
 
+    private async Task<AccessProfile> ProfileAsync(string key, CancellationToken ct)
+    {
+        var role = await db.AccessRoles.AsNoTracking().SingleOrDefaultAsync(r => r.Key == key && r.IsActive, ct)
+            ?? throw new AccessOperationException(400, "invalid-profile", "Selecciona un rol de acceso activo.");
+        var permissions = await db.AccessRolePermissions.Where(p => p.RoleKey == key).Select(p => p.Permission).ToArrayAsync(ct);
+        return new(role.Key, role.Label, permissions);
+    }
+
     private void SetProfile(Guid userId, AccessProfile profile, HashSet<string>? existing = null)
     {
+        var assignment = db.AccountRoleAssignments.SingleOrDefault(a => a.UserId == userId);
+        if (assignment is null) db.AccountRoleAssignments.Add(new() { UserId = userId, RoleKey = profile.Key });
+        else assignment.RoleKey = profile.Key;
         foreach (var permission in profile.Permissions.Where(x => existing is null || !existing.Contains(x)))
             db.AccountPermissions.Add(new() { UserId = userId, Permission = permission });
     }

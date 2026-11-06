@@ -252,11 +252,12 @@ public sealed class AccountAccessSqlTests : IAsyncLifetime
     [Fact]
     public async Task Audit_cannot_be_updated_or_deleted_even_using_direct_sql()
     {
+        var before = await Read(db => db.AuditEvents.CountAsync());
         var update = await Assert.ThrowsAsync<SqlException>(() => Read(db => db.Database.ExecuteSqlRawAsync("UPDATE [audit].[Events] SET Detail='tampered'")));
         Assert.Equal(51001, update.Number);
         var delete = await Assert.ThrowsAsync<SqlException>(() => Read(db => db.Database.ExecuteSqlRawAsync("DELETE FROM [audit].[Events]")));
         Assert.Equal(51001, delete.Number);
-        Assert.Equal(1, await Read(db => db.AuditEvents.CountAsync()));
+        Assert.Equal(before, await Read(db => db.AuditEvents.CountAsync()));
     }
 
     [Fact]

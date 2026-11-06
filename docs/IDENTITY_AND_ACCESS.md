@@ -2,7 +2,13 @@
 
 Segundo incremento: funciones persistentes de cuentas en la base de **un solo colegio**. No existen tenants ni selección de colegio. Una cuenta sigue siendo independiente de persona, estudiante, encargado y matrícula.
 
-## Perfiles actuales
+## Roles configurables (ADR-012)
+
+Los roles de acceso se administran en `/workspace/roles` y se asignan desde Cuentas. Su nombre y conjunto de permisos se guardan en SQL: Director y Secretaría pueden recibir todos los permisos o solo los seleccionados. Cada cuenta tiene un rol en este incremento. Estudiante, docente y padre/encargado siguen siendo perfiles escolares independientes; los vínculos, facultades y asignaciones se autorizan por recurso.
+
+Editar un rol actualiza de forma transaccional los permisos efectivos de sus cuentas, cierra sus sesiones y agrega auditoría. Se protege al último gestor activo y no se desactiva un rol mientras tenga cuentas asignadas. La migración conserva los permisos previos y convierte los casos sin coincidencia en roles propios, sin ampliar su acceso. Los identificadores de acciones protegidas permanecen definidos por el servidor; la composición de roles es configurable.
+
+## Ejemplos iniciales (editables; referencia histórica)
 
 | Perfil | Permisos |
 | --- | --- |
@@ -17,7 +23,7 @@ Segundo incremento: funciones persistentes de cuentas en la base de **un solo co
 | Administración financiera | `people.read`, `academic.read`, `finance.read`, `finance.charges`, `finance.collect`, `finance.reverse` |
 | Administración institucional | Todos los anteriores |
 
-Un conjunto de permisos que no coincide con ningún perfil (por ejemplo, después de ampliar un perfil) se muestra como «Permisos personalizados». El primer gestor recibe solo accesos y auditoría; puede asignarse «Administración institucional» desde la plataforma. Vincular una cuenta a una persona está descrito en `PEOPLE_AND_FAMILIES.md`.
+La tabla resume los ejemplos originales, no la configuración vigente de cada instalación. La fuente actual es el módulo de roles. El primer gestor recibe gestión y auditoría desde un rol SQL; puede asignarse otro rol autorizado. Vincular una cuenta a una persona está descrito en `PEOPLE_AND_FAMILIES.md`.
 
 Los perfiles de cuentas no conceden facultades familiares. Las facultades sobre un estudiante se conceden por vínculo en el módulo de personas. No representan los futuros roles de docente, familia o estudiante. Esas facultades deben autorizarse por recurso/vínculo cuando existan los módulos.
 

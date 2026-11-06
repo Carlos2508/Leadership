@@ -1,0 +1,163 @@
+<app-shell title="Roles y permisos">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">ADMINISTRACIÓN</span>
+      <h1>Roles y permisos</h1>
+      <p>
+        Define qué puede consultar y administrar cada cuenta. El nombre del rol no limita los
+        permisos que puedes elegir.
+      </p>
+    </div>
+    <button class="button" (click)="open()" [disabled]="loading() || busy()">
+      <app-icon name="key" />Crear rol
+    </button>
+  </div>
+  <nav class="module-tabs" aria-label="Administración de acceso">
+    <a routerLink="/workspace/access">Cuentas</a
+    ><a class="selected" routerLink="/workspace/roles" aria-current="page">Roles y permisos</a>
+  </nav>
+  <p class="role-school-note">
+    Los perfiles de estudiante, docente y padre/encargado son independientes. Un rol de acceso no
+    crea matrícula, asignaciones docentes ni vínculos familiares.
+  </p>
+  @if (error()) {
+    <div class="feedback error-feedback" role="alert">
+      {{ error() }} <button class="text-button" (click)="load()">Reintentar</button>
+    </div>
+  }
+  <section class="card directory-card" [attr.aria-busy]="loading()">
+    @if (loading()) {
+      <p class="loading-state" role="status">Cargando roles…</p>
+    } @else {
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Roles de acceso">
+        <table class="stack-table">
+          <caption class="sr-only">
+            Roles y cuentas asignadas de esta instalación
+          </caption>
+          <thead>
+            <tr>
+              <th>Rol</th>
+              <th>Permisos</th>
+              <th>Cuentas asignadas</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (role of roles(); track role.key) {
+              <tr>
+                <td>
+                  <strong>{{ role.label }}</strong>
+                  @if (role.description) {
+                    <small class="role-description">{{ role.description }}</small>
+                  }
+                </td>
+                <td data-label="Permisos">
+                  {{ role.permissions.length }} de {{ catalog().length }}
+                </td>
+                <td data-label="Cuentas">{{ role.accounts }}</td>
+                <td data-label="Estado">
+                  <span class="pill" [class.mint]="role.isActive">{{
+                    role.isActive ? 'Activo' : 'Inactivo'
+                  }}</span>
+                </td>
+                <td data-label="Acciones">
+                  <button class="button outline compact-button" (click)="open(role)">
+                    Editar <span class="sr-only">{{ role.label }}</span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+  <dialog
+    #editor
+    class="account-dialog wide-dialog"
+    aria-labelledby="role-editor-title"
+    (cancel)="cancel($event)"
+  >
+    <div class="dialog-heading">
+      <h2 id="role-editor-title">{{ selected() ? 'Editar rol' : 'Crear rol' }}</h2>
+      <button class="icon-button" (click)="close()" [disabled]="busy()" aria-label="Cerrar ventana">
+        <app-icon name="close" />
+      </button>
+    </div>
+    <form class="access-form" (ngSubmit)="save()">
+      <label class="form-field"
+        ><span>Nombre del rol</span
+        ><input
+          name="label"
+          [(ngModel)]="label"
+          required
+          minlength="2"
+          maxlength="100"
+          placeholder="Ej. Director o Secretaría"
+      /></label>
+      <label class="form-field"
+        ><span>Descripción <small>(opcional)</small></span
+        ><textarea name="description" [(ngModel)]="description" maxlength="500" rows="2"></textarea>
+      </label>
+      <div class="role-permission-heading">
+        <h3>Permisos del rol</h3>
+        <button class="text-button" type="button" (click)="all()">
+          {{ permissions.length === catalog().length ? 'Quitar selección' : 'Seleccionar todos' }}
+        </button>
+      </div>
+      @for (area of areas(); track area) {
+        <fieldset class="choice-group role-permission-group">
+          <legend>{{ area }}</legend>
+          @for (permission of catalog(); track permission.key) {
+            @if (permission.area === area) {
+              <label class="checkbox-field"
+                ><input
+                  type="checkbox"
+                  [checked]="permissions.includes(permission.key)"
+                  (change)="toggle(permission.key, $event)"
+                /><span>{{ permission.label }}</span></label
+              >
+            }
+          }
+        </fieldset>
+      }
+      <p class="muted-copy">
+        {{ permissions.length }} permisos seleccionados. Puedes dar todos los permisos a cualquier
+        rol. Las comprobaciones por curso, estudiante y vínculo se conservan.
+      </p>
+      @if (selected()) {
+        <label class="checkbox-field"
+          ><input type="checkbox" name="active" [(ngModel)]="active" /><span
+            >Rol activo</span
+          ></label
+        >
+        <p class="muted-copy">
+          {{ selected()!.accounts }} cuentas asignadas. Para desactivar el rol, primero reasígnalas
+          desde Cuentas.
+        </p>
+      }
+      <label class="form-field"
+        ><span>Motivo del cambio</span
+        ><textarea
+          name="reason"
+          [(ngModel)]="reason"
+          required
+          minlength="8"
+          maxlength="500"
+          rows="2"
+        ></textarea>
+      </label>
+      @if (dialogError()) {
+        <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
+      }
+      <div class="dialog-actions">
+        <button class="button outline" type="button" (click)="close()" [disabled]="busy()">
+          Cancelar</button
+        ><button class="button" type="submit" [disabled]="busy()">
+          {{ busy() ? 'Guardando…' : 'Guardar rol' }}
+        </button>
+      </div>
+    </form>
+  </dialog>
+</app-shell>

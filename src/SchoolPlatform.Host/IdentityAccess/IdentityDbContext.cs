@@ -7,6 +7,9 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
     : Microsoft.AspNetCore.Identity.EntityFrameworkCore.IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>(options)
 {
     public DbSet<AccountPermission> AccountPermissions => Set<AccountPermission>();
+    public DbSet<AccessRole> AccessRoles => Set<AccessRole>();
+    public DbSet<AccessRolePermission> AccessRolePermissions => Set<AccessRolePermission>();
+    public DbSet<AccountRoleAssignment> AccountRoleAssignments => Set<AccountRoleAssignment>();
     public DbSet<AccountAccessGrant> AccessGrants => Set<AccountAccessGrant>();
     public DbSet<SecurityAuditEvent> AuditEvents => Set<SecurityAuditEvent>();
 
@@ -14,6 +17,29 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
     {
         base.OnModelCreating(builder);
         builder.HasDefaultSchema("iam");
+        builder.Entity<AccessRole>(entity =>
+        {
+            entity.HasKey(x => x.Key);
+            entity.Property(x => x.Key).HasMaxLength(80).IsUnicode(false);
+            entity.Property(x => x.Label).HasMaxLength(100);
+            entity.HasIndex(x => x.Label).IsUnique();
+            entity.Property(x => x.Description).HasMaxLength(500);
+            entity.Property(x => x.Version).IsRowVersion();
+        });
+        builder.Entity<AccessRolePermission>(entity =>
+        {
+            entity.HasKey(x => new { x.RoleKey, x.Permission });
+            entity.Property(x => x.RoleKey).HasMaxLength(80).IsUnicode(false);
+            entity.Property(x => x.Permission).HasMaxLength(80).IsUnicode(false);
+            entity.HasOne<AccessRole>().WithMany().HasForeignKey(x => x.RoleKey).OnDelete(DeleteBehavior.Restrict);
+        });
+        builder.Entity<AccountRoleAssignment>(entity =>
+        {
+            entity.HasKey(x => x.UserId);
+            entity.Property(x => x.RoleKey).HasMaxLength(80).IsUnicode(false);
+            entity.HasOne<AccessRole>().WithMany().HasForeignKey(x => x.RoleKey).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
         builder.Entity<AccountPermission>(entity =>
         {
             entity.HasKey(x => new { x.UserId, x.Permission });

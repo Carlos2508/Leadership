@@ -1,0 +1,595 @@
+<app-shell title="Inicio">
+  <div class="page-heading dash-heading">
+    <div>
+      <span class="eyebrow">{{ today }}</span>
+      <h1>{{ greeting }}{{ greetingName() ? ', ' + greetingName() : '' }}.</h1>
+      <p>El estado del colegio y el trabajo que necesita tu atención.</p>
+    </div>
+    <div class="dash-toolbar">
+      @if (stats(); as st) {
+        @if (st.years.length) {
+          <label class="dash-cycle"
+            ><span>Ciclo escolar</span
+            ><select [ngModel]="st.yearId" (ngModelChange)="changeYear($event)">
+              @for (year of st.years; track year.id) {
+                <option [value]="year.id">{{ year.label | cycle }}</option>
+              }
+            </select></label
+          >
+        }
+      }
+      <button class="button outline" (click)="load()" [disabled]="loading()">
+        <app-icon name="refresh" />Actualizar
+      </button>
+    </div>
+  </div>
+  @if (session.mfaPending().length) {
+    <div class="feedback action-explanation mfa-banner" role="note">
+      <app-icon name="shield" /><span
+        >Hay funciones que requieren verificación en dos pasos.
+        <a routerLink="/workspace/security">Actívala en Mi cuenta</a> para usarlas.</span
+      >
+    </div>
+  }
+  @if (loading()) {
+    <div class="dash-loading card" role="status">
+      <span class="dash-loading-line"></span>Consultando la información del colegio…
+    </div>
+  } @else if (error()) {
+    <div class="feedback error-feedback" role="alert">
+      <strong>No pudimos cargar el resumen.</strong> {{ error() }}
+      <button class="text-button" (click)="load()">Reintentar</button
+      ><button class="text-button" (click)="changeYear(null)">Volver al ciclo disponible</button>
+    </div>
+  } @else if (stats(); as st) {
+    <div class="dash-context">
+      <span>
+        @if (selectedYear(); as year) {
+          {{ year.label | cycle }} <span class="dash-context-dot">·</span>
+          {{ yearStatusLabels[year.status] }}
+        } @else {
+          Resumen de tu cuenta
+        }
+      </span>
+      <span
+        >Actualizado a las {{ updated(st.asOf) }}
+        <span class="dash-live-dot" aria-hidden="true"></span
+      ></span>
+    </div>
+    @if (!st.years.length && session.can('academic.read')) {
+      <section class="card dash-panel">
+        <h2>No hay un ciclo escolar configurado</h2>
+        <p class="dash-empty-copy">
+          El resumen de matrícula, libretas y cobros estará disponible cuando se prepare un ciclo.
+        </p>
+        <a class="text-button dash-inline-link" routerLink="/workspace/academic"
+          >Revisar ciclo escolar <app-icon name="arrow"
+        /></a>
+      </section>
+    }
+
+    @if (hasSchoolSummary()) {
+      <section class="dash-metrics" aria-label="Indicadores principales">
+        @if (st.finance; as f) {
+          <a class="dash-metric" routerLink="/workspace/finance" [queryParams]="{ year: st.yearId }"
+            ><span class="dash-metric-label">Cobrado hoy <app-icon name="receipt" /></span
+            ><strong>{{ money(f.collectedToday, f.currency) }}</strong
+            ><small
+              >{{ f.paymentsToday }} {{ f.paymentsToday === 1 ? 'recibo' : 'recibos' }} · aplicado a
+              este ciclo</small
+            ></a
+          >
+          <a
+            class="dash-metric"
+            [class.dash-metric-warning]="f.overdue > 0"
+            routerLink="/workspace/finance"
+            [queryParams]="{ year: st.yearId }"
+            ><span class="dash-metric-label">Saldo vencido <app-icon name="wallet" /></span
+            ><strong>{{ money(f.overdue, f.currency) }}</strong
+            ><small>{{
+              f.chargeCount ? 'Vencimiento anterior a hoy' : 'Sin cargos registrados en este ciclo'
+            }}</small></a
+          >
+        }
+        @if (st.academic; as a) {
+          <a
+            class="dash-metric"
+            routerLink="/workspace/enrollment"
+            [queryParams]="{ year: st.yearId }"
+            ><span class="dash-metric-label">Estudiantes inscritos <app-icon name="people" /></span
+            ><strong>{{ a.enrolled }}</strong
+            ><small
+              >{{ a.byGrade.length }}
+              {{ a.byGrade.length === 1 ? 'grado con matrícula' : 'grados con matrícula' }}</small
+            ></a
+          >
+          @if (!st.gate) {
+            <a
+              class="dash-metric"
+              routerLink="/workspace/grades"
+              [queryParams]="{ year: st.yearId }"
+              ><span class="dash-metric-label">Períodos publicados <app-icon name="book" /></span
+              ><strong
+                >{{ published() }} <em>de {{ a.periods.length }}</em></strong
+              ><small>{{
+                a.periods.length
+                  ? 'Publicaciones del ciclo seleccionado'
+                  : 'Sin períodos configurados'
+              }}</small></a
+            >
+          }
+        }
+        @if (st.gate; as g) {
+          <a class="dash-metric" routerLink="/workspace/gate/report"
+            ><span class="dash-metric-label">Dentro del colegio <app-icon name="scan" /></span
+            ><strong>{{ g.inside }}</strong
+            ><small>Portería hoy · todos los ciclos</small></a
+          >
+        }
+      </section>
+    }
+
+    @if (attention().length) {
+      <section class="card dash-attention" aria-labelledby="attention-title">
+        <div class="dash-section-title">
+          <div>
+            <span class="eyebrow">PARA RESOLVER</span>
+            <h2 id="attention-title">
+              Requiere atención <span class="dash-count">{{ attention().length }}</span>
+            </h2>
+          </div>
+        </div>
+        <ul class="dash-attention-list">
+          @for (item of attention(); track item.key) {
+            <li>
+              <span class="dash-attention-icon" [class]="item.tone"
+                ><app-icon [name]="item.icon"
+              /></span>
+              <div>
+                <strong>{{ item.title }}</strong>
+                <p>{{ item.detail }}</p>
+              </div>
+              <a
+                class="button outline compact-button"
+                [routerLink]="item.route"
+                [queryParams]="{ year: st.yearId }"
+                >{{ item.action }}<app-icon name="arrow"
+              /></a>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (st.finance; as f) {
+      <div class="dash-grid">
+        <section class="card dash-panel" aria-labelledby="collections-title">
+          <div class="dash-section-title">
+            <div>
+              <span class="eyebrow">ÚLTIMOS SIETE DÍAS</span>
+              <h2 id="collections-title">Cobros del ciclo</h2>
+            </div>
+            <strong class="dash-panel-total">{{ money(weeklyTotal(), f.currency) }}</strong>
+          </div>
+          <ul
+            class="dash-chart"
+            aria-label="Importe cobrado por día, aplicado al ciclo seleccionado"
+          >
+            @for (collection of f.lastSevenDays; track collection.date) {
+              <li>
+                <span class="dash-chart-value">{{ money(collection.amount, f.currency) }}</span>
+                <div class="dash-chart-track" aria-hidden="true">
+                  <span [style.height.%]="(collection.amount / maxCollection()) * 100"></span>
+                </div>
+                <span class="dash-chart-day">{{ day(collection.date, true) }}</span
+                ><span class="dash-chart-date">{{ day(collection.date) }}</span>
+              </li>
+            }
+          </ul>
+          <details class="dash-chart-data">
+            <summary>Ver importes por día</summary>
+            <dl>@for (collection of f.lastSevenDays; track collection.date) { <div><dt>{{ day(collection.date) }}</dt><dd>{{ money(collection.amount, f.currency) }}</dd></div> }</dl>
+          </details>
+          <p class="dash-footnote">
+            Pagos confirmados, según fecha de pago. Excluye reversiones; los recibos de varios
+            ciclos se distribuyen por su aplicación.
+          </p>
+        </section>
+        <section class="card dash-panel" aria-labelledby="balance-title">
+          <div class="dash-section-title">
+            <div>
+              <span class="eyebrow">CUENTAS POR COBRAR</span>
+              <h2 id="balance-title">Composición del saldo</h2>
+            </div>
+          </div>
+          <dl class="dash-balances">
+            <div>
+              <dt>Vencido</dt>
+              <dd class="dash-danger-text">{{ money(f.overdue, f.currency) }}</dd>
+            </div>
+            <div>
+              <dt>Vence hoy</dt>
+              <dd>{{ money(f.dueToday, f.currency) }}</dd>
+            </div>
+            <div>
+              <dt>Por vencer</dt>
+              <dd>{{ money(f.future, f.currency) }}</dd>
+            </div>
+            <div class="dash-balance-total">
+              <dt>Total pendiente</dt>
+              <dd>{{ money(f.pending, f.currency) }}</dd>
+            </div>
+          </dl>
+          <p class="dash-footnote">
+            {{ f.studentsWithBalance }}
+            {{ f.studentsWithBalance === 1 ? 'estudiante con saldo' : 'estudiantes con saldo' }} ·
+            {{ f.chargeCount }}
+            {{ f.chargeCount === 1 ? 'cargo registrado' : 'cargos registrados' }}. Un saldo vacío no
+            acredita solvencia.
+          </p>
+          <a
+            class="text-button dash-inline-link"
+            routerLink="/workspace/finance"
+            [queryParams]="{ year: st.yearId }"
+            >Consultar estados de cuenta <app-icon name="arrow"
+          /></a>
+        </section>
+      </div>
+    }
+
+    @if (st.academic; as a) {
+      <div class="dash-grid">
+        <section class="card dash-panel" aria-labelledby="enrollment-title">
+          <div class="dash-section-title">
+            <div>
+              <span class="eyebrow">MATRÍCULA</span>
+              <h2 id="enrollment-title">Inscritos por grado</h2>
+            </div>
+            <a
+              class="text-button"
+              routerLink="/workspace/enrollment"
+              [queryParams]="{ year: st.yearId }"
+              >Ver inscripciones</a
+            >
+          </div>
+          <ul class="dash-grade-list">
+            @for (grade of a.byGrade; track grade.grade) {
+              <li>
+                <span>{{ grade.grade }}</span>
+                <div class="dash-grade-track" aria-hidden="true">
+                  <span [style.width.%]="percent(grade.count, a.enrolled)"></span>
+                </div>
+                <strong>{{ grade.count }}</strong>
+              </li>
+            } @empty {
+              <li class="dash-empty-copy">No hay inscripciones activas en este ciclo.</li>
+            }
+          </ul>
+          <div class="dash-panel-summary">
+            <span>{{ a.courses }} cursos creados</span
+            ><span>{{ a.unassignedCourses }} sin docente asignado</span>
+          </div>
+        </section>
+        <section class="card dash-panel" aria-labelledby="periods-title">
+          <div class="dash-section-title">
+            <div>
+              <span class="eyebrow">SEGUIMIENTO ACADÉMICO</span>
+              <h2 id="periods-title">Libretas y publicación</h2>
+            </div>
+          </div>
+          <ul class="dash-periods">
+            @for (p of a.periods; track p.periodId) {
+              <li>
+                <div class="dash-period-heading">
+                  <strong>{{ p.name }}</strong
+                  ><span
+                    class="pill"
+                    [class.mint]="p.published"
+                    [class.gold]="!p.published && p.endsOn < st.on"
+                    >{{ periodState(p) }}</span
+                  >
+                </div>
+                <div class="dash-progress" aria-hidden="true">
+                  <span [style.width.%]="percent(p.recorded, p.expected)"></span>
+                </div>
+                <div class="dash-period-meta">
+                  <span>{{ p.recorded }} de {{ p.expected }} registros</span
+                  ><span>{{ day(p.startsOn) }} – {{ day(p.endsOn) }}</span>
+                </div>
+              </li>
+            } @empty {
+              <li class="dash-empty-copy">No hay períodos configurados.</li>
+            }
+          </ul>
+          <p class="dash-footnote">
+            El avance cuenta notas, pendientes y exoneraciones registrados. No representa un
+            promedio ni autoriza la publicación.
+          </p>
+          <a
+            class="text-button dash-inline-link"
+            routerLink="/workspace/grades"
+            [queryParams]="{ year: st.yearId }"
+            >Revisar libretas y publicaciones <app-icon name="arrow"
+          /></a>
+        </section>
+      </div>
+    }
+
+    @if (st.gate; as g) {
+      <section class="card dash-panel" aria-labelledby="gate-summary-title">
+        <div class="dash-section-title">
+          <div>
+            <span class="eyebrow">PORTERÍA · HOY · TODOS LOS CICLOS</span>
+            <h2 id="gate-summary-title">Entradas y salidas</h2>
+          </div>
+          <a class="text-button" routerLink="/workspace/gate/report">Ver registro del día</a>
+        </div>
+        <dl class="dash-gate">
+          <div>
+            <dt>Con entrada</dt>
+            <dd>{{ g.arrived }}</dd>
+          </div>
+          <div>
+            <dt>Dentro</dt>
+            <dd>{{ g.inside }}</dd>
+          </div>
+          <div>
+            <dt>Ya salieron</dt>
+            <dd>{{ g.left }}</dd>
+          </div>
+          <div>
+            <dt>Sin entrada registrada</dt>
+            <dd>{{ g.expected - g.arrived }}</dd>
+          </div>
+        </dl>
+        <p class="dash-footnote">
+          {{ g.expected }} estudiantes con inscripción y ubicación vigentes hoy. La falta de una
+          marca no confirma una ausencia.
+        </p>
+      </section>
+    }
+
+    @if (st.teaching.length) {
+      <section class="card dash-panel" aria-labelledby="my-courses-title">
+        <div class="dash-section-title">
+          <div>
+            <span class="eyebrow">TU TRABAJO DOCENTE</span>
+            <h2 id="my-courses-title">Mis cursos</h2>
+          </div>
+          <span class="pill" [class.gold]="reviews() > 0"
+            >{{ reviews() }} entregas por revisar</span
+          >
+        </div>
+        <ul class="dash-teaching">
+          @for (course of st.teaching; track course.id) {
+            <li>
+              <div class="dash-teaching-heading">
+                <div>
+                  <h3>{{ course.subject }}</h3>
+                  <p>
+                    {{ course.grade
+                    }}{{ course.section ? ' · Sección ' + course.section : ' · Todo el grado' }} ·
+                    {{ course.students }} estudiantes
+                  </p>
+                </div>
+                <a class="text-button" [routerLink]="['/workspace/courses', course.id]"
+                  >Ver lista <span class="sr-only">de {{ course.subject }}</span></a
+                >
+              </div>
+              <div class="dash-teaching-status">
+                <span [class.dash-warning-text]="course.pendingReviews > 0"
+                  ><strong>{{ course.pendingReviews }}</strong> entregas por revisar</span
+                ><span
+                  >Asistencia de hoy:
+                  <strong>{{ course.attendanceRecorded }}</strong> registros</span
+                >
+              </div>
+              @for (task of course.upcoming; track task.title + task.dueAt) {
+                <p class="dash-next-task">
+                  <app-icon name="calendar" /><span
+                    >{{ task.title }} · entrega {{ deadline(task.dueAt) }}</span
+                  >
+                </p>
+              }
+              <div class="dash-course-actions">
+                <a
+                  class="button outline compact-button"
+                  [routerLink]="['/workspace/courses', course.id, 'attendance']"
+                  >Asistencia<span class="sr-only"> de {{ course.subject }}</span></a
+                ><a
+                  class="button outline compact-button"
+                  [routerLink]="['/workspace/courses', course.id, 'assignments']"
+                  >{{ course.pendingReviews ? 'Revisar entregas' : 'Actividades'
+                  }}<span class="sr-only"> de {{ course.subject }}</span></a
+                ><a
+                  class="button compact-button"
+                  [routerLink]="['/workspace/courses', course.id, 'grades']"
+                  >Libreta<span class="sr-only"> de {{ course.subject }}</span></a
+                >
+              </div>
+            </li>
+          }
+        </ul>
+        <p class="dash-footnote">
+          No hay horario de clases configurado: un curso sin registro hoy no se considera una
+          asistencia atrasada.
+        </p>
+      </section>
+    }
+
+    @if (st.students.length) {
+      <section class="dash-personal" aria-labelledby="students-summary-title">
+        <div class="dash-section-title">
+          <div>
+            <span class="eyebrow">SEGUIMIENTO ESCOLAR</span>
+            <h2 id="students-summary-title">
+              {{ st.students.length === 1 ? 'Tu seguimiento' : 'Estudiantes a tu cargo' }}
+            </h2>
+          </div>
+          @if (pendingTasks()) {
+            <span class="pill gold">{{ pendingTasks() }} tareas por entregar</span>
+          }
+        </div>
+        <div class="dash-student-grid">
+          @for (student of st.students; track student.id) {
+            <article class="card dash-student">
+              <div class="dash-student-heading">
+                <span class="avatar" aria-hidden="true">{{ student.name.slice(0, 1) }}</span>
+                <div>
+                  <h3>
+                    <a [routerLink]="['/workspace/my/students', student.id]">{{ student.name }}</a>
+                  </h3>
+                  <small>{{ student.code }}</small>
+                </div>
+              </div>
+              @if (student.enrolled === false) {
+                <p class="dash-empty-copy">Sin inscripción en el ciclo seleccionado.</p>
+              }
+              @if (student.pendingTasks !== null) {
+                <p class="dash-student-stat">
+                  <strong>{{ student.pendingTasks }}</strong> tareas por entregar
+                </p>
+              }
+              @if (student.canFinance && student.balance !== null) {
+                <p class="dash-student-stat">
+                  <strong>{{ money(student.balance) }}</strong> saldo del ciclo
+                </p>
+                <small class="muted-copy"
+                  >{{ student.charges }} cargos registrados. Consulta el detalle para revisar tus
+                  obligaciones.</small
+                >
+              }
+              @if (!student.canAcademic) {
+                <p class="dash-footnote">El vínculo no incluye consulta académica.</p>
+              }
+              <ul class="dash-task-list">
+                @for (task of student.tasks; track task.title + task.dueAt) {
+                  <li>
+                    <strong>{{ task.title }}</strong
+                    ><span>{{ task.course }} · {{ deadline(task.dueAt) }}</span>
+                    @if (task.overdue) {
+                      <small class="dash-warning-text"
+                        >Venció; todavía acepta entrega tardía.</small
+                      >
+                    }
+                  </li>
+                }
+              </ul>
+              <a
+                class="text-button dash-inline-link"
+                [routerLink]="['/workspace/my/students', student.id]"
+                >{{
+                  student.canAcademic ? 'Ver notas, tareas y asistencia' : 'Abrir ficha disponible'
+                }}<app-icon name="arrow"
+              /></a>
+            </article>
+          }
+        </div>
+      </section>
+    }
+
+    <div class="dash-grid dash-secondary">
+      @if (st.finance?.recentReceipts?.length) {
+        <section class="card dash-panel" aria-labelledby="receipts-title">
+          <div class="dash-section-title">
+            <div>
+              <span class="eyebrow">PAGOS CONFIRMADOS</span>
+              <h2 id="receipts-title">Recibos recientes</h2>
+            </div>
+          </div>
+          <ul class="dash-receipts">
+            @for (receipt of st.finance!.recentReceipts; track receipt.id) {
+              <li>
+                <a [routerLink]="['/workspace/finance/receipts', receipt.id]"
+                  >Recibo {{ receipt.number }}<small>{{ day(receipt.date) }}</small></a
+                ><strong>{{ money(receipt.applied, st.finance!.currency) }}</strong>
+              </li>
+            }
+          </ul>
+          <p class="dash-footnote">
+            Importes aplicados al ciclo seleccionado. El recibo conserva su importe completo.
+          </p>
+        </section>
+      }
+      @if (feed().length || feedError()) {
+        <section class="card dash-panel" aria-labelledby="feed-title">
+          <div class="dash-section-title">
+            <div>
+              <span class="eyebrow">COMUNICACIÓN</span>
+              <h2 id="feed-title">Avisos recientes</h2>
+            </div>
+            <span class="pill">{{ unread() }} sin leer</span>
+          </div>
+          @if (feedError()) {
+            <p class="feedback error-feedback" role="alert">
+              {{ feedError() }}
+              <button class="text-button" (click)="loadFeed()">Reintentar avisos</button>
+            </p>
+          }
+          <ul class="dash-feed">
+            @for (item of feed().slice(0, 4); track item.id) {
+              <li>
+                <span class="unread-dot" [class.hidden-dot]="item.read" aria-hidden="true"></span>
+                <div>
+                  <a routerLink="/workspace/announcements">{{ item.title }}</a
+                  ><small>{{ item.author }} · {{ api.date(item.publishedAt) }}</small>
+                </div>
+              </li>
+            }
+          </ul>
+          <a class="text-button dash-inline-link" routerLink="/workspace/announcements"
+            >Ver todos los avisos <app-icon name="arrow"
+          /></a>
+        </section>
+      }
+      @if (st.access; as access) {
+        @if (access.pendingActivation || access.suspended || !hasSchoolSummary()) {
+          <section class="card dash-panel" aria-labelledby="account-summary-title">
+            <div class="dash-section-title">
+              <div>
+                <span class="eyebrow">CONTROL DE ACCESO</span>
+                <h2 id="account-summary-title">Estado de las cuentas</h2>
+              </div>
+            </div>
+            <dl class="dash-balances">
+              <div>
+                <dt>Pendientes de activar</dt>
+                <dd>{{ access.pendingActivation }}</dd>
+              </div>
+              <div>
+                <dt>Suspendidas</dt>
+                <dd>{{ access.suspended }}</dd>
+              </div>
+            </dl>
+            <a class="text-button dash-inline-link" routerLink="/workspace/access"
+              >Revisar cuentas <app-icon name="arrow"
+            /></a>
+          </section>
+        }
+      }
+    </div>
+    @if (!hasSchoolSummary() && !st.students.length && !st.teaching.length && !st.access) {
+      <section class="card dash-panel dash-no-data">
+        <app-icon name="info" />
+        <h2>{{ st.people !== null ? 'Directorio del colegio' : 'Tu cuenta está activa' }}</h2>
+        <p>
+          {{
+            st.people !== null
+              ? st.people + ' personas activas registradas. Tu acceso permite consultar sus fichas.'
+              : 'Aún no tienes información escolar asignada. Comunícate con la administración si esperabas ver cursos o estudiantes.'
+          }}
+        </p>
+        @if (st.people !== null) {
+          <a class="text-button" routerLink="/workspace/people">Consultar directorio</a>
+        }
+        @if (session.can('attendance.gate')) {
+          <a class="button" routerLink="/workspace/gate">Abrir lector de portería</a>
+        }
+      </section>
+    }
+    <p class="dash-scope-note">
+      El resumen muestra únicamente la información autorizada para tu cuenta. Las cifras no
+      sustituyen los registros ni los cortes de solvencia.
+    </p>
+  }
+</app-shell>

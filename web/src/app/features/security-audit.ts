@@ -7,7 +7,11 @@ import { Icon } from '../shared/icon';
 const actionLabels: Record<string, string> = {
   OwnerProvisioned: 'Gestor inicial creado',
   AccountInvited: 'Cuenta invitada',
-  AccessProfileChanged: 'Perfil modificado',
+  AccessProfileChanged: 'Rol de la cuenta modificado',
+  AccessRoleCreated: 'Rol de acceso creado',
+  AccessRoleUpdated: 'Rol de acceso modificado',
+  AccountRolePermissionsChanged: 'Permisos del rol actualizados',
+  AccessRolesMigrated: 'Roles de acceso preparados',
   AccountEnabled: 'Cuenta habilitada',
   AccountSuspended: 'Cuenta suspendida',
   SessionsRevoked: 'Sesiones cerradas',
@@ -177,9 +181,14 @@ const detailLabels: Record<string, string> = {
         <div>
           <span class="eyebrow">CAMBIOS CON TRAZABILIDAD</span>
           <h1>Auditoría</h1>
-          <p>Quién realizó cada cambio, cuándo y con qué motivo. Los registros no se pueden modificar ni borrar.</p>
+          <p>
+            Quién realizó cada cambio, cuándo y con qué motivo. Los registros no se pueden modificar
+            ni borrar.
+          </p>
         </div>
-        <button class="button outline" (click)="load()" [disabled]="loading()"><app-icon name="search" />Actualizar</button>
+        <button class="button outline" (click)="load()" [disabled]="loading()">
+          <app-icon name="search" />Actualizar
+        </button>
       </div>
       @if (error()) {
         <p class="feedback error-feedback" role="alert">{{ error() }}</p>
@@ -204,12 +213,15 @@ const detailLabels: Record<string, string> = {
           <p role="status" class="loading-state">Cargando auditoría…</p>
         } @else if (data(); as page) {
           <p class="directory-summary" aria-live="polite">
-            {{ page.total }} {{ page.total === 1 ? 'evento' : 'eventos' }} · Fechas en la zona horaria del colegio.
+            {{ page.total }} {{ page.total === 1 ? 'evento' : 'eventos' }} · Fechas en la zona
+            horaria del colegio.
           </p>
           @if (page.items.length) {
             <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de auditoría">
               <table class="stack-table audit-table">
-                <caption class="sr-only">Registro de operaciones</caption>
+                <caption class="sr-only">
+                  Registro de operaciones
+                </caption>
                 <thead>
                   <tr>
                     <th scope="col">Operación</th>
@@ -229,7 +241,9 @@ const detailLabels: Record<string, string> = {
                         }
                       </td>
                       <td data-label="Fecha" class="nowrap">{{ api.date(event.occurredAt) }}</td>
-                      <td data-label="Por">{{ event.actor || 'Sistema o intento sin identificar' }}</td>
+                      <td data-label="Por">
+                        {{ event.actor || 'Sistema o intento sin identificar' }}
+                      </td>
                       <td data-label="Registro">{{ targetLabel(event) }}</td>
                       <td data-label="Motivo" class="audit-reason">{{ event.reason || '—' }}</td>
                     </tr>
@@ -245,9 +259,18 @@ const detailLabels: Record<string, string> = {
             </div>
           }
           <div class="pagination">
-            <button class="button outline" [disabled]="page.page <= 1 || loading()" (click)="load(page.page - 1)">Anterior</button
+            <button
+              class="button outline"
+              [disabled]="page.page <= 1 || loading()"
+              (click)="load(page.page - 1)"
+            >
+              Anterior</button
             ><span>Página {{ page.page }} de {{ pages(page) }}</span
-            ><button class="button outline" [disabled]="page.page * page.pageSize >= page.total || loading()" (click)="load(page.page + 1)">
+            ><button
+              class="button outline"
+              [disabled]="page.page * page.pageSize >= page.total || loading()"
+              (click)="load(page.page + 1)"
+            >
               Siguiente
             </button>
           </div>
@@ -270,7 +293,9 @@ export class SecurityAudit {
     this.loading.set(true);
     this.error.set('');
     try {
-      this.data.set(await this.api.get<PageResult<AuditEntry>>(`/api/v1/audit?page=${page}&area=${this.area}`));
+      this.data.set(
+        await this.api.get<PageResult<AuditEntry>>(`/api/v1/audit?page=${page}&area=${this.area}`),
+      );
     } catch (error) {
       this.error.set(this.api.message(error));
     } finally {
@@ -286,7 +311,10 @@ export class SecurityAudit {
   detail(value: string): string {
     if (!value) return '';
     // Instants inside details (e.g. the time of a voided gate mark) are shown in the school's time zone.
-    value = value.replace(/\d{4}-\d{2}-\d{2}T[\d:.]+(?:[+-]\d{2}:\d{2}|Z)/g, (instant) => '«' + this.api.date(instant) + '»');
+    value = value.replace(
+      /\d{4}-\d{2}-\d{2}T[\d:.]+(?:[+-]\d{2}:\d{2}|Z)/g,
+      (instant) => '«' + this.api.date(instant) + '»',
+    );
     // Details are technical keys (statuses, kinds, faculties, codes, counts); translate known ones, shorten identifiers.
     return value
       .split(/(«[^»]*»|[:,])/)
@@ -301,7 +329,8 @@ export class SecurityAudit {
       .slice(0, 120);
   }
   targetLabel(event: AuditEntry): string {
-    if (event.targetType) return `${typeLabels[event.targetType] ?? 'Registro'} ${(event.targetId ?? '').slice(0, 8)}`;
+    if (event.targetType)
+      return `${typeLabels[event.targetType] ?? 'Registro'} ${(event.targetId ?? '').slice(0, 8)}`;
     return event.target || '—';
   }
 }

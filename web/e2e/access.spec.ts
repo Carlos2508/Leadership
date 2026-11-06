@@ -17,8 +17,16 @@ test('manage an invitation, activate without email, recover access and inspect d
     .getByLabel('Contraseña', { exact: true })
     .fill(process.env['SCHOOLPLATFORM_E2E_PASSWORD']!);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
-  await page.getByRole('link', { name: 'Administrar cuentas' }).click();
+  await expect(
+    page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ }),
+  ).toBeVisible();
+  if (testInfo.project.name === 'mobile')
+    await page.getByRole('button', { name: 'Abrir menú' }).click();
+  await page.locator('summary').filter({ hasText: 'Administración' }).click();
+  await page
+    .getByRole('navigation', { name: 'Navegación principal' })
+    .getByRole('link', { name: 'Cuentas y accesos', exact: true })
+    .click();
   await expect(page.getByRole('heading', { name: 'Cuentas y accesos' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Invitar cuenta' })).toBeEnabled();
   expect(
@@ -28,6 +36,7 @@ test('manage an invitation, activate without email, recover access and inspect d
   await page.screenshot({ path: testInfo.outputPath('accounts.png'), fullPage: true });
   await page.getByRole('button', { name: 'Invitar cuenta' }).click();
   await page.getByLabel('Nombre de usuario', { exact: true }).fill(username);
+  await page.getByRole('combobox', { name: 'Rol de acceso', exact: true }).selectOption('basic');
   await page
     .getByLabel('Motivo de la invitación')
     .fill('Autorización institucional sintética para prueba de navegador.');
@@ -58,7 +67,9 @@ test('manage an invitation, activate without email, recover access and inspect d
   await student.getByLabel('Usuario', { exact: true }).fill(username);
   await student.getByLabel('Contraseña', { exact: true }).fill(password);
   await student.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(student.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
+  await expect(
+    student.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ }),
+  ).toBeVisible();
   await expect(student.getByRole('link', { name: 'Administrar cuentas' })).toHaveCount(0);
   expect((await student.request.get('/api/v1/access/accounts')).status()).toBe(403);
   expect((await student.request.get('/api/v1/audit')).status()).toBe(403);

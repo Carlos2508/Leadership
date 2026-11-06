@@ -1,4 +1,5 @@
 import { Component, ElementRef, ViewChild, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {
   AccessApi,
@@ -13,7 +14,7 @@ import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
 
 @Component({
-  imports: [Shell, Icon, FormsModule],
+  imports: [Shell, Icon, FormsModule, RouterLink],
   templateUrl: './access-management.html',
 })
 export class AccessManagement {
@@ -34,7 +35,7 @@ export class AccessManagement {
   readonly code = signal<AccessCode | null>(null);
   search = '';
   username = '';
-  profile = 'basic';
+  profile = '';
   reason = '';
   verified = false;
   operation = 'profile';
@@ -67,12 +68,12 @@ export class AccessManagement {
   }
   profileLabel(key: string): string {
     if (key === 'custom') return 'Permisos personalizados';
-    return this.profiles().find((x) => x.key === key)?.label ?? 'Cuenta básica';
+    return this.profiles().find((x) => x.key === key)?.label ?? 'Rol no disponible';
   }
   openInvite(): void {
     this.resetDialog();
     this.username = '';
-    this.profile = 'basic';
+    this.profile = '';
     this.mode.set('invite');
     this.selected.set(null);
     this.dialog.nativeElement.showModal();
@@ -128,7 +129,7 @@ export class AccessManagement {
     return (
       (
         {
-          profile: 'Guardar perfil',
+          profile: 'Guardar rol',
           sessions: 'Cerrar todas las sesiones',
           issue: 'Generar código de acceso',
           cancel: 'Anular códigos vigentes',

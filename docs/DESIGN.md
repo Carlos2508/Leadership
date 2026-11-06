@@ -24,6 +24,12 @@ Referencia visual revisada: página pública, dashboard y listado de productos d
 
 Capa: `web/src/styles/_identity.scss` (se carga al final).
 
+## Inicio y roles
+
+El dashboard muestra indicadores, pendientes y acciones por contexto, sin duplicar el menú como catálogo de módulos. El ciclo está visible y queda en la URL; portería identifica su alcance de hoy para todos los ciclos. Cero, sin configuración y fallo de carga tienen significados diferentes. Las cifras monetarias usan aplicaciones confirmadas y nunca se confunden con solvencia. Ver ADR-011.
+
+El editor de roles usa acciones agrupadas por área, selección completa opcional, motivo y confirmación del número de cuentas afectadas. No deduce permisos del nombre: Director y Secretaría pueden tener todos. Los perfiles escolares se mantienen separados. Ver ADR-012.
+
 ## Alertas (SweetAlert2)
 
 Servicio `core/alerts.ts`, con los mismos botones, fuentes y colores que la plataforma (`buttonsStyling: false`).

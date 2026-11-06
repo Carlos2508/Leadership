@@ -24,11 +24,12 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<SecurityAudit>();
 builder.Services.AddScoped<AccountAccessService>();
+builder.Services.AddScoped<AccessRoleService>();
 builder.Services.AddScoped<MfaService>();
 builder.Services.AddOptions<AccountAccessOptions>().BindConfiguration("AccountAccess")
     .Validate(x => x.ActivationMinutes is >= 1 and <= 4320 && x.RecoveryMinutes is >= 1 and <= 60,
         "Vigencia de códigos fuera del rango permitido.")
-    .Validate(x => x.RequireMfaForPermissions.All(p => AccessProfiles.All.Any(profile => profile.Permissions.Contains(p))),
+    .Validate(x => x.RequireMfaForPermissions.All(p => PermissionCatalog.All.Any(d => d.Key == p)),
         "AccountAccess:RequireMfaForPermissions contiene un permiso desconocido.").ValidateOnStart();
 // Resolve the connection lazily from the final configuration: hosts and test factories may add sources after this line.
 static string SchoolDatabase(IServiceProvider services) =>
@@ -48,6 +49,7 @@ builder.Services.AddScoped<SchoolPlatform.Host.Finance.ChargeService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Finance.PaymentService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Finance.ClearanceService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Grades.GradeService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Common.DashboardService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Grades.GradeReportService>();
 builder.Services.AddSingleton<SchoolPlatform.Host.Documents.BrandAssets>();
 builder.Services.AddSingleton<SchoolPlatform.Host.Documents.PdfDocuments>();
@@ -111,7 +113,7 @@ builder.Services.AddAuthorization(options =>
     // Registered scanner devices: only their bearer scheme is evaluated (session cookies are ignored on these endpoints).
     options.AddPolicy("GateDevice", policy => policy.AddAuthenticationSchemes(SchoolPlatform.Host.Gate.GateDeviceAuthenticationHandler.SchemeName)
         .RequireClaim(SchoolPlatform.Host.Gate.GateDeviceAuthenticationHandler.DeviceClaim));
-    foreach (var permission in AccessProfiles.All.SelectMany(x => x.Permissions).Distinct())
+    foreach (var permission in PermissionCatalog.All.Select(x => x.Key))
         options.AddPolicy(permission, policy => policy.RequireAuthenticatedUser()
             .AddRequirements(new ActiveAccountRequirement(), new PermissionRequirement(permission)));
 });

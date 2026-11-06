@@ -2,6 +2,19 @@
 
 Actualizado: 5 de noviembre de 2026, America/Guatemala.
 
+## Dashboard operativo y roles configurables (estado vigente)
+
+- Rediseño anterior versionado y enviado a `origin/main` como `2f70635` por solicitud del propietario. Este incremento sustituye «Tus módulos» por datos y acciones operativas; ver ADR-011.
+- Dashboard con ciclo explícito en URL, actualización/hora de lectura, cobrado hoy por aplicaciones, saldos por vencimiento, siete días de cobros y recibos, matrícula por grado, cursos sin docente, registros/publicación por período y portería de hoy con alcance indicado. Los errores se muestran con reintento, sin ceros ficticios. No convierte falta de entrada en ausencia ni saldo vacío en solvencia.
+- Inicio docente con entregas por revisar, vencimientos próximos y registros de asistencia de sus cursos. Inicio familiar/estudiantil con tareas y seguimiento por recurso; el saldo solo para encargados con facultad financiera. Sin valores de notas en el resumen ni nuevas políticas académicas.
+- **Roles de acceso configurables en SQL**, con módulo `/workspace/roles`, creación/edición, permisos por área, selección completa y asignación desde Cuentas. Director y Secretaría pueden tener todos los permisos; el nombre no fija el acceso. Los perfiles escolares de estudiante, docente y padre/encargado se conservan separados, según aclaración del propietario. Ver ADR-012.
+- Eliminado `AccessProfiles` como catálogo en tiempo de ejecución. El catálogo de acciones protegidas permanece en el servidor; roles, composición y asignación se guardan en SQL. La proyección efectiva, auditoría y cierre de sesiones se actualizan transaccionalmente; protección del último gestor, rowversion, MFA y desactivación solo tras reasignar cuentas.
+- Migración Identity `20261106003523_ConfigurableAccessRoles` aplicada a `SchoolPlatform_Development`. **Hash SHA-256 de los permisos efectivos antes/después idéntico**, y comparación entre roles/asignaciones y proyección con **0 diferencias**. Los accesos no coincidentes se preservan en roles propios, sin ampliación. No se importaron datos ni se tocó PHP/Numix.
+- Validación final: **89 pruebas .NET aprobadas, 0 omitidas** (SQL Server real); build Angular correcto; **39 E2E aprobados y 1 omitido previsto** (rendimiento móvil), con Axe y revisión de escritorio/móvil. Dashboard comprobado en 320/768/1024/1920 px, incluyendo error y reintento, cambio/navegación de ciclo y datos reales preparados por el harness. Roles comprobados con todos los permisos y edición de un rol asignado.
+- Capturas revisadas y conservadas en `.local/qa/evidencia/dashboard-roles-2026-11-05/`. Sin bases temporales de pruebas residuales; `git diff --check` correcto. Advertencia conocida del build: SweetAlert2 CommonJS.
+- Revisión visual adicional: corregida la distribución del botón de pendientes en 320 px y agregados importes diarios desplegables para evitar cifras diminutas. **4 E2E adicionales aprobados** tras ese ajuste, con Axe y verificación de lectura en móvil.
+- Host local en `http://localhost:5082`, lanzador/puerto en `.local/qa/dashboard-roles-host.json`, logs `.local/qa/dashboard-roles-5082*.log`. Los hosts anteriores del proyecto se detuvieron para compilar. No hubo despliegue. Se versiona y envía este incremento por la solicitud vigente; licencias, políticas, hardware y Flutter mantienen sus pendientes anteriores.
+
 ## Rediseño web y navegación escolar (estado vigente)
 
 El propietario solicitó commit y push de este rediseño antes del siguiente ajuste del dashboard. Las menciones a «sin commit» de esta sección describen el cierre previo.

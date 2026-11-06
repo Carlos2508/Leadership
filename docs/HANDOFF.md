@@ -1,5 +1,13 @@
 # Handoff para la siguiente sesión
 
+## Campana de notificaciones y revisión de experiencia — 6 de noviembre de 2026, leer primero
+
+- Solicitud: revisar todos los flujos para que sean sencillos, corregir lo que salga y hacer funcionar la campana del header.
+- Web: `core/notifications.ts` (avisos sin leer de `/me/announcements` + pendientes derivados de `/api/v1/dashboard`, ya autorizado por permiso/recurso), `shell.ts` (botón con contador, panel `role=dialog`, marcar avisos leídos), `announcements.ts` (`?open=<id>` abre y desplaza; sincroniza la campana), estilos al final de `_identity.scss`. Refresca al navegar (mín. 30 s), cada 2 min visible y al volver a la pestaña. E2E `announcements.spec.ts` verifica la campana.
+- App conectado: campana en el encabezado con avisos sin leer que abre la pestaña Avisos (`connectedTabRequestProvider`).
+- Recorrido `qa-ux.mjs`/`run-ux.ps1` (8 cuentas, 74 pantallas, escritorio y 390 px): 0 errores de consola, 0 desbordes, cargas < 1 s; evidencia `.local/qa/evidencia/ux-2026-11-06/`.
+- No se corrió Playwright: el host del puerto 5082 (PID 15580, ajeno) sigue bloqueando `bin`. Correr `Invoke-Web.ps1 test` cuando se detenga.
+
 ## App Flutter: diseño de la web y cuenta real — 6 de noviembre de 2026, leer primero
 
 - Solicitud: el app con el mismo diseño que la web, profesional y capaz de hacer lo de la web. Commits `8b6bd28` (diseño) y el de integración; ADR-014.

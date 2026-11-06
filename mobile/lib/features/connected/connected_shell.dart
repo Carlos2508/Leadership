@@ -56,6 +56,19 @@ String shortDate(String iso) {
   return date == null ? iso : DateFormat("d 'de' MMMM", 'es').format(date.toLocal());
 }
 
+/// Asks the connected home to switch tab (e.g. the bell opens «Avisos»).
+class ConnectedTabRequest extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void open(String label) => state = label;
+  void clear() => state = null;
+}
+
+final connectedTabRequestProvider = NotifierProvider<ConnectedTabRequest, String?>(
+  ConnectedTabRequest.new,
+);
+
 class _Destination {
   const _Destination(this.label, this.icon, this.selected, this.page);
   final String label;
@@ -108,6 +121,12 @@ class _ConnectedHomeState extends ConsumerState<ConnectedHome> {
       return const Scaffold(body: SizedBox.shrink());
     }
     final destinations = _destinations(session);
+    ref.listen(connectedTabRequestProvider, (_, label) {
+      if (label == null) return;
+      final target = destinations.indexWhere((d) => d.label == label);
+      if (target >= 0) setState(() => _index = target);
+      ref.read(connectedTabRequestProvider.notifier).clear();
+    });
     final index = _index.clamp(0, destinations.length - 1);
     return Scaffold(
       body: IndexedStack(index: index, children: [for (final d in destinations) d.page]),
@@ -184,6 +203,8 @@ class ConnectedTabPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(connectedControllerProvider);
+    final feed = ref.watch(apiGetProvider(NoticesTab.path)).value;
+    final unread = feed is List ? feed.where((x) => x is Map && x['read'] != true).length : 0;
     return Scaffold(
       body: SafeArea(
         bottom: false,
@@ -191,6 +212,8 @@ class ConnectedTabPage extends ConsumerWidget {
           onRefresh: onRefresh,
           children: [
             InstitutionHeader(
+              notificationCount: unread,
+              onNotifications: () => ref.read(connectedTabRequestProvider.notifier).open('Avisos'),
               subtitle: session?.profile ?? '',
               initials: session?.initials,
               profileLabel: session?.name,

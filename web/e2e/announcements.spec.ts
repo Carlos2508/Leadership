@@ -159,6 +159,14 @@ test('coordination publishes a notice and the student reads it in the platform',
     path: testInfo.outputPath('student-announcements.png'),
     fullPage: true,
   });
+  // Header bell: opens a panel; a notice already read on the page no longer appears there.
+  await studentPage.getByRole('button', { name: /^Notificaciones/ }).click();
+  const panel = studentPage.getByRole('dialog', { name: 'Notificaciones' });
+  await expect(panel).toBeVisible();
+  await expect(panel).not.toContainText(title);
+  await expectAccessible(studentPage);
+  await studentPage.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
   await context.close();
 
   await page.reload();

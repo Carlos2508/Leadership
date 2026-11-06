@@ -2,6 +2,10 @@
 
 Actualizado: 6 de noviembre de 2026, America/Guatemala.
 
+## Campana de notificaciones (estado vigente)
+
+- La campana del encabezado muestra avisos sin leer y pendientes por rol con las mismas reglas del panel; abre cada destino y marca avisos como leídos. También en el app conectado. Recorrido de 8 cuentas y 74 pantallas sin errores ni desbordes.
+
 ## App Flutter con diseño de la web y cuenta real (estado vigente)
 
 - Mismo diseño visual que la web y nuevo modo conectado (ADR-014): ingreso con la cuenta del colegio y MFA, panel por permisos, avisos, ficha de estudiante/familia (notas con solvencia, tareas con entrega, asistencia, portería, estado de cuenta), libreta y asistencia docente, directorio y caja con registro de pago. El servidor autoriza todo; el modo demo queda separado.

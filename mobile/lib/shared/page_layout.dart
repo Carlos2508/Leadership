@@ -131,10 +131,16 @@ class InstitutionHeader extends ConsumerWidget {
     this.initials,
     this.profileLabel,
     this.onProfile,
+    this.notificationCount,
+    this.onNotifications,
     super.key,
   });
 
   final String subtitle;
+
+  /// Unread notices for the bell (connected mode); hidden when [onNotifications] is null.
+  final int? notificationCount;
+  final VoidCallback? onNotifications;
 
   /// Connected mode passes its own account; the demo uses the prototype session.
   final String? initials;
@@ -201,6 +207,26 @@ class InstitutionHeader extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  if (onNotifications != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: Spacing.xs),
+                      child: IconButton(
+                        tooltip: (notificationCount ?? 0) > 0
+                            ? 'Notificaciones: ${notificationCount!} sin leer'
+                            : 'Notificaciones',
+                        onPressed: onNotifications,
+                        color: Colors.white,
+                        icon: Badge(
+                          isLabelVisible: (notificationCount ?? 0) > 0,
+                          backgroundColor: colors.accent,
+                          textColor: colors.deep,
+                          label: Text(
+                            (notificationCount ?? 0) > 9 ? '9+' : '${notificationCount ?? 0}',
+                          ),
+                          child: const Icon(Icons.notifications_none_rounded),
+                        ),
+                      ),
+                    ),
                   if (initials != null)
                     Tooltip(
                       message: 'Mi perfil',

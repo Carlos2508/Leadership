@@ -8,6 +8,10 @@ import { CourseView } from './courses';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
 import { PluralPipe } from '../shared/plural.pipe';
+import { ActivatedRoute } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { skip } from 'rxjs';
+import { NotificationService } from '../core/notifications';
 
 export interface FeedItem {
   id: string;
@@ -80,7 +84,7 @@ interface Options {
       @if (tab() === 'inbox') {
         <section class="announcement-list" aria-label="Avisos recibidos">
           @for (item of feed(); track item.id) {
-            <article class="card announcement-card" [class.unread]="!item.read">
+            <article class="card announcement-card" [class.unread]="!item.read" [attr.id]="'aviso-' + item.id">
               <button class="announcement-toggle" (click)="toggle(item)" [attr.aria-expanded]="openId() === item.id">
                 <span class="unread-dot" [class.hidden-dot]="item.read" aria-hidden="true"></span>
                 <span class="person-copy"
@@ -211,6 +215,8 @@ interface Options {
 })
 export class Announcements {
   readonly api = inject(AccessApi);
+  private readonly route = inject(ActivatedRoute);
+  private readonly notifications = inject(NotificationService);
   readonly alerts = inject(Alerts);
   readonly school = inject(InstitutionService).current;
   @ViewChild('editDialog') private dialog!: ElementRef<HTMLDialogElement>;
@@ -235,6 +241,8 @@ export class Announcements {
 
   constructor() {
     queueMicrotask(() => void this.load());
+    // Choosing another notice in the bell while already here only changes the query: reload and open it.
+    this.route.queryParamMap.pipe(skip(1), takeUntilDestroyed()).subscribe(() => void this.load());
   }
   private empty() {
     return { title: '', body: '', audienceKind: 'School' as 'School' | 'Grade' | 'Course', audienceId: '', forStudents: true, forGuardians: true, forStaff: false };
@@ -251,6 +259,14 @@ export class Announcements {
       ]);
       this.feed.set(feed);
       this.options.set(options);
+      // Opened from the header bell: show that notice expanded and in view.
+      const open = this.route.snapshot.queryParamMap.get('open');
+      const target = open ? feed.find((x) => x.id === open) : undefined;
+      if (target && this.openId() !== target.id) {
+        this.tab.set('inbox');
+        void this.toggle(target);
+        requestAnimationFrame(() => document.getElementById('aviso-' + target.id)?.scrollIntoView({ block: 'center' }));
+      }
       if (options.canPublishSchool || options.courses.length) this.authored.set(await this.api.get<AnnouncementView[]>('/api/v1/announcements'));
       if (options.canPublishSchool && !this.grades().length) {
         const [grades, years] = await Promise.all([
@@ -270,6 +286,7 @@ export class Announcements {
       try {
         await this.api.post(`/api/v1/me/announcements/${item.id}/read`, {});
         this.feed.update((list) => list.map((x) => (x.id === item.id ? { ...x, read: true } : x)));
+        this.notifications.noticeRead(item.id);
       } catch {
         /* Reading still works; the receipt will be retried next time. */
       }

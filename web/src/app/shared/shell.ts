@@ -1,8 +1,9 @@
-import { Component, ElementRef, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { InstitutionService } from '../core/institution';
 import { Icon } from './icon';
 import { SessionService } from '../core/session';
+import { AppNotification, NotificationKind, NotificationService } from '../core/notifications';
 @Component({
   selector: 'app-shell',
   imports: [RouterLink, RouterLinkActive, Icon],
@@ -280,17 +281,77 @@ import { SessionService } from '../core/session';
           </div>
           <div class="topbar-actions">
             @if (!preview()) {
-              <a
-                class="topbar-notification"
-                routerLink="/workspace/announcements"
-                [attr.aria-label]="
-                  'Ver comunicados' + (unread() ? ': ' + unread() + ' sin leer' : '')
-                "
-                ><app-icon name="bell" />
-                @if (unread()) {
-                  <span aria-hidden="true"></span>
+              <div class="notify-wrap">
+                <button
+                  type="button"
+                  class="topbar-notification"
+                  (click)="toggleNotifications($event)"
+                  [attr.aria-expanded]="notifyOpen()"
+                  aria-controls="notification-panel"
+                  [attr.aria-label]="
+                    'Notificaciones' + (notifications.count() ? ': ' + notifications.count() + ' nuevas' : '')
+                  "
+                >
+                  <app-icon name="bell" />
+                  @if (notifications.count()) {
+                    <span class="notify-badge" aria-hidden="true">{{
+                      notifications.count() > 9 ? '9+' : notifications.count()
+                    }}</span>
+                  }
+                </button>
+                @if (notifyOpen()) {
+                  <section
+                    id="notification-panel"
+                    class="notify-panel"
+                    role="dialog"
+                    aria-label="Notificaciones"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <header class="notify-head">
+                      <strong>Notificaciones</strong>
+                      @if (hasUnreadNotices()) {
+                        <button type="button" class="text-button" (click)="markAllRead()">
+                          Marcar avisos como leídos
+                        </button>
+                      }
+                    </header>
+                    @if (notifications.items().length) {
+                      <ul class="notify-list">
+                        @for (item of notifications.items(); track item.key) {
+                          <li>
+                            <a
+                              [routerLink]="item.link"
+                              [queryParams]="item.queryParams"
+                              [fragment]="item.fragment"
+                              (click)="openNotification(item)"
+                              [class.is-new]="item.isNew"
+                              ><span class="notify-icon" [attr.data-kind]="item.kind"
+                                ><app-icon [name]="iconFor(item.kind)" /></span
+                              ><span class="notify-copy"
+                                ><strong>{{ item.title }}</strong><small>{{ item.detail }}</small></span
+                              >
+                              @if (item.isNew) {
+                                <span class="notify-dot" aria-label="Nueva"></span>
+                              }
+                            </a>
+                          </li>
+                        }
+                      </ul>
+                    } @else if (notifications.error()) {
+                      <p class="notify-empty">{{ notifications.error() }}</p>
+                    } @else {
+                      <p class="notify-empty">
+                        <app-icon name="check" /><span
+                          ><strong>Estás al día</strong>No hay avisos nuevos ni pendientes.</span
+                        >
+                      </p>
+                    }
+                    <a class="notify-all" routerLink="/workspace/announcements" (click)="closeNotifications()"
+                      >Ver todos los avisos <app-icon name="arrow"
+                    /></a>
+                  </section>
                 }
-              </a>
+              </div>
             }
             <details class="topbar-profile-menu">
               <summary
@@ -341,8 +402,52 @@ export class Shell {
   readonly school = inject(InstitutionService).current;
   readonly preview = input(false);
   readonly title = input('Vista general');
+  /** Kept for compatibility with pages that still pass it; the bell uses NotificationService. */
   readonly unread = input(0);
   readonly menuOpen = signal(false);
+  readonly notifications = inject(NotificationService);
+  readonly notifyOpen = signal(false);
+  readonly hasUnreadNotices = computed(() => this.notifications.items().some((x) => x.kind === 'notice'));
+
+  constructor() {
+    // Inputs are bound after construction; read preview() once they are.
+    queueMicrotask(() => {
+      if (!this.preview()) this.notifications.start();
+    });
+  }
+  iconFor(kind: NotificationKind): string {
+    return { notice: 'megaphone', task: 'clipboard', money: 'wallet', teaching: 'book', admin: 'key' }[kind];
+  }
+  toggleNotifications(event: Event): void {
+    event.stopPropagation();
+    const open = !this.notifyOpen();
+    this.notifyOpen.set(open);
+    if (open) {
+      void this.notifications.refresh(true);
+      // Pending items stop counting once seen; unread notices keep counting until opened.
+      setTimeout(() => this.notifications.markSeen(), 1200);
+    }
+  }
+  closeNotifications(): void {
+    this.notifyOpen.set(false);
+  }
+  openNotification(item: AppNotification): void {
+    this.notifyOpen.set(false);
+    if (item.noticeId) void this.notifications.markNoticeRead(item.noticeId);
+  }
+  async markAllRead(): Promise<void> {
+    await this.notifications.markAllNoticesRead();
+  }
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    if (this.notifyOpen()) this.notifyOpen.set(false);
+  }
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (!this.notifyOpen()) return;
+    this.notifyOpen.set(false);
+    this.host.nativeElement.querySelector<HTMLElement>('.topbar-notification')?.focus();
+  }
   onNavigationClick(event: MouseEvent): void {
     if ((event.target as Element).closest('a')) this.closeMenu(false);
   }

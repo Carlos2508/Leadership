@@ -44,7 +44,7 @@ test('a member enables two-step verification and the next login asks for the cod
   const username = 'mfa-' + randomUUID().slice(0, 6);
   const password = 'Synthetic-Portal!12345';
   await login(page, process.env['SCHOOLPLATFORM_E2E_USERNAME']!, process.env['SCHOOLPLATFORM_E2E_PASSWORD']!);
-  await expect(page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^¡Hola,/ })).toBeVisible();
   const token = (await (await page.request.get('/api/v1/antiforgery')).json()).token as string;
   const invite = await (await page.request.post('/api/v1/access/invitations', { data: { username, profile: 'basic', reason }, headers: { 'X-XSRF-TOKEN': token } })).json();
 
@@ -79,6 +79,6 @@ test('a member enables two-step verification and the next login asks for the cod
   await member.screenshot({ path: testInfo.outputPath('mfa-challenge.png'), fullPage: true });
   await member.getByLabel('Código de verificación').fill(totp(key, 1));
   await member.getByRole('button', { name: 'Verificar e ingresar' }).click();
-  await expect(member.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
+  await expect(member.getByRole('heading', { name: /^¡Hola,/ })).toBeVisible();
   await context.close();
 });

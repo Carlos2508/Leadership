@@ -19,7 +19,7 @@ async function login(page: Page) {
     .fill(process.env['SCHOOLPLATFORM_E2E_PASSWORD']!);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
   await expect(
-    page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ }),
+    page.getByRole('heading', { name: /^¡Hola,/ }),
   ).toBeVisible();
   const session = await (await page.request.get('/api/v1/session')).json();
   if (!session.permissions.includes('finance.read')) {

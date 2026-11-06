@@ -8,14 +8,14 @@ La fuente de verdad es `config/institution.json`. El host lee y valida `Institut
 | --- | --- |
 | Identidad | Nombre público/corto, denominación legal, sede, lema, bienvenida e identificador estable de la institución |
 | Contacto | Teléfono, correo, dirección y sitio HTTPS; `DialPrefix` (+502) para llamar con un toque, `Phones` adicionales con etiqueta, `WhatsApp` (solo dígitos con código de país), `OfficeHours`, `MapQuery` (texto que se busca en Google Maps) y `Social` (URLs HTTPS) |
-| Página pública | `Public.About`, `Public.Highlights`, `Public.Programs`, `Public.AdmissionsMessage`; las secciones vacías no se muestran |
-| Recursos | Logo principal, de acceso, de comprobantes, de boletas y favicon, con rutas independientes |
+| Página pública | `Public.HeroTitle/HeroAccent/HeroDescription`, `AboutTitle/About`, misión y visión, `Highlights`, `LifeTitle/LifeText/Programs`, `DigitalTitle/DigitalText`, admisión y `AdmissionSteps`, comunidad, `QuestionsTitle/Questions`, `ContactTitle/ContactText`; secciones opcionales vacías se ocultan |
+| Recursos | Logo principal, de acceso, de comprobantes, de boletas, de carnet y favicon; imágenes opcionales `HeroImage`, `StudentImage`, `CommunityImage`, con rutas independientes bajo `/branding/` |
 | Documentos | NIT y pies para comprobantes/boletas, reservados al servidor |
 | Tema | Color profundo/lateral, primario, acento y superficie en formato `#RRGGBB` |
 | Región | Cultura, zona horaria IANA y moneda ISO |
 | Vocabulario | Etiquetas de estudiantes, encargados, colegiatura y bimestre; el español genérico de la interfaz sigue siendo código del producto |
 
-Los contactos desconocidos quedan vacíos y no aparecen en pantalla. Las claves de logos de comprobantes y boletas existen, pero todavía no hay generador de documentos.
+Los contactos desconocidos quedan vacíos y no aparecen en pantalla. Comprobantes, cartas de notas y carnets conservan sus recursos de impresión independientes.
 
 ## Editar esta instalación
 
@@ -49,6 +49,8 @@ Un color hexadecimal válido no garantiza contraste: después de cambiar colores
 
 ## Página pública (`/`)
 
-Presentación, «Mi espacio en línea», contacto y ubicación, y acceso «Ingresar a mi espacio». Todo texto institucional sale de la configuración; en Development el pie lista los campos aún vacíos. El mapa de Google se carga **solo al pulsar «Mostrar mapa»** (CSP `frame-src https://www.google.com`); antes no hay conexión con terceros. «Cómo llegar» abre Google Maps con `MapQuery`.
+La referencia vigente (ADR-013) incluye portada con curva e imagen, pilares, misión/visión, vida escolar, admisión, comunidad, preguntas y contacto. Cada entrada del menú llega a una sección real. Todo texto institucional sale de la configuración, sin editor administrativo ni instrucciones técnicas en la página. El mapa de Google se carga **solo al pulsar «Ver mapa»** (CSP `frame-src https://www.google.com`); antes no hay conexión con terceros. «Cómo llegar» abre Google Maps con `MapQuery`.
 
-Datos actuales tomados de los carnets que el propio colegio imprimía en el sistema anterior (teléfono 5129-4403, correo y dirección, normas del reverso). **Confirmar con el colegio** que siguen vigentes y completar horario, WhatsApp, redes, presentación y niveles. `MapQuery` incluye el nombre del colegio porque solo con la dirección Google ubicaba la zona 1 de la capital.
+Teléfono, correo y dirección proceden de los carnets aportados; el teléfono y la dirección coinciden con el [listado público de MINEDUC consultado](https://infopublica.mineduc.gob.gt/mineduc/images/c/c8/DIGEACE_DIGEACE_GUATEMALA_INCISO2C_2023_VERSION09.pdf). WhatsApp e Instagram reproducen el paquete entregado. No se agregaron horarios, tarifas ni niveles no comprobados. Misión, visión y presentación nuevas son redacción autorizada para esta solicitud, no documentos oficiales investigados. Los enlaces del pie para privacidad/términos son consultas por correo, no políticas publicadas.
+
+Las imágenes aportadas son ilustrativas, como indica el paquete. Las rutas, procedencia y licencia de las fuentes se documentan en `reference/REFERENCE_DESIGN_ASSETS.md`. Para otra instalación se deben sustituir todos estos contenidos y recursos en la misma configuración, incluidos los campos nuevos de `Public`.

@@ -8,12 +8,12 @@ test('welcome loads configured branding and opens the real login form', async ({
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/');
   await expect(page).toHaveTitle('Colegio Leadership Mixco');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('¡Piensa en grande!');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Colegio Leadership Mixco');
   await expect(page.getByRole('img', { name: 'Colegio Leadership Mixco' })).toBeVisible();
-  await expect(page.locator('img')).toHaveCount(1);
-  await expect(page.locator('.welcome-main')).toHaveCSS('display', 'grid');
+  await expect(page.locator('.site-hero-image img')).toBeVisible();
+  await expect(page.locator('#nosotros')).toContainText('líderes del mañana');
   const viewport = page.viewportSize()!;
-  for (const width of [320, 768, 1920]) {
+  for (const width of [320, 768, 900, 1920]) {
     await page.setViewportSize({ width, height: 1000 });
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
@@ -56,7 +56,7 @@ test('sample dashboard renders and student filters combine without changing reco
 }, testInfo) => {
   await page.goto('/preview');
   await expect(page.getByRole('heading', { name: 'Resumen del colegio' })).toBeVisible();
-  await expect(page.locator('.sidebar .brand img')).toHaveCSS('width', '38px');
+  await expect(page.locator('.sidebar .brand img')).toHaveCSS('width', testInfo.project.name === 'mobile' ? '52px' : '60px');
   await expect(page.getByRole('img', { name: /Asistencia ficticia/ })).toBeVisible();
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),

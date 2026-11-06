@@ -17,7 +17,8 @@ import { SessionService } from '../core/session';
       >
         <a class="brand" routerLink="/"
           ><img [src]="school.assets.mainLogo" alt="" /><span
-            >{{ school.shortName }}<small>{{ school.campusLabel }}</small></span
+            ><strong>{{ school.public.heroTitle || school.displayName }}</strong
+            ><small>{{ school.campusLabel }}</small></span
           ></a
         >
         <button class="mobile-close icon-button" (click)="closeMenu()" aria-label="Cerrar menú">
@@ -28,16 +29,51 @@ import { SessionService } from '../core/session';
           <a
             [routerLink]="preview() ? '/preview' : '/workspace'"
             routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: true }"
+            [routerLinkActiveOptions]="{
+              paths: 'exact',
+              queryParams: 'ignored',
+              matrixParams: 'ignored',
+              fragment: 'exact',
+            }"
             ariaCurrentWhenActive="page"
             ><app-icon name="home" />Inicio</a
           >
+          @if (!preview() && session.studentId(); as studentId) {
+            <a
+              routerLink="/workspace"
+              fragment="personal-courses"
+              queryParamsHandling="preserve"
+              [class.active]="router.url.endsWith('#personal-courses')"
+              ><app-icon name="school" />Académico</a
+            >
+            <a
+              [routerLink]="['/workspace/my/students', studentId]"
+              fragment="tasks-title"
+              queryParamsHandling="preserve"
+              [class.active]="router.url.endsWith('#tasks-title')"
+              ><app-icon name="clipboard" />Tareas</a
+            >
+            <a
+              [routerLink]="['/workspace/my/students', studentId]"
+              fragment="grades-title"
+              queryParamsHandling="preserve"
+              [class.active]="router.url.endsWith('#grades-title')"
+              ><app-icon name="chart" />Calificaciones</a
+            >
+            <a
+              [routerLink]="['/workspace/my/students', studentId]"
+              fragment="attendance-title"
+              queryParamsHandling="preserve"
+              [class.active]="router.url.endsWith('#attendance-title')"
+              ><app-icon name="calendar" />Asistencia</a
+            >
+          }
           @if (!preview()) {
             <a
               routerLink="/workspace/announcements"
               routerLinkActive="active"
               ariaCurrentWhenActive="page"
-              ><app-icon name="mail" />Avisos</a
+              ><app-icon name="megaphone" />{{ session.studentId() ? 'Comunicados' : 'Avisos' }}</a
             >
           }
           @if (preview()) {
@@ -183,17 +219,22 @@ import { SessionService } from '../core/session';
           <p class="sidebar-note">Explora la navegación con información ficticia.</p>
           <a class="sidebar-home" routerLink="/"><app-icon name="arrow" />Volver al inicio</a>
         }
+        @if (!preview()) {
+          <a class="sidebar-account" routerLink="/workspace/security"
+            ><app-icon name="user" />Mi cuenta</a
+          >
+        }
         @if (!preview() && session.token()) {
           <form class="sidebar-logout" action="/Identity/Account/Logout" method="post">
             <input type="hidden" name="__RequestVerificationToken" [value]="session.token()" />
             <button type="submit"><app-icon name="logout" />Cerrar sesión</button>
           </form>
         }
-        @if (!preview()) {
-          <a class="sidebar-account" routerLink="/workspace/security"
-            ><app-icon name="shield" />Mi cuenta y seguridad</a
-          >
-        }
+        <div class="sidebar-art" aria-hidden="true">
+          <app-icon name="school" /><svg viewBox="0 0 260 130" preserveAspectRatio="none">
+            <path d="M0 0C80 12 140 58 260 110V130H0Z" />
+          </svg>
+        </div>
       </aside>
       @if (menuOpen()) {
         <button
@@ -205,7 +246,7 @@ import { SessionService } from '../core/session';
         ></button>
       }
       <div class="workspace-main" [attr.inert]="menuOpen() ? '' : null">
-        <header class="topbar">
+        <header class="topbar" [class.home-topbar]="title() === 'Inicio'">
           <div class="breadcrumb">
             <button
               class="icon-button mobile-menu"
@@ -218,27 +259,42 @@ import { SessionService } from '../core/session';
             ><span class="breadcrumb-text">{{ title() }}</span>
           </div>
           <div class="topbar-actions">
-            <span class="topbar-school">{{
-              preview() ? 'Demostración' : session.displayName() || session.username()
-            }}</span>
-            @if (preview()) {
-              <span class="pill gold">Ciclo de muestra 2026</span>
-            }
-            @if (preview()) {
-              <span class="avatar">D</span>
-            } @else {
+            @if (!preview()) {
               <a
-                class="avatar avatar-link"
-                routerLink="/workspace/security"
-                [attr.aria-label]="'Mi seguridad: ' + (session.displayName() || session.username())"
-                [attr.title]="
-                  session.displayName()
-                    ? session.displayName() + ' · ' + session.username()
-                    : session.username()
+                class="topbar-notification"
+                routerLink="/workspace/announcements"
+                [attr.aria-label]="
+                  'Ver comunicados' + (unread() ? ': ' + unread() + ' sin leer' : '')
                 "
-                >{{ session.initials() || school.shortName.slice(0, 1) }}</a
-              >
+                ><app-icon name="bell" />
+                @if (unread()) {
+                  <span aria-hidden="true"></span>
+                }
+              </a>
             }
+            <details class="topbar-profile-menu">
+              <summary
+                [attr.aria-label]="
+                  'Mi cuenta: ' + (session.displayName() || session.username() || 'Demostración')
+                "
+              >
+                <span class="avatar">{{
+                  preview() ? 'D' : session.initials() || school.shortName.slice(0, 1)
+                }}</span
+                ><span class="topbar-profile-copy"
+                  ><strong>{{
+                    preview() ? 'Demostración' : session.displayName() || session.username()
+                  }}</strong
+                  ><small>{{
+                    preview() ? 'Vista de muestra' : session.schoolProfile() || 'Mi espacio'
+                  }}</small></span
+                ><app-icon name="chevron" />
+              </summary>
+              <div class="topbar-profile-dropdown">
+                <a routerLink="/workspace/security"><app-icon name="user" />Mi cuenta y seguridad</a
+                ><a routerLink="/"><app-icon name="home" />Ir al sitio público</a>
+              </div>
+            </details>
           </div>
         </header>
         @if (preview()) {
@@ -265,6 +321,7 @@ export class Shell {
   readonly school = inject(InstitutionService).current;
   readonly preview = input(false);
   readonly title = input('Vista general');
+  readonly unread = input(0);
   readonly menuOpen = signal(false);
   onNavigationClick(event: MouseEvent): void {
     if ((event.target as Element).closest('a')) this.closeMenu(false);

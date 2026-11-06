@@ -48,6 +48,9 @@ public sealed class PublicBoundaryTests
         {
             ["Institution:DisplayName"] = "Colegio de ejemplo",
             ["Institution:ShortName"] = "Mi colegio",
+            ["Institution:Public:HeroTitle"] = "Colegio de ejemplo",
+            ["Institution:Public:HeroAccent"] = "Ciudad",
+            ["Institution:Public:CommunityText"] = "Nuestra comunidad de ejemplo.",
             // Another school also replaces its own contact data (all of it lives only in configuration).
             ["Institution:Contact:MapQuery"] = "Colegio de ejemplo, Ciudad",
             ["Institution:Contact:Email"] = "info@example.test",

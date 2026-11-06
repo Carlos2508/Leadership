@@ -2,6 +2,8 @@
 
 Fecha: 4 de noviembre de 2026, America/Guatemala.
 
+**Actualización de diseño, 5 de noviembre de 2026:** el propietario sustituyó la dirección visual inicial y la posterior Numix por sus capturas pública/estudiantil y el paquete HTML/CSS. Autorizó redactar misión, visión y presentación para ampliar la página. ADR-013 registra esta excepción limitada al contenido público configurado; no autoriza inventar datos escolares, oferta, horarios ni políticas académicas, financieras o legales.
+
 La solicitud actual es comenzar la reconstrucción y facilitar el uso del mismo producto para futuros clientes mediante configuración mantenida por el desarrollador. Este repositorio era un README vacío. El sistema existente y el kit están fuera del repositorio; no se modificaron.
 
 ## Lectura de las fuentes

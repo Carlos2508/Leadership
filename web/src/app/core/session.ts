@@ -13,12 +13,16 @@ export class SessionService {
   initials(): string {
     const source = this.displayName() || this.username();
     const parts = source.split(/[\s._-]+/).filter(Boolean);
-    return (this.displayName() && parts.length > 1 ? parts[0][0] + parts[1][0] : source.slice(0, 1)).toUpperCase();
+    return (
+      this.displayName() && parts.length > 1 ? parts[0][0] + parts[1][0] : source.slice(0, 1)
+    ).toUpperCase();
   }
   readonly state = signal<'loading' | 'ready' | 'denied' | 'error'>('loading');
   readonly token = signal('');
   readonly permissions = signal<string[]>([]);
   readonly userId = signal('');
+  readonly studentId = signal<string | null>(null);
+  readonly schoolProfile = signal('');
   readonly twoFactorEnabled = signal(false);
   /** Permissions the account holds but cannot use until two-step verification is enabled. */
   readonly mfaPending = signal<string[]>([]);
@@ -33,7 +37,8 @@ export class SessionService {
    * still authorizes every API call, so this only affects what the interface shows.
    */
   load(returnUrl = '/workspace', force = false): Promise<boolean> {
-    if (!force && this.state() === 'ready' && Date.now() - this.loadedAt < 15000) return Promise.resolve(true);
+    if (!force && this.state() === 'ready' && Date.now() - this.loadedAt < 15000)
+      return Promise.resolve(true);
     if (!force && this.pending) return this.pending;
     const run = this.fetch(returnUrl, force).finally(() => (this.pending = null));
     this.pending = run;
@@ -41,12 +46,13 @@ export class SessionService {
   }
   private async fetch(returnUrl: string, force: boolean): Promise<boolean> {
     // The antiforgery token is requested in parallel the first time; it stays valid for this sign-in.
-    const tokenRequest = this.token() && !force
-      ? null
-      : firstValueFrom(this.http.get<{ token: string }>('/api/v1/antiforgery')).then(
-          (x) => x.token,
-          () => '',
-        );
+    const tokenRequest =
+      this.token() && !force
+        ? null
+        : firstValueFrom(this.http.get<{ token: string }>('/api/v1/antiforgery')).then(
+            (x) => x.token,
+            () => '',
+          );
     try {
       const session = await firstValueFrom(
         this.http.get<{
@@ -56,6 +62,8 @@ export class SessionService {
           twoFactorEnabled?: boolean;
           mfaPending?: string[];
           displayName?: string | null;
+          studentId?: string | null;
+          schoolProfile?: string | null;
         }>('/api/v1/session'),
       );
       if (this.userId() && this.userId() !== session.userId) this.token.set('');
@@ -64,6 +72,8 @@ export class SessionService {
       this.username.set(session.username);
       this.displayName.set(session.displayName ?? '');
       this.userId.set(session.userId);
+      this.studentId.set(session.studentId ?? null);
+      this.schoolProfile.set(session.schoolProfile ?? '');
       this.permissions.set(session.permissions);
       this.state.set('ready');
       this.loadedAt = Date.now();
@@ -85,7 +95,9 @@ export class SessionService {
     if (token) this.token.set(token);
     else if (!this.token()) {
       try {
-        this.token.set((await firstValueFrom(this.http.get<{ token: string }>('/api/v1/antiforgery'))).token);
+        this.token.set(
+          (await firstValueFrom(this.http.get<{ token: string }>('/api/v1/antiforgery'))).token,
+        );
       } catch {
         /* retried on the next validation */
       }

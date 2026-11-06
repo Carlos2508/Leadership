@@ -2,6 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { randomUUID } from 'node:crypto';
 
+test.use({ trace: 'off' });
+
 const reason = 'Autorización institucional sintética para prueba de navegador.';
 
 async function login(page: Page, username: string, password: string): Promise<void> {
@@ -9,9 +11,7 @@ async function login(page: Page, username: string, password: string): Promise<vo
   await page.getByLabel('Usuario', { exact: true }).fill(username);
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(
-    page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^¡Hola,/ })).toBeVisible();
 }
 
 async function post(page: Page, path: string, data: object) {
@@ -146,9 +146,12 @@ test('coordination publishes a notice and the student reads it in the platform',
   await studentPage.getByRole('button', { name: 'Guardar mi contraseña' }).click();
   await login(studentPage, 'avi-' + s.toLowerCase(), 'Synthetic-Portal!12345');
   await expect(
-    studentPage.getByRole('region', { name: 'Avisos recientes', exact: true }),
+    studentPage.getByRole('region', { name: 'Comunicados importantes', exact: true }),
   ).toContainText('sin leer');
-  await studentPage.getByRole('link', { name: 'Ver todos los avisos' }).click();
+  await studentPage
+    .getByRole('region', { name: 'Comunicados importantes', exact: true })
+    .getByRole('link', { name: 'Ver todos', exact: true })
+    .click();
   await studentPage.getByRole('button', { name: new RegExp(title) }).click();
   await expect(studentPage.getByText('Traer ropa cómoda')).toBeVisible();
   await expectAccessible(studentPage);

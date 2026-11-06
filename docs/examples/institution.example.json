@@ -9,14 +9,17 @@
     "WelcomeMessage": "Una comunidad para aprender y crecer.",
     "Contact": {
       "Phone": "", "Email": "", "Address": "", "Website": "", "DialPrefix": "+502",
-      "Phones": [ { "Label": "Secretaría", "Number": "" } ],
-      "WhatsApp": "", "OfficeHours": [ "Lunes a viernes, 7:00 a 15:00" ], "MapQuery": "",
+      "Phones": [],
+      "WhatsApp": "", "OfficeHours": [], "MapQuery": "",
       "Social": { "Facebook": "", "Instagram": "", "YouTube": "", "TikTok": "" }
     },
     "Documents": { "TaxId": "", "ReceiptFooter": "", "ReportCardFooter": "", "CardRules": [], "CardNotice": "" },
     "Assets": {
       "MainLogo": "/branding/main.png",
       "LoginLogo": "/branding/main.png",
+      "HeroImage": "",
+      "StudentImage": "",
+      "CommunityImage": "",
       "ReceiptLogo": "/branding/main.png",
       "ReportCardLogo": "/branding/main.png",
       "CardLogo": "/branding/main.png",
@@ -25,10 +28,31 @@
     "Theme": { "Deep": "#18324A", "Primary": "#234C6F", "Accent": "#ECA42E", "Surface": "#F5F8FA" },
     "Locale": { "Culture": "es-GT", "TimeZone": "America/Guatemala", "Currency": "GTQ" },
     "Public": {
+      "HeroTitle": "Colegio de ejemplo",
+      "HeroAccent": "",
+      "HeroDescription": "Presentación de esta comunidad educativa.",
+      "AboutTitle": "Nuestra comunidad educativa",
       "About": "Texto breve de presentación del colegio.",
+      "MissionTitle": "Nuestra misión",
+      "MissionAccent": "",
+      "MissionText": "",
+      "VisionTitle": "Nuestra visión",
+      "VisionText": "",
       "Highlights": [ { "Title": "Valor o fortaleza", "Text": "Descripción breve." } ],
       "Programs": [ { "Title": "Nivel o programa", "Text": "Descripción breve." } ],
-      "AdmissionsMessage": "Cómo solicitar información de inscripción."
+      "LifeTitle": "Vida escolar",
+      "LifeText": "",
+      "DigitalTitle": "Tu espacio escolar",
+      "DigitalText": "Información y seguimiento de tu cuenta.",
+      "AdmissionsTitle": "Admisión",
+      "AdmissionsMessage": "Cómo solicitar información de inscripción.",
+      "AdmissionSteps": [],
+      "CommunityTitle": "Nuestra comunidad",
+      "CommunityText": "",
+      "QuestionsTitle": "Preguntas frecuentes",
+      "Questions": [],
+      "ContactTitle": "Contacto",
+      "ContactText": "Canales de comunicación de esta institución."
     },
     "Terms": { "StudentPlural": "Alumnos", "GuardianPlural": "Familias", "Tuition": "Mensualidad", "Period": "Bimestre" }
   }

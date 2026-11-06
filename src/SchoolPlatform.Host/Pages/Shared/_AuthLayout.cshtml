@@ -13,9 +13,10 @@
   <a class="skip-link" href="#main">Saltar al contenido</a>
   <main id="main" class="auth-shell">
     <section class="brand-panel" aria-label="Institución">
-      <a href="/" class="brand"><img src="@Institution.Value.Assets.MainLogo" alt="" /><span>@Institution.Value.ShortName<small>@Institution.Value.CampusLabel</small></span></a>
+      <a href="/" class="brand"><img src="@Institution.Value.Assets.MainLogo" alt="" /><span>@(string.IsNullOrWhiteSpace(Institution.Value.Public.HeroTitle) ? Institution.Value.DisplayName : Institution.Value.Public.HeroTitle)<small>@Institution.Value.CampusLabel</small></span></a>
       <div class="brand-message"><div class="eyebrow">COMUNIDAD EDUCATIVA</div><h1>@Institution.Value.Tagline</h1><p>@Institution.Value.WelcomeMessage</p></div>
       <p class="brand-footer">@Institution.Value.DisplayName</p>
+      @if (!string.IsNullOrWhiteSpace(Institution.Value.Assets.HeroImage)) { <img class="auth-campus" src="@Institution.Value.Assets.HeroImage" alt="" /> }
     </section>
     <section class="form-panel">@RenderBody()</section>
   </main>

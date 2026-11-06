@@ -4,29 +4,29 @@ Decisiones visuales de la plataforma. Los **colores institucionales** (`--deep`,
 
 ## Identidad
 
-- **Tipografía:** *Figtree* en toda la interfaz, títulos, cifras y acceso. Autoalojada en `wwwroot/fonts` (CSP `font-src 'self'`), licencia SIL OFL. Títulos sin serif, texto habitual de 14–15 px y cifras tabulares. Fraunces deja de utilizarse en la interfaz.
-- **Firma visual:** selección del menú con relleno primario y marca lateral de acento. Sin barras decorativas repetidas, texturas ni íconos que giran.
-- **Superficies:** fondo institucional claro, barra lateral sólida, encabezado blanco y paneles blancos con borde fino. Sombras para diálogos, alertas y el bloque de acceso público; los listados y módulos no flotan. Radios de 8–14 px.
+- **Tipografía:** *Inter* variable, normal y cursiva, en la web y el acceso Razor. Autoalojada en `wwwroot/fonts` (CSP `font-src 'self'`), licencia SIL OFL conservada. Títulos sin serif, texto habitual de 14–15 px y cifras tabulares. Las fuentes históricas se conservan para no alterar documentos existentes, pero la web ya no utiliza Figtree/Fraunces.
+- **Firma visual:** referencia pública/estudiantil aportada por el propietario, ADR-013. Menú y encabezado oscuros, selección con cápsula dorada, curvas en portada y base lateral, una marca por cabecera/menú y un birrete decorativo discreto.
+- **Superficies:** marfil institucional y paneles blancos con borde fino, sombra suave y radios de 14–22 px. Botones principales dorados con texto oscuro; acciones destructivas rojas. El marco privado se adapta al escritorio y ocupa toda la pantalla en móvil.
 - **Movimiento:** solo transiciones breves de color y foco. Respetar `prefers-reduced-motion`.
 - **Personas:** avatares con dos iniciales en uno de cinco tonos derivados del nombre (estable para cada persona).
 - **Estados vacíos:** ícono pequeño en un cuadrado de esquinas suaves, explicación concreta y siguiente paso.
 
 ## Navegación y página pública
 
-Referencia visual revisada: página pública, dashboard y listado de productos de Numix, más su código local (solo lectura). Se adopta su claridad de módulos y jerarquía; la marca y los colores siguen siendo los de esta instalación.
+Referencia vigente: capturas pública/estudiantil y paquete HTML/CSS proporcionados por el propietario. Sustituye la dirección visual Numix de ADR-010, conservando la claridad de módulos, los permisos y la información operativa. Ver ADR-013.
 
 - Menú con Estudiantes, Padres y Docentes como entradas independientes, además de Inscripciones, Cursos, Calificaciones y Ciclo escolar. Portería, Finanzas y Administración conservan sus permisos. «Mi cuenta y seguridad» es una utilidad separada.
 - Directorios `/workspace/students`, `/workspace/parents`, `/workspace/teachers`: mismo registro de personas, filtros de servidor `student`, `guardian`, `staff`, alta con perfil preseleccionado y pestaña «Todos» para encontrar fichas existentes. Docentes incluye al personal y lo indica en el título; no convierte todo el personal en docente asignado ni concede cursos por el nombre del cargo. Las asignaciones siguen en Cursos.
 - El registro de personal permite indicar cargo al crear la ficha, con validación, perfil y auditoría confirmados en el mismo `SaveChanges`. No crea cuentas ni vínculos ni matrícula.
 - Una marca en la cabecera pública y una en el menú del área privada. Sin escudo gigante en el hero ni segundo logo en el formulario de ingreso. Documentos y carnets conservan sus marcas propias configuradas.
-- Página pública con presentación institucional configurada, bloque de información del portal, servicios, contacto y mapa bajo solicitud. No inventar oferta educativa, horarios o estadísticas; los campos vacíos se ocultan. No mostrar instrucciones técnicas de configuración a las familias.
+- Página pública con portada e imágenes del paquete, pilares, misión/visión, vida escolar, admisión, comunidad, preguntas y contacto. Todos los enlaces del menú tienen destinos reales. La redacción pública nueva fue autorizada por el propietario y está en configuración; no constituye una política ni una oferta/estadística verificada. Los campos vacíos se ocultan. Mapa bajo solicitud y sin instrucciones técnicas para familias.
 - Diseño fluido hasta 1680 px de contenido, menú móvil con foco/Escape/fondo inerte, tablas adaptadas y formularios utilizables desde 320 px.
 
 Capa: `web/src/styles/_identity.scss` (se carga al final).
 
 ## Inicio y roles
 
-El dashboard muestra indicadores, pendientes y acciones por contexto, sin duplicar el menú como catálogo de módulos. El ciclo está visible y queda en la URL; portería identifica su alcance de hoy para todos los ciclos. Cero, sin configuración y fallo de carga tienen significados diferentes. Las cifras monetarias usan aplicaciones confirmadas y nunca se confunden con solvencia. Ver ADR-011.
+El dashboard muestra indicadores, pendientes y acciones por contexto. La composición de referencia usa cuatro indicadores personales, actividades/calendario y comunicados/acciones breves; conserva el resumen operativo de administración y la docencia. Mis clases proviene de la matrícula, no de la muestra; no se inventa un promedio general. El ciclo está visible y queda en la URL; portería identifica su alcance de hoy para todos los ciclos. Cero, sin configuración y fallo de carga tienen significados diferentes. Las cifras monetarias usan aplicaciones confirmadas y nunca se confunden con solvencia. Ver ADR-011/013.
 
 El editor de roles usa acciones agrupadas por área, selección completa opcional, motivo y confirmación del número de cuentas afectadas. No deduce permisos del nombre: Director y Secretaría pueden tener todos. Los perfiles escolares se mantienen separados. Ver ADR-012.
 

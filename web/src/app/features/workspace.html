@@ -1,10 +1,19 @@
-<app-shell title="Inicio">
-  <div class="page-heading dash-heading">
+<app-shell title="Inicio" [unread]="unread()">
+  <div class="page-heading dash-heading reference-welcome">
     <div>
-      <span class="eyebrow">{{ today }}</span>
-      <h1>{{ greeting }}{{ greetingName() ? ', ' + greetingName() : '' }}.</h1>
-      <p>El estado del colegio y el trabajo que necesita tu atención.</p>
+      <span class="eyebrow">BIENVENIDO A TU ESPACIO</span>
+      <h1>
+        ¡Hola, <span>{{ greetingName() }}!</span>
+      </h1>
+      <p>
+        {{
+          session.studentId()
+            ? 'Gestiona tus clases, tareas y toda tu vida escolar desde aquí.'
+            : 'Tu información escolar y el trabajo que necesita tu atención, en un solo lugar.'
+        }}
+      </p>
     </div>
+    <app-icon class="welcome-calendar-art" name="calendar" aria-hidden="true" />
     <div class="dash-toolbar">
       @if (stats(); as st) {
         @if (st.years.length) {
@@ -18,7 +27,12 @@
           >
         }
       }
-      <button class="button outline" (click)="load()" [disabled]="loading()">
+      <button
+        class="button outline"
+        title="Actualizar información"
+        (click)="load()"
+        [disabled]="loading()"
+      >
         <app-icon name="refresh" />Actualizar
       </button>
     </div>
@@ -127,6 +141,204 @@
           >
         }
       </section>
+    } @else if (st.students.length || st.teaching.length) {
+      <section class="reference-metrics" aria-label="Indicadores principales">
+        <a
+          class="reference-metric"
+          routerLink="/workspace"
+          [fragment]="
+            self()
+              ? 'personal-courses'
+              : st.teaching.length
+                ? 'my-courses-title'
+                : 'students-summary-title'
+          "
+          [queryParams]="{ year: st.yearId }"
+        >
+          <app-icon [name]="self() || st.teaching.length ? 'book' : 'people'" /><strong>{{
+            personalCourseCount()
+          }}</strong>
+          <span>{{
+            self() || st.teaching.length ? 'Cursos activos' : 'Estudiantes a tu cargo'
+          }}</span>
+        </a>
+        <a
+          class="reference-metric"
+          routerLink="/workspace"
+          [fragment]="st.teaching.length ? 'my-courses-title' : 'activities-title'"
+          [queryParams]="{ year: st.yearId }"
+          ><app-icon name="clipboard" /><strong>{{ personalPending() }}</strong
+          ><span>{{ st.teaching.length ? 'Entregas por revisar' : 'Tareas pendientes' }}</span></a
+        >
+        <a
+          class="reference-metric"
+          routerLink="/workspace"
+          fragment="calendario"
+          [queryParams]="{ year: st.yearId }"
+          ><app-icon name="calendar" /><strong>{{ upcomingCount() }}</strong
+          ><span>Próximas actividades</span></a
+        >
+        <a class="reference-metric" routerLink="/workspace/announcements"
+          ><app-icon name="megaphone" /><strong>{{ feedError() ? '—' : unread() }}</strong
+          ><span>{{ feedError() ? 'Avisos sin consultar' : 'Comunicados sin leer' }}</span></a
+        >
+      </section>
+    }
+
+    <div class="reference-home-grid">
+      <section class="card reference-activities" aria-labelledby="activities-title">
+        <div class="reference-card-title">
+          <h2 id="activities-title">
+            <app-icon name="calendar" />{{
+              activityDate() ? 'Actividades del ' + day(activityDate()) : 'Próximas actividades'
+            }}
+          </h2>
+          <a routerLink="/workspace" fragment="calendario" [queryParams]="{ year: st.yearId }"
+            >Ver calendario <app-icon name="arrow"
+          /></a>
+        </div>
+        @if (activityDate()) {
+          <button class="text-button activity-reset" (click)="activityDate.set('')">
+            Ver todas las próximas actividades
+          </button>
+        }
+        <ul class="reference-activity-list">
+          @for (activity of visibleActivities(); track activity.key) {
+            <li>
+              <span class="activity-date"
+                ><small>{{ day(activity.date, true) }}</small
+                ><strong>{{ dayNumber(activity.date) }}</strong></span
+              ><a
+                [routerLink]="activity.route"
+                [fragment]="activity.fragment"
+                [queryParams]="{ year: st.yearId }"
+                ><strong>{{ activity.title }}</strong
+                ><span>{{ activity.detail }}</span>
+                @if (activity.overdue) {
+                  <small class="dash-warning-text">Entrega tardía disponible</small>
+                }</a
+              ><span class="activity-kind">{{ activity.kind }}</span>
+            </li>
+          } @empty {
+            <li class="reference-empty">
+              <app-icon name="calendar" />
+              <div>
+                <strong>{{
+                  activityDate() ? 'Un día sin pendientes registrados' : 'Estás al día'
+                }}</strong>
+                <p>
+                  {{
+                    activityDate()
+                      ? 'Selecciona otra fecha o consulta todas tus próximas actividades.'
+                      : 'Las próximas entregas y cierres aparecerán aquí cuando estén disponibles.'
+                  }}
+                </p>
+              </div>
+            </li>
+          }
+        </ul>
+      </section>
+      <app-school-calendar
+        [on]="st.on"
+        [eventDates]="eventDates()"
+        (selectDate)="activityDate.set($event)"
+      />
+      <section class="card reference-notices" aria-labelledby="feed-title">
+        <div class="reference-card-title">
+          <h2 id="feed-title"><app-icon name="megaphone" />Comunicados importantes</h2>
+          <a routerLink="/workspace/announcements">Ver todos <app-icon name="arrow" /></a>
+        </div>
+        @if (feedError()) {
+          <p class="feedback error-feedback" role="alert">
+            {{ feedError() }}
+            <button class="text-button" (click)="loadFeed()">Reintentar avisos</button>
+          </p>
+        } @else {
+          <ul class="reference-notice-list">
+            @for (item of feed().slice(0, 3); track item.id) {
+              <li>
+                <span class="notice-symbol" [class.notice-read]="item.read"
+                  ><app-icon [name]="item.read ? 'bell' : 'info'" /></span
+                ><a routerLink="/workspace/announcements"
+                  ><strong
+                    >{{ item.title }}
+                    @if (!item.read) {
+                      <span class="sr-only">, sin leer</span>
+                    }</strong
+                  ><span>{{ api.date(item.publishedAt) }}</span></a
+                ><app-icon name="chevron" />
+              </li>
+            } @empty {
+              <li class="reference-empty">
+                <app-icon name="megaphone" />
+                <div>
+                  <strong>No hay comunicados nuevos</strong>
+                  <p>Los mensajes del colegio estarán disponibles en este espacio.</p>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+      <section class="card reference-shortcuts" aria-labelledby="shortcuts-title">
+        <div class="reference-card-title">
+          <h2 id="shortcuts-title"><app-icon name="zap" />Accesos rápidos</h2>
+        </div>
+        <div class="reference-shortcut-grid">
+          @for (action of quickActions(); track action.label) {
+            <a
+              [routerLink]="action.route"
+              [fragment]="action.fragment"
+              [queryParams]="{ year: st.yearId }"
+              ><app-icon [name]="action.icon" /><span>{{ action.label }}</span></a
+            >
+          }
+        </div>
+      </section>
+    </div>
+
+    @if (self(); as student) {
+      <section
+        class="card reference-courses"
+        id="personal-courses"
+        aria-labelledby="personal-courses-title"
+      >
+        <div class="reference-card-title">
+          <h2 id="personal-courses-title"><app-icon name="book" />Mis clases</h2>
+          <span class="muted-copy">{{ selectedYear()?.label | cycle }}</span>
+        </div>
+        <div class="reference-course-list">
+          @for (course of student.courseItems; track course.id) {
+            <a
+              [routerLink]="['/workspace/my/students', student.id]"
+              fragment="tasks-title"
+              [queryParams]="{ year: st.yearId }"
+              ><span class="course-symbol"><app-icon name="book" /></span
+              ><span
+                ><strong>{{ course.subject }}</strong
+                ><small
+                  >{{ course.grade
+                  }}{{ course.section ? ' · Sección ' + course.section : '' }}</small
+                ></span
+              ><app-icon name="chevron"
+            /></a>
+          } @empty {
+            <p class="dash-empty-copy">
+              {{
+                student.enrolled
+                  ? 'Aún no hay cursos asignados a tu grado y sección.'
+                  : 'No tienes una inscripción activa en este ciclo.'
+              }}
+            </p>
+          }
+        </div>
+        <a
+          class="reference-view-school"
+          [routerLink]="['/workspace/my/students', student.id]"
+          [queryParams]="{ year: st.yearId }"
+          >Ver notas, tareas y asistencia <app-icon name="arrow"
+        /></a>
+      </section>
     }
 
     @if (attention().length) {
@@ -188,7 +400,14 @@
           </ul>
           <details class="dash-chart-data">
             <summary>Ver importes por día</summary>
-            <dl>@for (collection of f.lastSevenDays; track collection.date) { <div><dt>{{ day(collection.date) }}</dt><dd>{{ money(collection.amount, f.currency) }}</dd></div> }</dl>
+            <dl>
+              @for (collection of f.lastSevenDays; track collection.date) {
+                <div>
+                  <dt>{{ day(collection.date) }}</dt>
+                  <dd>{{ money(collection.amount, f.currency) }}</dd>
+                </div>
+              }
+            </dl>
           </details>
           <p class="dash-footnote">
             Pagos confirmados, según fecha de pago. Excluye reversiones; los recibos de varios
@@ -417,21 +636,19 @@
       </section>
     }
 
-    @if (st.students.length) {
+    @if (familyStudents().length) {
       <section class="dash-personal" aria-labelledby="students-summary-title">
         <div class="dash-section-title">
           <div>
             <span class="eyebrow">SEGUIMIENTO ESCOLAR</span>
-            <h2 id="students-summary-title">
-              {{ st.students.length === 1 ? 'Tu seguimiento' : 'Estudiantes a tu cargo' }}
-            </h2>
+            <h2 id="students-summary-title">Estudiantes a tu cargo</h2>
           </div>
           @if (pendingTasks()) {
             <span class="pill gold">{{ pendingTasks() }} tareas por entregar</span>
           }
         </div>
         <div class="dash-student-grid">
-          @for (student of st.students; track student.id) {
+          @for (student of familyStudents(); track student.id) {
             <article class="card dash-student">
               <div class="dash-student-heading">
                 <span class="avatar" aria-hidden="true">{{ student.name.slice(0, 1) }}</span>
@@ -509,37 +726,6 @@
           <p class="dash-footnote">
             Importes aplicados al ciclo seleccionado. El recibo conserva su importe completo.
           </p>
-        </section>
-      }
-      @if (feed().length || feedError()) {
-        <section class="card dash-panel" aria-labelledby="feed-title">
-          <div class="dash-section-title">
-            <div>
-              <span class="eyebrow">COMUNICACIÓN</span>
-              <h2 id="feed-title">Avisos recientes</h2>
-            </div>
-            <span class="pill">{{ unread() }} sin leer</span>
-          </div>
-          @if (feedError()) {
-            <p class="feedback error-feedback" role="alert">
-              {{ feedError() }}
-              <button class="text-button" (click)="loadFeed()">Reintentar avisos</button>
-            </p>
-          }
-          <ul class="dash-feed">
-            @for (item of feed().slice(0, 4); track item.id) {
-              <li>
-                <span class="unread-dot" [class.hidden-dot]="item.read" aria-hidden="true"></span>
-                <div>
-                  <a routerLink="/workspace/announcements">{{ item.title }}</a
-                  ><small>{{ item.author }} · {{ api.date(item.publishedAt) }}</small>
-                </div>
-              </li>
-            }
-          </ul>
-          <a class="text-button dash-inline-link" routerLink="/workspace/announcements"
-            >Ver todos los avisos <app-icon name="arrow"
-          /></a>
         </section>
       }
       @if (st.access; as access) {

@@ -1,0 +1,395 @@
+<div class="institution-site">
+  <a class="skip-link" routerLink="/" fragment="inicio">Saltar al contenido</a>
+  <header class="public-header site-header">
+    <div class="site-container site-header-inner">
+      <a
+        class="site-brand"
+        routerLink="/"
+        fragment="inicio"
+        (click)="navigate('inicio')"
+        [attr.aria-label]="school.displayName + ', inicio'"
+        ><img
+          [src]="school.assets.mainLogo"
+          [alt]="school.displayName"
+          width="66"
+          height="66"
+        /><span class="site-wordmark"
+          ><strong>{{ school.public.heroTitle || school.displayName }}</strong
+          ><small>{{ school.campusLabel }}</small></span
+        ></a
+      >
+      <button
+        class="site-menu-button"
+        (click)="menuOpen.set(!menuOpen())"
+        [attr.aria-expanded]="menuOpen()"
+        aria-controls="public-navigation"
+        aria-label="Menú de navegación"
+      >
+        <app-icon [name]="menuOpen() ? 'close' : 'menu'" />
+      </button>
+      <nav
+        id="public-navigation"
+        class="site-navigation"
+        [class.open]="menuOpen()"
+        aria-label="Navegación pública"
+      >
+        @for (item of navigation(); track item.id) {
+          <a
+            routerLink="/"
+            [fragment]="item.id"
+            (click)="navigate(item.id)"
+            [class.selected]="activeSection() === item.id"
+            [attr.aria-current]="activeSection() === item.id ? 'location' : null"
+            >{{ item.label }}</a
+          >
+        }
+      </nav>
+      <a class="site-button site-button-gold header-login" href="/Identity/Account/Login"
+        ><app-icon name="user" /><span>Ingresar a mi espacio</span></a
+      >
+    </div>
+  </header>
+  <main>
+    <section class="site-hero" id="inicio" aria-labelledby="hero-title">
+      <svg class="site-shape-defs" aria-hidden="true" width="0" height="0">
+        <defs>
+          <clipPath id="campus-curve" clipPathUnits="objectBoundingBox">
+            <path d="M.60 0H1V1H0C.08.95.12.80.20.58C.28.27.40.08.60 0Z" />
+          </clipPath>
+        </defs>
+      </svg>
+      @if (school.assets.heroImage) {
+        <div class="site-hero-image" aria-hidden="true">
+          <img
+            [src]="school.assets.heroImage"
+            alt=""
+            fetchpriority="high"
+            width="1600"
+            height="703"
+          />
+        </div>
+      }
+      <div class="site-container site-hero-inner">
+        <div class="site-hero-copy">
+          <span class="site-eyebrow light">PLATAFORMA INSTITUCIONAL</span>
+          <h1 id="hero-title">
+            {{ school.public.heroTitle || school.displayName }}
+            @if (school.public.heroAccent) {
+              <em>{{ school.public.heroAccent }}</em>
+            }
+          </h1>
+          <p>{{ school.public.heroDescription || school.welcomeMessage }}</p>
+          <div class="site-hero-actions">
+            <a class="site-button site-button-gold" href="/Identity/Account/Login"
+              >Ingresar a la plataforma <app-icon name="arrow"
+            /></a>
+            @if (hasAbout()) {
+              <a
+                class="site-button site-button-outline"
+                routerLink="/"
+                fragment="nosotros"
+                (click)="navigate('nosotros')"
+                ><app-icon name="play" />Conoce el colegio</a
+              >
+            }
+          </div>
+        </div>
+      </div>
+      <svg
+        class="site-hero-wave"
+        viewBox="0 0 1440 100"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <path d="M0 76C330-35 850 155 1440 18V100H0Z" />
+      </svg>
+    </section>
+    @if (school.public.highlights.length) {
+      <section class="site-pillars" aria-label="Nuestra comunidad educativa">
+        <div class="site-container site-pillars-grid">
+          @for (item of school.public.highlights; track item.title; let i = $index) {
+            <article>
+              <span class="site-pillar-icon"
+                ><app-icon [name]="pillarIcons[i % pillarIcons.length]"
+              /></span>
+              <h2>{{ item.title }}</h2>
+              <p>{{ item.text }}</p>
+            </article>
+          }
+        </div>
+      </section>
+    }
+    @if (hasAbout()) {
+      <section class="site-about" id="nosotros" aria-labelledby="mission-title">
+        <div
+          class="site-container site-mission-grid"
+          [class.no-photo]="!school.assets.studentImage"
+        >
+          @if (school.assets.studentImage) {
+            <figure class="site-mission-photo">
+              <img
+                [src]="school.assets.studentImage"
+                alt="Imagen ilustrativa de estudiantes en el colegio"
+                width="1400"
+                height="625"
+                loading="lazy"
+              />
+            </figure>
+          }
+          <div class="site-mission-copy">
+            <span class="site-eyebrow">NUESTRA MISIÓN</span>
+            <h2 id="mission-title">
+              {{ school.public.missionTitle || school.shortName
+              }}<span>{{ school.public.missionAccent }}</span>
+            </h2>
+            <p>{{ school.public.missionText || school.public.about }}</p>
+          </div>
+        </div>
+        @if (school.public.visionText) {
+          <div class="site-container site-vision-grid">
+            <div>
+              <span class="site-eyebrow">QUIÉNES SOMOS</span>
+              <h2>{{ school.public.aboutTitle }}</h2>
+              <p>{{ school.public.about }}</p>
+            </div>
+            <article>
+              <span class="site-vision-icon"><app-icon name="compass" /></span>
+              <div>
+                <span class="site-eyebrow">NUESTRA VISIÓN</span>
+                <h3>{{ school.public.visionTitle }}</h3>
+                <p>{{ school.public.visionText }}</p>
+              </div>
+            </article>
+          </div>
+        }
+      </section>
+    }
+    @if (school.public.lifeText || school.public.programs.length) {
+      <section class="site-life" id="vida-escolar" aria-labelledby="life-title">
+        <div class="site-container">
+          <div class="site-section-heading">
+            <span class="site-eyebrow">VIDA ESCOLAR</span>
+            <h2 id="life-title">{{ school.public.lifeTitle }}</h2>
+            <p>{{ school.public.lifeText }}</p>
+          </div>
+          <div class="site-life-grid">
+            @for (item of school.public.programs; track item.title; let i = $index) {
+              <article>
+                <span class="site-number">0{{ i + 1 }}</span
+                ><app-icon [name]="['book', 'heart', 'school'][i % 3]" />
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.text }}</p>
+              </article>
+            }
+          </div>
+          <div class="site-digital-strip">
+            <span><app-icon name="school" /></span>
+            <div>
+              <h3>{{ school.public.digitalTitle }}</h3>
+              <p>{{ school.public.digitalText }}</p>
+            </div>
+            <a href="/Identity/Account/Login" class="site-text-link"
+              >Conoce tu espacio <app-icon name="arrow"
+            /></a>
+          </div>
+        </div>
+      </section>
+    }
+    @if (school.public.admissionsMessage || school.public.admissionSteps.length) {
+      <section class="site-admissions" id="admision" aria-labelledby="admission-title">
+        <div class="site-container">
+          <div class="site-section-heading">
+            <span class="site-eyebrow">ADMISIÓN</span>
+            <h2 id="admission-title">{{ school.public.admissionsTitle }}</h2>
+            <p>{{ school.public.admissionsMessage }}</p>
+          </div>
+          <ol class="site-admission-steps">
+            @for (item of school.public.admissionSteps; track item.title; let i = $index) {
+              <li>
+                <span>0{{ i + 1 }}</span>
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.text }}</p>
+              </li>
+            }
+          </ol>
+          @if (admissionLink()) {
+            <a
+              class="site-button site-button-gold"
+              [href]="admissionLink()"
+              target="_blank"
+              rel="noopener"
+              >Solicitar información <app-icon name="arrow"
+            /></a>
+          }
+        </div>
+      </section>
+    }
+    @if (school.public.communityText) {
+      <section class="site-community" id="comunidad" aria-labelledby="community-title">
+        <div class="site-container site-community-grid">
+          <div>
+            <span class="site-eyebrow light">NUESTRA COMUNIDAD</span>
+            <h2 id="community-title">{{ school.public.communityTitle }}</h2>
+            <p>{{ school.public.communityText }}</p>
+            @if (socials().length) {
+              <a
+                class="site-button site-button-gold"
+                [href]="socials()[0].url"
+                target="_blank"
+                rel="noopener"
+                >Síguenos y conecta <app-icon name="arrow"
+              /></a>
+            }
+          </div>
+          @if (school.assets.communityImage) {
+            <figure>
+              <img
+                [src]="school.assets.communityImage"
+                alt="Imagen ilustrativa de la comunidad educativa"
+                width="1400"
+                height="800"
+                loading="lazy"
+              />
+            </figure>
+          }
+        </div>
+      </section>
+    }
+    @if (school.public.questions.length) {
+      <section class="site-questions" aria-labelledby="questions-title">
+        <div class="site-container site-questions-grid">
+          <div>
+            <span class="site-eyebrow">TE ACOMPAÑAMOS</span>
+            <h2 id="questions-title">{{ school.public.questionsTitle }}</h2>
+          </div>
+          <div class="site-questions-list">
+            @for (item of school.public.questions; track item.title) {
+              <details>
+                <summary>{{ item.title }}<app-icon name="plus" /></summary>
+                <p>{{ item.text }}</p>
+              </details>
+            }
+          </div>
+        </div>
+      </section>
+    }
+    @if (
+      school.contact.address ||
+      school.contact.mapQuery ||
+      school.contact.phone ||
+      school.contact.email ||
+      school.contact.whatsApp
+    ) {
+      <section class="site-contact" id="contacto" aria-labelledby="contact-title">
+        <div
+          class="site-container site-contact-grid"
+          [class.no-location]="!school.contact.address && !school.contact.mapQuery"
+        >
+          <div>
+            <span class="site-eyebrow">CONTACTO Y UBICACIÓN</span>
+            <h2 id="contact-title">{{ school.public.contactTitle }}</h2>
+            <p>{{ school.public.contactText }}</p>
+            <div class="site-contact-links">
+              @if (school.contact.phone) {
+                <a [href]="phoneHref()"
+                  ><app-icon name="phone-call" /><span
+                    ><small>Teléfono</small><strong>{{ school.contact.phone }}</strong></span
+                  ><app-icon name="arrow"
+                /></a>
+              }
+              @if (school.contact.email) {
+                <a [href]="mailTo()"
+                  ><app-icon name="mail" /><span
+                    ><small>Correo electrónico</small
+                    ><strong>{{ school.contact.email }}</strong></span
+                  ><app-icon name="arrow"
+                /></a>
+              }
+              @if (school.contact.whatsApp) {
+                <a
+                  [href]="'https://wa.me/' + school.contact.whatsApp"
+                  target="_blank"
+                  rel="noopener"
+                  ><app-icon name="message" /><span
+                    ><small>Estamos para ayudarte</small
+                    ><strong>Escríbenos por WhatsApp</strong></span
+                  ><app-icon name="arrow"
+                /></a>
+              }
+            </div>
+          </div>
+          @if (school.contact.address || school.contact.mapQuery) {
+            <div class="site-location">
+              <span class="site-location-icon"><app-icon name="pin" /></span>
+              <h3>Visítanos</h3>
+              <p>{{ school.contact.address }}</p>
+              <div class="site-location-actions">
+                <a
+                  class="site-button site-button-gold"
+                  [href]="directionsUrl()"
+                  target="_blank"
+                  rel="noopener"
+                  >Cómo llegar <app-icon name="arrow" /></a
+                ><button class="site-text-link" (click)="showMap()">
+                  Ver mapa <app-icon name="pin" />
+                </button>
+              </div>
+              @if (mapUrl(); as url) {
+                <iframe
+                  [src]="url"
+                  title="Ubicación del colegio"
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
+                ></iframe>
+              }
+              <div class="site-location-lines" aria-hidden="true"></div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  </main>
+  <footer class="site-footer">
+    <div class="site-footer-wave" aria-hidden="true"></div>
+    <div class="site-container site-footer-contacts">
+      @if (school.contact.address) {
+        <a [href]="directionsUrl()" target="_blank" rel="noopener"
+          ><app-icon name="pin" /><span
+            ><strong>Dirección</strong><small>{{ school.contact.address }}</small></span
+          ></a
+        >
+      }
+      @if (school.contact.phone) {
+        <a [href]="phoneHref()"
+          ><app-icon name="phone-call" /><span
+            ><strong>Teléfono / WhatsApp</strong><small>{{ school.contact.phone }}</small></span
+          ></a
+        >
+      }
+      @if (school.contact.email) {
+        <a [href]="mailTo()"
+          ><app-icon name="mail" /><span
+            ><strong>Correo</strong><small>{{ school.contact.email }}</small></span
+          ></a
+        >
+      }
+      @if (socials().length) {
+        <a [href]="socials()[0].url" target="_blank" rel="noopener"
+          ><app-icon name="instagram" /><span
+            ><strong>Síguenos</strong><small>{{ socials()[0].handle }}</small></span
+          ></a
+        >
+      }
+    </div>
+    <div class="site-container site-footer-bottom">
+      <span>© {{ year }} {{ school.displayName }}. Todos los derechos reservados.</span>
+      @if (school.contact.email) {
+        <div>
+          <a [href]="mailTo('Consulta de privacidad')">Aviso de privacidad</a
+          ><span aria-hidden="true">|</span
+          ><a [href]="mailTo('Consulta de términos de uso')">Términos de uso</a>
+        </div>
+      }
+    </div>
+  </footer>
+</div>

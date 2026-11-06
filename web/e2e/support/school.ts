@@ -12,7 +12,7 @@ export async function login(page: Page, ensureSchoolAccess = true): Promise<void
   await page.goto('/Identity/Account/Login');
   await enterCredentials(page);
   await expect(
-    page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ }),
+    page.getByRole('heading', { name: /^¡Hola,/ }),
   ).toBeVisible();
   const session = await (await page.request.get('/api/v1/session')).json();
   if (ensureSchoolAccess && !session.permissions.includes('academic.manage')) {

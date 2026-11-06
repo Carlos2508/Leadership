@@ -121,10 +121,16 @@ public sealed class DashboardSqlTests : SqlTestBase
         var academicChild = family.Students.Single(x => x.Id == student);
         Assert.Equal(1, academicChild.PendingTasks);
         Assert.Equal("Tarea autorizada", Assert.Single(academicChild.Tasks).Title);
+        Assert.False(academicChild.IsSelf);
+        Assert.Equal(1, academicChild.Courses);
+        Assert.Equal((course, "Curso autorizado", "Grado sintético"),
+            (Assert.Single(academicChild.CourseItems).Id, academicChild.CourseItems[0].Subject, academicChild.CourseItems[0].Grade));
         Assert.Null(academicChild.Balance);
         var limitedChild = family.Students.Single(x => x.Id == financeOnly);
         Assert.Null(limitedChild.PendingTasks);
         Assert.Empty(limitedChild.Tasks);
+        Assert.Null(limitedChild.Courses);
+        Assert.Empty(limitedChild.CourseItems);
         Assert.Equal(0m, limitedChild.Balance);
         Assert.Equal(0, limitedChild.Charges);
         Assert.DoesNotContain("score", JsonSerializer.Serialize(family), StringComparison.OrdinalIgnoreCase);
@@ -137,6 +143,15 @@ public sealed class DashboardSqlTests : SqlTestBase
         Assert.False(revoked.CanAcademic);
         Assert.Null(revoked.PendingTasks);
         Assert.Empty(revoked.Tasks);
+        Assert.Null(revoked.Courses);
+        Assert.Empty(revoked.CourseItems);
+        var studentUser = await Account("dashboard-student");
+        await Link(student, studentUser);
+        var self = Assert.Single((await Read(studentUser, year)).Students);
+        Assert.True(self.IsSelf);
+        Assert.Equal(1, self.Courses);
+        Assert.Equal(course, Assert.Single(self.CourseItems).Id);
+        Assert.Null(self.Balance);
         var basic = await Account("dashboard-outsider");
         await Assert.ThrowsAsync<OperationException>(() => Read(basic, year));
         Assert.Empty((await Read(basic)).Years);

@@ -22,12 +22,36 @@ export interface Institution {
     social: { facebook: string; instagram: string; youTube: string; tikTok: string };
   };
   public: {
+    aboutTitle: string;
+    digitalTitle: string;
+    digitalText: string;
+    questionsTitle: string;
+    contactTitle: string;
+    contactText: string;
+    heroTitle: string;
+    heroAccent: string;
+    heroDescription: string;
+    missionTitle: string;
+    missionAccent: string;
+    missionText: string;
+    visionTitle: string;
+    visionText: string;
+    lifeTitle: string;
+    lifeText: string;
+    communityTitle: string;
+    communityText: string;
+    admissionsTitle: string;
+    admissionSteps: { title: string; text: string }[];
+    questions: { title: string; text: string }[];
     about: string;
     highlights: { title: string; text: string }[];
     programs: { title: string; text: string }[];
     admissionsMessage: string;
   };
   assets: {
+    heroImage: string;
+    studentImage: string;
+    communityImage: string;
     mainLogo: string;
     loginLogo: string;
     receiptLogo: string;

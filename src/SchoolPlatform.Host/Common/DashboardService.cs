@@ -25,8 +25,9 @@ public sealed record DashboardFinance(decimal Pending, int StudentsWithBalance, 
     CollectionDay[] LastSevenDays, DashboardReceipt[] RecentReceipts);
 public sealed record DashboardGate(int Expected, int Arrived, int Inside, int Left);
 public sealed record DashboardTask(string Course, string Title, DateTimeOffset DueAt, bool Overdue);
+public sealed record DashboardStudentCourse(Guid Id, string Subject, string Grade, string? Section);
 public sealed record DashboardStudent(Guid Id, string Name, string Code, bool CanAcademic, bool CanFinance, bool? Enrolled,
-    int? PendingTasks, DashboardTask[] Tasks, decimal? Balance, int? Charges);
+    int? PendingTasks, DashboardTask[] Tasks, decimal? Balance, int? Charges, bool IsSelf, int? Courses, DashboardStudentCourse[] CourseItems);
 public sealed record DashboardTeaching(Guid Id, string Subject, string Grade, string? Section, int Students,
     int PendingReviews, int AttendanceRecorded, DashboardTask[] Upcoming);
 public sealed record DashboardAccess(int PendingActivation, int Suspended);
@@ -121,8 +122,20 @@ public sealed class DashboardService(SchoolDbContext db, IAuthorizationService a
                 ? await db.Enrollments.AnyAsync(e => e.StudentId == student.Id && e.AcademicYearId == yearId && e.Status != EnrollmentStatus.Cancelled, ct) : null;
             DashboardTask[] tasks = [];
             int? pendingTasks = null;
+            int? courseCount = null;
+            DashboardStudentCourse[] courseItems = [];
             if (canAcademic && enrolled == true)
             {
+                courseItems = await db.Courses.AsNoTracking().Where(c => c.AcademicYearId == yearId &&
+                    db.Placements.Any(p => p.GradeLevelId == c.GradeLevelId && (c.SectionId == null || p.SectionId == c.SectionId) &&
+                        p.EndsOn == null && db.Enrollments.Any(e => e.Id == p.EnrollmentId && e.StudentId == student.Id &&
+                            e.AcademicYearId == yearId && e.Status == EnrollmentStatus.Active)))
+                    .OrderBy(c => db.Subjects.Where(s => s.Id == c.SubjectId).Select(s => s.Name).First())
+                    .Select(c => new DashboardStudentCourse(c.Id, db.Subjects.Where(s => s.Id == c.SubjectId).Select(s => s.Name).First(),
+                        db.Grades.Where(g => g.Id == c.GradeLevelId).Select(g => g.Name).First(),
+                        db.Sections.Where(s => s.Id == c.SectionId).Select(s => s.Name).FirstOrDefault()))
+                    .ToArrayAsync(ct);
+                courseCount = courseItems.Length;
                 var allowed = await learning.StudentAssignmentsAsync(actor, student.Id, ct) ?? [];
                 var activityIds = await (from a in db.Assignments.AsNoTracking()
                                          join c in db.Courses on a.CourseId equals c.Id
@@ -130,11 +143,11 @@ public sealed class DashboardService(SchoolDbContext db, IAuthorizationService a
                 var pending = allowed.Where(a => activityIds.Contains(a.Id) && !a.Closed && a.SubmissionStatus == null &&
                     (a.DueAt >= now || a.AllowLate)).OrderBy(a => a.DueAt).ToArray();
                 pendingTasks = pending.Length;
-                tasks = pending.Take(3).Select(a => new DashboardTask(a.Course, a.Title, a.DueAt, a.DueAt < now)).ToArray();
+                tasks = pending.Select(a => new DashboardTask(a.Course, a.Title, a.DueAt, a.DueAt < now)).ToArray();
             }
             Statement? statement = canFinance && enrolled == true ? await charges.StatementAsync(student.Id, yearId, ct) : null;
             students.Add(new(student.Id, student.DisplayName, student.StudentCode, canAcademic, canFinance, enrolled,
-                pendingTasks, tasks, statement?.TotalBalance, statement?.Charges.Count(c => c.Status != "Voided")));
+                pendingTasks, tasks, statement?.TotalBalance, statement?.Charges.Count(c => c.Status != "Voided"), access.IsSelf, courseCount, courseItems));
         }
         DashboardAccess? accountSummary = accessRead ? new(
             await db.Accounts.CountAsync(a => a.PasswordHash == null, ct),

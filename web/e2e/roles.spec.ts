@@ -14,7 +14,7 @@ test('custom access roles accept all permissions and update assigned accounts th
     .fill(process.env['SCHOOLPLATFORM_E2E_PASSWORD']!);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
   await expect(
-    page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ }),
+    page.getByRole('heading', { name: /^¡Hola,/ }),
   ).toBeVisible();
   await page.goto('/workspace/roles');
   await expect(page.getByRole('heading', { name: 'Roles y permisos', exact: true })).toBeVisible();

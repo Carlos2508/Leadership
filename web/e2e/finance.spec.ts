@@ -9,7 +9,7 @@ async function login(page: Page, username: string, password: string): Promise<vo
   await page.getByLabel('Usuario', { exact: true }).fill(username);
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^¡Hola,/ })).toBeVisible();
 }
 
 async function post(page: Page, path: string, data: object) {

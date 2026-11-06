@@ -73,6 +73,9 @@ export interface Dashboard {
     tasks: DashboardTask[];
     balance: number | null;
     charges: number | null;
+    isSelf: boolean;
+    courses: number | null;
+    courseItems: { id: string; subject: string; grade: string; section: string | null }[];
   }[];
   access: { pendingActivation: number; suspended: number } | null;
 }

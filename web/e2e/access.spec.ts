@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { randomUUID } from 'node:crypto';
 
+test.use({ trace: 'off' });
+
 test('manage an invitation, activate without email, recover access and inspect durable audit', async ({
   page,
   browser,
@@ -17,12 +19,14 @@ test('manage an invitation, activate without email, recover access and inspect d
     .getByLabel('Contraseña', { exact: true })
     .fill(process.env['SCHOOLPLATFORM_E2E_PASSWORD']!);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(
-    page.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^¡Hola,/ })).toBeVisible();
   if (testInfo.project.name === 'mobile')
     await page.getByRole('button', { name: 'Abrir menú' }).click();
-  await page.locator('summary').filter({ hasText: 'Administración' }).click();
+  await page
+    .getByRole('navigation', { name: 'Navegación principal' })
+    .locator('summary')
+    .filter({ hasText: 'Administración' })
+    .click();
   await page
     .getByRole('navigation', { name: 'Navegación principal' })
     .getByRole('link', { name: 'Cuentas y accesos', exact: true })
@@ -67,9 +71,7 @@ test('manage an invitation, activate without email, recover access and inspect d
   await student.getByLabel('Usuario', { exact: true }).fill(username);
   await student.getByLabel('Contraseña', { exact: true }).fill(password);
   await student.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(
-    student.getByRole('heading', { name: /^(Buenos días|Buenas tardes|Buenas noches)/ }),
-  ).toBeVisible();
+  await expect(student.getByRole('heading', { name: /^¡Hola,/ })).toBeVisible();
   await expect(student.getByRole('link', { name: 'Administrar cuentas' })).toHaveCount(0);
   expect((await student.request.get('/api/v1/access/accounts')).status()).toBe(403);
   expect((await student.request.get('/api/v1/audit')).status()).toBe(403);

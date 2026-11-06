@@ -57,6 +57,27 @@ public sealed class SocialOptions
 
 public sealed class PublicSiteOptions
 {
+    public string AboutTitle { get; set; } = "";
+    public string DigitalTitle { get; set; } = "";
+    public string DigitalText { get; set; } = "";
+    public string QuestionsTitle { get; set; } = "";
+    public string ContactTitle { get; set; } = "";
+    public string ContactText { get; set; } = "";
+    public string HeroTitle { get; set; } = "";
+    public string HeroAccent { get; set; } = "";
+    public string HeroDescription { get; set; } = "";
+    public string MissionTitle { get; set; } = "";
+    public string MissionAccent { get; set; } = "";
+    public string MissionText { get; set; } = "";
+    public string VisionTitle { get; set; } = "";
+    public string VisionText { get; set; } = "";
+    public string LifeTitle { get; set; } = "";
+    public string LifeText { get; set; } = "";
+    public string CommunityTitle { get; set; } = "";
+    public string CommunityText { get; set; } = "";
+    public string AdmissionsTitle { get; set; } = "";
+    public PublicItem[] AdmissionSteps { get; set; } = [];
+    public PublicItem[] Questions { get; set; } = [];
     public string About { get; set; } = "";
     public PublicItem[] Highlights { get; set; } = [];
     public PublicItem[] Programs { get; set; } = [];
@@ -82,6 +103,9 @@ public sealed class DocumentOptions
 
 public sealed class AssetOptions
 {
+    public string HeroImage { get; set; } = "";
+    public string StudentImage { get; set; } = "";
+    public string CommunityImage { get; set; } = "";
     public string MainLogo { get; set; } = "";
     public string LoginLogo { get; set; } = "";
     public string ReceiptLogo { get; set; } = "";
@@ -124,7 +148,8 @@ public sealed class InstitutionValidator(IWebHostEnvironment environment) : IVal
             if (string.IsNullOrWhiteSpace(value)) errors.Add("Falta un nombre, mensaje o término institucional obligatorio.");
 
         foreach (var path in new[] { options.Assets.MainLogo, options.Assets.LoginLogo, options.Assets.ReceiptLogo,
-                     options.Assets.ReportCardLogo, options.Assets.CardLogo, options.Assets.Favicon })
+                     options.Assets.ReportCardLogo, options.Assets.CardLogo, options.Assets.Favicon }
+                 .Concat(new[] { options.Assets.HeroImage, options.Assets.StudentImage, options.Assets.CommunityImage }.Where(x => x.Length > 0)))
         {
             if (!Regex.IsMatch(path, @"^/branding/[a-zA-Z0-9_-]+\.(png|svg|ico|webp)$") ||
                 !File.Exists(Path.Combine(environment.WebRootPath, path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar))))

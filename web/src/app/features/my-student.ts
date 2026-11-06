@@ -1,6 +1,6 @@
 import { Component, ElementRef, ViewChild, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi } from '../core/access-api';
 import { Alerts } from '../core/alerts';
@@ -338,6 +338,7 @@ interface StudentTask {
   `,
 })
 export class MyStudent {
+  private readonly route = inject(ActivatedRoute);
   readonly gateDays = signal<MyGateDay[] | null>(null);
   readonly gateError = signal('');
   async loadGate(): Promise<void> {
@@ -491,6 +492,8 @@ export class MyStudent {
         this.grades.set(await this.api.get(`/api/v1/me/students/${view.student.id}/grades`));
       if (!view.isSelf && view.faculties.includes('Finance'))
         this.statement.set(await this.api.get<Statement>(`/api/v1/me/students/${view.student.id}/statement`));
+      const fragment = this.route.snapshot.fragment;
+      if (fragment) requestAnimationFrame(() => document.getElementById(fragment)?.scrollIntoView({ block: 'start' }));
     } catch (error) {
       if (error instanceof HttpErrorResponse && (error.status === 404 || error.status === 400)) this.notFound.set(true);
       else this.error.set(this.api.message(error));

@@ -6,7 +6,13 @@ import {
 } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { InstitutionService } from './core/institution';
-import { PreloadAllModules, provideRouter, withComponentInputBinding, withPreloading } from '@angular/router';
+import {
+  PreloadAllModules,
+  provideRouter,
+  withComponentInputBinding,
+  withPreloading,
+  withInMemoryScrolling,
+} from '@angular/router';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -15,6 +21,11 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => inject(InstitutionService).load()),
     provideBrowserGlobalErrorListeners(),
     // Lazy pages download in the background after the first screen, so later navigation is instant.
-    provideRouter(routes, withComponentInputBinding(), withPreloading(PreloadAllModules)),
+    provideRouter(
+      routes,
+      withComponentInputBinding(),
+      withPreloading(PreloadAllModules),
+      withInMemoryScrolling({ anchorScrolling: 'enabled', scrollPositionRestoration: 'enabled' }),
+    ),
   ],
 };

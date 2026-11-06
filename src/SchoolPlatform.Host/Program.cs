@@ -243,11 +243,17 @@ app.MapGet("/api/v1/session", async (ClaimsPrincipal user, IOptions<InstitutionO
     var mfaPending = twoFactor ? [] : await mfa.RequiredByAsync(userId, ct);
     // Name of the linked person (if any) for the avatar and greeting; accounts without a person show their username.
     var person = await school.AccountLinks.AsNoTracking().Where(x => x.UserId == userId && x.UnlinkedAt == null)
-        .Join(school.Persons, l => l.PersonId, p => p.Id, (l, p) => new { p.GivenNames, p.FamilyNames, p.PreferredName }).FirstOrDefaultAsync(ct);
+        .Join(school.Persons, l => l.PersonId, p => p.Id, (l, p) => new { p.Id, p.GivenNames, p.FamilyNames, p.PreferredName, p.Status,
+            IsStudent = school.Students.Any(s => s.PersonId == p.Id), IsGuardian = school.Guardians.Any(g => g.PersonId == p.Id),
+            IsStaff = school.Staff.Any(s => s.PersonId == p.Id) }).FirstOrDefaultAsync(ct);
+    var roleLabel = await db.AccountRoleAssignments.Where(a => a.UserId == userId)
+        .Join(db.AccessRoles, a => a.RoleKey, r => r.Key, (a, r) => r.Label).FirstOrDefaultAsync(ct);
     return Results.Ok(new
     {
         userId, username = user.Identity!.Name, schoolId = options.Value.SchoolId,
         displayName = person is null ? null : SchoolPlatform.Host.People.PeopleService.Display(person.GivenNames, person.FamilyNames, person.PreferredName),
+        studentId = person is { IsStudent: true, Status: SchoolPlatform.Host.People.PersonStatus.Active } ? (Guid?)person.Id : null,
+        schoolProfile = person?.IsStudent == true ? "Estudiante" : person?.IsStaff == true ? "Docente y personal" : person?.IsGuardian == true ? "Familia" : roleLabel,
         permissions = permissions.Except(mfaPending).ToArray(), twoFactorEnabled = twoFactor, mfaPending
     });
 })

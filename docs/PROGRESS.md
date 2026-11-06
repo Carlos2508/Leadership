@@ -2,6 +2,15 @@
 
 Actualizado: 5 de noviembre de 2026, America/Guatemala.
 
+## Rediseño según las capturas del propietario — estado vigente
+
+- Se sustituyó la dirección visual anterior por las capturas pública/estudiantil y el paquete HTML/CSS aportado: carbón/dorado, marfil, Inter normal/cursiva autoalojada, imágenes originales, portada curva, menú/cabecera oscuros, cápsula seleccionada y tarjetas. Mismo sistema en ingreso Razor, directorios y módulos. Ver ADR-013 y `QA_REFERENCIA_2026-11-05.md`.
+- Página pública ampliada con misión/visión, vida escolar, admisión, comunidad, preguntas y contacto; cada entrada del menú tiene destino real, con desplazamiento bajo la cabecera y cierre móvil. Todos los contenidos institucionales, recursos y colores permanecen en `institution.json`/`InstitutionOptions`; no hay editor de marca. La redacción pública nueva fue autorizada por el propietario y no se trata como una política oficial investigada.
+- Panel con composición de referencia y datos reales: cursos propios, tareas, calendario por fecha, comunicados y acciones funcionales. Conserva los resúmenes de administración/docencia/familia, ciclo explícito y permisos por recurso. No copia promedio, horario ni Recursos ficticios. Curso propio/familiar se obtiene solo con acceso académico; revocar la facultad retira cursos/tareas. La sesión añade contexto visual del perfil, sin conceder permisos por nombre.
+- **89 .NET/SQL aprobadas**, 0 omitidas; build Angular correcto. **81 E2E aprobados y 1 omisión prevista**, 0 fallos, corrida completa de 82 casos; **18 adicionales aprobados** tras corregir texto sobre la curva en menú/ingreso. Axe, capturas y ausencia de desbordamiento revisados en escritorio/móvil y 320/390/900/1440/1920 px; recorridos operativos también 768/1024 px. Advertencia conocida SweetAlert2 CommonJS.
+- Evidencia preservada en `.local/qa/evidencia/reference-redesign-2026-11-05/`: 159 PNG de suite completa y 58 finales, más accesos directos de portada/panel. Originales del kit y copias coinciden por SHA-256. SQL final: **0 bases temporales**. `git diff --check` correcto. Host final `http://localhost:5082`, raíz/liveness/readiness 200, metadatos `.local/qa/reference-design-host.json`, lanzador 3372.
+- Incremento en working tree sobre `434a824`, **sin commit/push ni despliegue**. Sin migraciones, importación, cambios de datos escolares/PHP/Numix ni Flutter. Los pendientes anteriores de operación, políticas, hardware y licencias se conservan.
+
 ## Consolidación de QA y experiencia en Git
 
 El propietario solicitó commit y push de todo lo pendiente. Este commit reúne las dos revisiones de flujos y sus mejoras de experiencia, pruebas y documentación. Las referencias posteriores a cambios sin commit describen el cierre de esas revisiones. Se conserva la validación documentada (89 .NET/SQL, 68 Flutter, 75 E2E y 6 adicionales); se comprobó `git diff --check` sin repetir suites. Evidencias y credenciales locales permanecen ignoradas. No incluye despliegue.

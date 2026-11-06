@@ -12,6 +12,7 @@ import { Icon } from '../shared/icon';
 import { CyclePipe } from '../shared/cycle.pipe';
 import { money } from '../core/finance-api';
 import { yearStatusLabels } from '../core/academic-api';
+import { SchoolCalendar } from '../shared/school-calendar';
 
 interface Attention {
   key: string;
@@ -22,8 +23,24 @@ interface Attention {
   action: string;
   tone: string;
 }
+interface HomeActivity {
+  key: string;
+  title: string;
+  detail: string;
+  date: string;
+  route: string[];
+  fragment?: string;
+  overdue: boolean;
+  kind: string;
+}
+interface HomeAction {
+  label: string;
+  icon: string;
+  route: string[];
+  fragment?: string;
+}
 @Component({
-  imports: [Shell, Icon, RouterLink, CyclePipe, FormsModule],
+  imports: [Shell, Icon, RouterLink, CyclePipe, FormsModule, SchoolCalendar],
   templateUrl: './workspace.html',
 })
 export class Workspace {
@@ -38,6 +55,110 @@ export class Workspace {
   readonly feed = signal<FeedItem[]>([]);
   readonly feedError = signal('');
   readonly unread = computed(() => this.feed().filter((x) => !x.read).length);
+  readonly activityDate = signal('');
+  readonly self = computed(() => this.stats()?.students.find((s) => s.isSelf));
+  readonly familyStudents = computed(() => this.stats()?.students.filter((s) => !s.isSelf) ?? []);
+  readonly personalCourseCount = computed(() =>
+    this.self()
+      ? (this.self()!.courses ?? '—')
+      : this.stats()?.teaching.length || this.familyStudents().length,
+  );
+  readonly personalPending = computed(() =>
+    this.stats()?.teaching.length
+      ? this.reviews()
+      : this.stats()?.students.some((s) => s.pendingTasks !== null)
+        ? this.pendingTasks()
+        : '—',
+  );
+  readonly activities = computed<HomeActivity[]>(() => {
+    const st = this.stats();
+    if (!st) return [];
+    const items: HomeActivity[] = [];
+    for (const student of st.students)
+      for (const task of student.tasks)
+        items.push({
+          key: student.id + task.title + task.dueAt,
+          title: task.title,
+          detail: (student.isSelf ? '' : student.name + ' · ') + task.course,
+          date: this.localDate(task.dueAt),
+          route: ['/workspace/my/students', student.id],
+          fragment: 'tasks-title',
+          overdue: task.overdue,
+          kind: 'Tarea',
+        });
+    for (const course of st.teaching)
+      for (const task of course.upcoming)
+        items.push({
+          key: course.id + task.title + task.dueAt,
+          title: task.title,
+          detail: course.subject,
+          date: this.localDate(task.dueAt),
+          route: ['/workspace/courses', course.id, 'assignments'],
+          overdue: false,
+          kind: 'Entrega',
+        });
+    for (const period of st.academic?.periods ?? [])
+      if (!period.published && period.endsOn >= st.on)
+        items.push({
+          key: period.periodId,
+          title: 'Cierre de ' + period.name,
+          detail: 'Período académico',
+          date: period.endsOn,
+          route: ['/workspace/grades'],
+          overdue: false,
+          kind: 'Período',
+        });
+    return items.sort((a, b) => a.date.localeCompare(b.date));
+  });
+  readonly eventDates = computed(() => this.activities().map((a) => a.date));
+  readonly visibleActivities = computed(() =>
+    this.activities()
+      .filter((a) => !this.activityDate() || a.date === this.activityDate())
+      .slice(0, 3),
+  );
+  readonly upcomingCount = computed(() => this.activities().filter((a) => !a.overdue).length);
+  readonly quickActions = computed<HomeAction[]>(() => {
+    const student = this.self();
+    if (student)
+      return [
+        { label: 'Mis clases', icon: 'book', route: ['/workspace'], fragment: 'personal-courses' },
+        {
+          label: 'Mis tareas',
+          icon: 'clipboard',
+          route: ['/workspace/my/students', student.id],
+          fragment: 'tasks-title',
+        },
+        {
+          label: 'Calificaciones',
+          icon: 'chart',
+          route: ['/workspace/my/students', student.id],
+          fragment: 'grades-title',
+        },
+        { label: 'Mi cuenta', icon: 'user', route: ['/workspace/security'] },
+      ];
+    const actions: HomeAction[] = [];
+    if (this.session.can('finance.collect'))
+      actions.push({ label: 'Registrar pago', icon: 'wallet', route: ['/workspace/finance'] });
+    if (this.session.can('enrollment.manage'))
+      actions.push({ label: 'Inscripciones', icon: 'school', route: ['/workspace/enrollment'] });
+    if (this.stats()?.teaching.length || this.session.can('academic.read'))
+      actions.push({ label: 'Cursos', icon: 'book', route: ['/workspace/courses'] });
+    if (this.familyStudents()[0])
+      actions.push({
+        label: 'Seguimiento escolar',
+        icon: 'school',
+        route: ['/workspace/my/students', this.familyStudents()[0].id],
+      });
+    if (this.session.can('attendance.gate'))
+      actions.push({ label: 'Portería', icon: 'scan', route: ['/workspace/gate'] });
+    if (this.session.can('accounts.manage'))
+      actions.push({ label: 'Cuentas y accesos', icon: 'shield', route: ['/workspace/access'] });
+    actions.push(
+      { label: 'Comunicados', icon: 'megaphone', route: ['/workspace/announcements'] },
+      { label: 'Mi cuenta', icon: 'user', route: ['/workspace/security'] },
+    );
+    return actions.slice(0, 4);
+  });
   readonly selectedYear = computed(() =>
     this.stats()?.years.find((y) => y.id === this.stats()?.yearId),
   );
@@ -127,22 +248,6 @@ export class Workspace {
   readonly greetingName = computed(
     () => this.session.displayName().split(' ')[0] || this.session.username(),
   );
-  readonly greeting = (() => {
-    const hour = Number(
-      new Intl.DateTimeFormat('en-US', {
-        hour: 'numeric',
-        hourCycle: 'h23',
-        timeZone: this.school.locale.timeZone,
-      }).format(new Date()),
-    );
-    return hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
-  })();
-  readonly today = new Intl.DateTimeFormat(this.school.locale.culture, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    timeZone: this.school.locale.timeZone,
-  }).format(new Date());
   private request = 0;
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
@@ -163,6 +268,7 @@ export class Workspace {
       );
       if (request !== this.request) return;
       this.stats.set(data);
+      this.activityDate.set('');
       if (!year && data.yearId)
         await this.router.navigate([], {
           relativeTo: this.route,
@@ -204,6 +310,19 @@ export class Workspace {
         ? { weekday: 'short', timeZone: 'UTC' }
         : { day: 'numeric', month: 'short', timeZone: 'UTC' },
     ).format(new Date(date + 'T12:00:00Z'));
+  }
+  dayNumber(date: string): string {
+    return String(Number(date.slice(8, 10)));
+  }
+  localDate(value: string): string {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: this.school.locale.timeZone,
+    }).formatToParts(new Date(value));
+    const part = (type: string) => parts.find((p) => p.type === type)!.value;
+    return `${part('year')}-${part('month')}-${part('day')}`;
   }
   deadline(value: string): string {
     return new Intl.DateTimeFormat(this.school.locale.culture, {

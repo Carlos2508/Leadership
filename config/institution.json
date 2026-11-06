@@ -3,7 +3,7 @@
     "SchoolId": "d0883093-df28-41e9-aee4-454bb2262551",
     "DisplayName": "Colegio Leadership Mixco",
     "ShortName": "Leadership",
-    "CampusLabel": "Mixco · Campus",
+    "CampusLabel": "MIXCO",
     "LegalName": "",
     "Tagline": "¡Piensa en grande!",
     "WelcomeMessage": "Tu espacio para aprender, conectar y crecer.",
@@ -14,10 +14,10 @@
       "Website": "",
       "DialPrefix": "+502",
       "Phones": [],
-      "WhatsApp": "",
+      "WhatsApp": "50251294403",
       "OfficeHours": [],
       "MapQuery": "Colegio Leadership, 7a avenida 10-72 zona 1, Mixco",
-      "Social": { "Facebook": "", "Instagram": "", "YouTube": "", "TikTok": "" }
+      "Social": { "Facebook": "", "Instagram": "https://www.instagram.com/colegio_leadershipgt/", "YouTube": "", "TikTok": "" }
     },
     "Documents": { "TaxId": "", "ReceiptFooter": "", "ReportCardFooter": "", "CardRules": [
         "Uso personal e intransferible dentro de las instalaciones del colegio.",
@@ -26,16 +26,63 @@
       ],
       "CardNotice": "Este carnet acredita al estudiante inscrito durante el ciclo escolar indicado." },
     "Assets": {
-      "MainLogo": "/branding/main.png",
-      "LoginLogo": "/branding/main.png",
+      "MainLogo": "/branding/reference-crest.png",
+      "LoginLogo": "/branding/reference-crest.png",
+      "HeroImage": "/branding/campus.webp",
+      "StudentImage": "/branding/students.webp",
+      "CommunityImage": "/branding/community.webp",
       "ReceiptLogo": "/branding/receipt.png",
       "ReportCardLogo": "/branding/report.png",
-      "CardLogo": "/branding/main.png",
+      "CardLogo": "/branding/reference-crest.png",
       "Favicon": "/branding/favicon.png"
     },
-    "Theme": { "Deep": "#073B25", "Primary": "#0B5835", "Accent": "#ECA42E", "Surface": "#F7F9F5" },
+    "Theme": { "Deep": "#0D1114", "Primary": "#15191C", "Accent": "#F8B91C", "Surface": "#F8F6F2" },
     "Locale": { "Culture": "es-GT", "TimeZone": "America/Guatemala", "Currency": "GTQ" },
-    "Public": { "About": "", "Highlights": [], "Programs": [], "AdmissionsMessage": "" },
+    "Public": {
+      "AboutTitle": "Una educación que deja huella.",
+      "DigitalTitle": "Tu vida escolar, en un solo lugar.",
+      "DigitalText": "Clases, tareas, avisos y seguimiento desde tu espacio personal.",
+      "QuestionsTitle": "Un buen comienzo empieza con tus preguntas.",
+      "ContactTitle": "Conversemos sobre el futuro.",
+      "ContactText": "Queremos escucharte. Encuentra el canal que mejor se adapte a ti.",
+      "HeroTitle": "Colegio Leadership",
+      "HeroAccent": "Mixco",
+      "HeroDescription": "Un espacio digital que conecta a estudiantes, docentes y familias, con toda la información académica y administrativa del colegio.",
+      "About": "Creemos en una educación que despierta la curiosidad, fortalece los valores y acompaña a cada estudiante a descubrir lo que es capaz de lograr. Aprendemos en comunidad, con respeto, entusiasmo y propósito.",
+      "MissionTitle": "Formando",
+      "MissionAccent": "líderes del mañana",
+      "MissionText": "Brindamos una educación integral que desarrolla el potencial académico, humano y social de nuestros estudiantes.",
+      "VisionTitle": "Un futuro que construimos juntos.",
+      "VisionText": "Ser una comunidad educativa que inspire a cada nueva generación a pensar en grande, actuar con integridad y transformar positivamente su entorno.",
+      "Highlights": [
+        { "Title": "Formación integral", "Text": "Educación académica y en valores." },
+        { "Title": "Comunidad activa", "Text": "Unimos estudiantes, docentes y familias." },
+        { "Title": "Desarrollo personal", "Text": "Fomentamos el liderazgo y el crecimiento." },
+        { "Title": "Excelencia educativa", "Text": "Compromiso con la calidad y el progreso." }
+      ],
+      "LifeTitle": "Aprender también es vivir experiencias.",
+      "LifeText": "Cada día es una oportunidad para descubrir, compartir y crecer. Una vida escolar que conecta lo que aprendemos con quienes queremos llegar a ser.",
+      "Programs": [
+        { "Title": "Aprendizaje con propósito", "Text": "Preguntar, explorar y poner en práctica lo aprendido para desarrollar nuevas habilidades." },
+        { "Title": "Valores que nos unen", "Text": "Respeto, responsabilidad y empatía en la convivencia y en nuestras decisiones de cada día." },
+        { "Title": "Liderazgo y participación", "Text": "La confianza para expresar ideas, trabajar en equipo y aportar a nuestra comunidad." }
+      ],
+      "CommunityTitle": "Somos más cuando crecemos juntos.",
+      "CommunityText": "Familias que acompañan, docentes que inspiran y estudiantes que se atreven a descubrir. En Leadership, cada persona forma parte de una misma comunidad.",
+      "AdmissionsTitle": "Tu próxima gran etapa comienza aquí.",
+      "AdmissionsMessage": "Conoce nuestra propuesta educativa y conversemos sobre el siguiente paso de tu familia. Nuestro equipo te orientará de manera personal.",
+      "AdmissionSteps": [
+        { "Title": "Conversemos", "Text": "Escríbenos o llámanos para compartir tus inquietudes y conocer más del colegio." },
+        { "Title": "Conoce nuestra propuesta", "Text": "Descubre nuestro enfoque educativo y coordina una visita con el equipo del colegio." },
+        { "Title": "Da el siguiente paso", "Text": "Recibe orientación sobre disponibilidad, requisitos y el proceso de inscripción." }
+      ],
+      "Questions": [
+        { "Title": "¿Cómo solicito información de admisión?", "Text": "Comunícate por nuestros canales de contacto. El equipo del colegio te orientará sobre la propuesta educativa y el proceso de inscripción." },
+        { "Title": "¿Cómo ingreso a mi espacio?", "Text": "Utiliza la cuenta personal que te entrega el colegio. Si es tu primer ingreso, sigue las indicaciones del código de activación que recibiste." },
+        { "Title": "¿Qué puedo consultar en la plataforma?", "Text": "Según tu cuenta y los accesos autorizados, encontrarás tareas, comunicados, asistencia y la información académica o administrativa que te corresponde." },
+        { "Title": "¿Puedo coordinar una visita al colegio?", "Text": "Sí. Comunícate con nuestro equipo para consultar disponibilidad y coordinar tu visita." }
+      ]
+    },
     "Terms": { "StudentPlural": "Estudiantes", "GuardianPlural": "Encargados", "Tuition": "Colegiatura", "Period": "Bimestre" }
   }
 }

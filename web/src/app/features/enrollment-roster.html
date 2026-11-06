@@ -242,7 +242,7 @@
             @for (candidate of candidates(); track candidate.id) {
               <label class="radio-option"
                 ><input type="radio" name="student" [value]="candidate.id" [(ngModel)]="form.studentId" /><span
-                  >{{ candidate.displayName }} <small>· {{ candidate.studentCode }}</small></span
+                  >{{ candidate.displayName }} <small>{{ candidate.studentCode }}</small></span
                 ></label
               >
             }

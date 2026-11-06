@@ -1,0 +1,551 @@
+/*
+ * Form controls and dialogs (loaded last). One look for every form of the platform:
+ * neutral fields, custom checkboxes/radios/switches tinted with the institutional accent, segmented choices,
+ * option cards and dialogs with a fixed header and footer. Colors come from --accent/--primary/--deep.
+ */
+:root {
+  --field-border: #dcd6cb;
+  --field-border-hover: #c4bcae;
+  --field-bg: #fff;
+  --field-radius: 10px;
+  --soft-bg: #f7f5f1;
+  --accent-ink: #15191d;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* ---------------------------------------------------------------- Text fields and selects */
+.form-field {
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.form-field > span > small,
+.form-field span small {
+  color: var(--muted);
+  font-weight: 400;
+}
+.form-field input,
+.form-field select,
+.form-field textarea,
+.select-field select,
+.course-switch select,
+.count-select,
+.inline-select {
+  border: 1px solid var(--field-border);
+  border-radius: var(--field-radius);
+  background-color: var(--field-bg);
+  transition:
+    border-color 0.15s var(--ease),
+    box-shadow 0.15s var(--ease);
+}
+.form-field input:hover,
+.form-field select:hover,
+.form-field textarea:hover,
+.select-field select:hover,
+.course-switch select:hover {
+  border-color: var(--field-border-hover);
+}
+input:not([type='checkbox']):not([type='radio']):focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 70%, #7a5a00);
+  box-shadow: var(--focus-ring);
+}
+input::placeholder,
+textarea::placeholder {
+  color: #9a9690;
+}
+/* Native selects with the same chevron everywhere. */
+.form-field select,
+.select-field select,
+.course-switch select,
+.count-select,
+.inline-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%235d6063' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px 8px;
+}
+input[type='date']::-webkit-calendar-picker-indicator {
+  opacity: 0.55;
+  cursor: pointer;
+}
+input[type='date']::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.9;
+}
+.form-field input:disabled,
+.form-field select:disabled,
+.form-field textarea:disabled {
+  background-color: var(--soft-bg);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------- Checkboxes, radios and switches */
+:where(input[type='checkbox']),
+:where(input[type='radio']) {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  display: inline-grid;
+  place-content: center;
+  border: 1.5px solid #bfb8ab;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    background-color 0.15s var(--ease),
+    border-color 0.15s var(--ease),
+    box-shadow 0.15s var(--ease);
+}
+:where(input[type='checkbox']) {
+  border-radius: 6px;
+}
+:where(input[type='radio']) {
+  border-radius: 50%;
+}
+:where(input[type='checkbox'])::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  background: var(--accent-ink);
+  clip-path: polygon(14% 52%, 0 66%, 38% 100%, 100% 22%, 86% 8%, 37% 70%);
+  transform: scale(0);
+  transition: transform 0.12s var(--ease);
+}
+:where(input[type='radio'])::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-ink);
+  transform: scale(0);
+  transition: transform 0.12s var(--ease);
+}
+:where(input[type='checkbox']):hover,
+:where(input[type='radio']):hover {
+  border-color: #8f887b;
+}
+:where(input[type='checkbox']):checked,
+:where(input[type='radio']):checked {
+  background: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 80%, #6b4c00);
+}
+:where(input[type='checkbox']):checked::before,
+:where(input[type='radio']):checked::before {
+  transform: scale(1);
+}
+:where(input[type='checkbox']):focus-visible,
+:where(input[type='radio']):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+:where(input[type='checkbox']):disabled,
+:where(input[type='radio']):disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+/* Switch: <input type="checkbox" role="switch" class="switch"> */
+:where(input[type='checkbox'].switch) {
+  width: 40px;
+  height: 24px;
+  border-radius: 999px;
+  border: none;
+  background: #d6d0c4;
+  place-content: center start;
+  padding: 0 3px;
+}
+:where(input[type='checkbox'].switch)::before {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  clip-path: none;
+  transform: none;
+  box-shadow: 0 1px 3px #00000033;
+  transition: transform 0.18s var(--ease);
+}
+:where(input[type='checkbox'].switch):checked {
+  background: var(--accent);
+}
+:where(input[type='checkbox'].switch):checked::before {
+  transform: translateX(16px);
+}
+.checkbox-field,
+.radio-option {
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.checkbox-field input,
+.radio-option input {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+}
+.checkbox-field > span,
+.radio-option > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.checkbox-field small,
+.radio-option small,
+.radio-option span small {
+  display: block;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+/* ---------------------------------------------------------------- Groups */
+/* A group reads as a labelled section, not as a box with the title on its border. */
+.choice-group {
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  gap: 12px;
+}
+.choice-group > legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.choice-group > legend + * {
+  clear: both;
+}
+.legend-row .text-button {
+  font-size: 13px;
+}
+
+/* Option card: a whole row that turns an option on/off, with title, description and a switch. */
+.option-list {
+  display: grid;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+}
+.option-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background-color 0.15s var(--ease);
+}
+.option-card + .option-card,
+.option-card + .option-detail,
+.option-detail + .option-card {
+  border-top: 1px solid var(--border);
+}
+.option-card:hover {
+  background: #fcfbf8;
+}
+.option-card .option-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--accent) 16%, #fff);
+  color: color-mix(in srgb, var(--accent) 45%, #3b2a00);
+}
+.option-card .option-icon app-icon {
+  width: 19px;
+  height: 19px;
+}
+.option-card .option-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.option-card .option-copy strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.option-card .option-copy small {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.option-card.sub {
+  padding-left: 68px;
+  background: var(--soft-bg);
+}
+.option-card.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.option-detail {
+  padding: 4px 16px 16px 68px;
+  display: grid;
+  gap: 12px;
+}
+
+/* Segmented choice: radios that look like one control. */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--field-border);
+  border-radius: 12px;
+  background: var(--soft-bg);
+  max-width: 100%;
+  overflow-x: auto;
+}
+.segmented label {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+.segmented input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.segmented label:hover {
+  color: var(--ink);
+}
+.segmented label:has(input:checked) {
+  background: #fff;
+  color: var(--ink);
+  box-shadow:
+    0 1px 2px #0000001a,
+    0 0 0 1px #00000008;
+}
+.segmented label:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+/* Calendar preview: one row per period with a proportional bar. */
+.timeline {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.timeline li {
+  display: grid;
+  grid-template-columns: 92px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.timeline li strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.timeline .bar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: #ece8e0;
+}
+.timeline .bar span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.timeline time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- Dialogs */
+.account-dialog {
+  padding: 0;
+  border: none;
+  border-radius: 18px;
+  box-shadow:
+    0 24px 80px -12px #0b0d1066,
+    0 0 0 1px #00000010;
+  overflow: hidden;
+  display: none;
+}
+.account-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.account-dialog::backdrop {
+  background: #0d1114a6;
+  backdrop-filter: blur(3px);
+}
+.account-dialog > .dialog-heading {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 22px 24px 16px;
+}
+.dialog-heading h2 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.dialog-heading .icon-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--muted);
+}
+.dialog-heading .icon-button:hover {
+  background: var(--soft-bg);
+  color: var(--ink);
+}
+.account-dialog > :not(.dialog-heading):not(form) {
+  margin-inline: 24px;
+}
+.account-dialog > :last-child:not(form) {
+  margin-bottom: 22px;
+}
+.account-dialog > form,
+.account-dialog > .dialog-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 24px 0;
+}
+.account-dialog > form > .dialog-actions,
+.account-dialog .dialog-actions.sticky {
+  position: sticky;
+  bottom: 0;
+  margin: 8px -24px 0;
+  padding: 16px 24px 20px;
+  background: linear-gradient(#ffffff00, #fff 14px);
+  border-top: 1px solid var(--border);
+  background: #fff;
+  z-index: 1;
+}
+.account-dialog .access-form {
+  gap: 18px;
+}
+.dialog-section-title {
+  margin: 4px 0 -6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.action-explanation {
+  color: #5b4614;
+  background: color-mix(in srgb, var(--accent) 10%, #fff);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, #fff);
+  border-radius: 12px;
+}
+
+@media (max-width: 767px) {
+  .account-dialog {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 16px);
+    margin: auto 0 0;
+    border-radius: 20px 20px 0 0;
+  }
+  .account-dialog > .dialog-heading {
+    padding: 18px 18px 12px;
+  }
+  .account-dialog > form,
+  .account-dialog > .dialog-body {
+    padding: 4px 18px 0;
+  }
+  .account-dialog > :not(.dialog-heading):not(form) {
+    margin-inline: 18px;
+  }
+  .account-dialog > form > .dialog-actions {
+    margin: 8px -18px 0;
+    padding: 14px 18px calc(16px + env(safe-area-inset-bottom));
+  }
+  .option-card.sub,
+  .option-detail {
+    padding-left: 16px;
+  }
+  .timeline li {
+    grid-template-columns: 78px 1fr;
+  }
+  .timeline .bar {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  input[type='checkbox'],
+  input[type='radio'],
+  input[type='checkbox']::before,
+  input[type='radio']::before,
+  .option-card,
+  .segmented label {
+    transition: none;
+  }
+}
+.dialog-lead {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.option-detail .segmented,
+.access-form > .segmented {
+  display: flex;
+  width: 100%;
+}
+.option-detail .segmented label,
+.access-form > .segmented label {
+  flex: 1;
+}
+.timeline li {
+  grid-template-columns: 92px minmax(0, 1fr) 132px;
+}
+.timeline time {
+  text-align: right;
+}
+@media (max-width: 767px) {
+  .timeline li {
+    grid-template-columns: 84px 1fr;
+  }
+  .timeline time {
+    text-align: left;
+  }
+}
+
+/* The dialog body scrolls; its rows keep their natural height (scrollable blocks such as candidate lists must
+   never be squeezed to zero when the content is taller than the screen). */
+.account-dialog > form.access-form {
+  grid-auto-rows: max-content;
+  align-content: start;
+}

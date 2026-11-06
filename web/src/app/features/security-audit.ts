@@ -187,7 +187,7 @@ const detailLabels: Record<string, string> = {
           </p>
         </div>
         <button class="button outline" (click)="load()" [disabled]="loading()">
-          <app-icon name="search" />Actualizar
+          <app-icon name="refresh" />Actualizar
         </button>
       </div>
       @if (error()) {

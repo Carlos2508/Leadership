@@ -34,6 +34,24 @@ El editor de roles usa acciones agrupadas por área, selección completa opciona
 - Campana del encabezado (`core/notifications.ts`): contador con avisos sin leer y pendientes por rol, panel desplegable (Escape/clic fuera cierra; en teléfono fijo bajo la barra). Los pendientes repiten exactamente las reglas de «Requiere atención» del panel y dejan de contar al verse hasta que cambie su cifra (por cuenta, en `localStorage`); los avisos siguen contando hasta abrirse. Abrir un aviso desde la campana lleva a `/workspace/announcements?open=<id>` y lo marca leído. El app conectado muestra la misma campana con los avisos sin leer.
 - Menú personal: el docente ve el grupo «Docencia» con sus cursos asignados (máximo seis) y la familia «Mis estudiantes» con cada vínculo vigente. Se cargan de `/api/v1/me/courses` y `/api/v1/me`; son atajos de presentación, la autorización sigue en el servidor.
 
+## Formularios y diálogos
+
+Capas finales `web/src/styles/_forms.scss` (controles) y `_polish.scss` (ajustes de página tras la revisión visual completa). Se cargan después de `_identity.scss`.
+
+- **Campos:** borde neutro cálido (`--field-border`), radio 10 px, valor en peso regular y etiqueta en 600. Foco con borde y anillo del acento. Los `select` llevan la misma flecha en toda la plataforma.
+- **Casillas y opciones:** dibujadas por la plataforma, no las del navegador. Seleccionadas en el acento con marca oscura. Sus reglas usan `:where()` para no pisar controles ocultos a propósito (asistencia, segmentos).
+- **Interruptor:** `<input type="checkbox" class="switch" role="switch">` para activar o desactivar una opción completa.
+- **Tarjetas de opción** (`.option-list` > `.option-card`): ícono, título, descripción y un interruptor a la derecha. Las subopciones usan `.sub` y los detalles `.option-detail`. Se usan para atajos como preparar un ciclo o copiar del anterior, en lugar de casillas sueltas dentro de un recuadro con título en el borde.
+- **Control segmentado** (`.segmented`): opciones cortas y excluyentes, por ejemplo la cantidad de bimestres. No usar una lista desplegable para elegir entre 2 y 6.
+- **Línea de tiempo** (`.timeline`): vista previa de períodos con una barra proporcional dentro del ciclo.
+- **Grupos** (`.choice-group`): el título va como etiqueta encima de las opciones, sin el recuadro con título en el borde.
+- **Diálogos:** encabezado fijo, cuerpo con desplazamiento propio y botones fijos abajo con línea divisoria. Fondo oscuro con desenfoque. En el teléfono se abren como hoja inferior. `.access-dialog` (portería y carnet) tiene el mismo aspecto.
+- **Botones pequeños:** dentro de tablas, listas y paginación miden 36 px, igual que `.compact-button`.
+- **Pestañas y selección:** la pestaña activa usa el acento, igual que el menú. El verde se reserva para estados «listo» o «correcto». Las pestañas de módulo se desplazan de lado en el teléfono.
+- No quedan grises verdosos del diseño anterior: bordes, fondos y sombras usan neutros cálidos.
+
+En el app (Flutter), `app_theme.dart` define interruptores, casillas, opciones, fechas y chips en el mismo dorado. `academic_page.dart` usa `_OptionGroup`/`_OptionTile` (tarjetas de opción), un `SegmentedButton` para la cantidad y una línea de tiempo. `SectionChips` se desplaza de lado y nunca deja una opción sola en una segunda fila.
+
 ## Alertas (SweetAlert2)
 
 Servicio `core/alerts.ts`, con los mismos botones, fuentes y colores que la plataforma (`buttonsStyling: false`).

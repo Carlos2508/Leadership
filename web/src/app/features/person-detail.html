@@ -509,7 +509,7 @@
                   /><span
                     >{{ candidate.displayName }}
                     @if (candidate.studentCode) {
-                      <small>· {{ candidate.studentCode }}</small>
+                      <small>{{ candidate.studentCode }}</small>
                     }
                   </span></label
                 >
@@ -591,7 +591,7 @@
                     [(ngModel)]="accountId"
                   /><span
                     >{{ account.username }}
-                    <small>· {{ accountStatusLabels[account.status] }}</small></span
+                    <small>{{ accountStatusLabels[account.status] }}</small></span
                   ></label
                 >
               }

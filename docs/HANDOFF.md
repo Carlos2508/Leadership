@@ -1,5 +1,14 @@
 # Handoff para la siguiente sesión
 
+## Revisión visual profesional de web y app — 6 de noviembre de 2026, leer primero
+
+- Solicitud: el propietario rechazó el diseño del diálogo «Nuevo ciclo» (casillas negras del navegador, recuadro con título en el borde, lista desplegable para la cantidad) y pidió revisar toda la web y el app con acabado profesional.
+- Web: capa `_forms.scss` con controles propios (casillas, opciones, interruptor, segmentado, tarjetas de opción, línea de tiempo y diálogos con encabezado y pie fijos, como hoja inferior en el teléfono). Capa `_polish.scss` con lo hallado en el recorrido: saludo de Inicio sin corte raro; etiquetas de estado con fondo neutro; filtros con valores en peso regular y casilla bien alineada; botones compactos en tablas y listas; columnas alineadas en Publicación de notas (el corte pasa al subtítulo); tarjetas separadas en Caja; `.access-dialog` con estilo (antes sin estilo alguno); filtro de Portería; pestañas activas en dorado; pestañas de módulo con desplazamiento lateral en el teléfono; secciones desplegables con flecha. Se reemplazaron los grises verdosos heredados por neutros cálidos (solo bordes, fondos y sombras; los verdes de «correcto» se mantienen). El menú lateral desplaza la opción activa a la vista. Auditoría «Actualizar» usa el ícono de recargar.
+- Diálogo «Nuevo ciclo», «Generar» y «Copiar» rehechos con tarjetas de opción e interruptores, cantidad en control segmentado y vista previa como línea de tiempo. E2E `academic.spec.ts` actualizado (role `switch`, radio «4», `.timeline`, etiquetas «Inicio de clases»/«Fin del ciclo»).
+- App: tema con interruptores, casillas, opciones, fechas y chips en dorado; «Nuevo ciclo» y «Copiar» con tarjetas de opción, `SegmentedButton` y línea de tiempo; `SectionChips` en una fila desplazable.
+- Fallo real encontrado por E2E en teléfono: dentro de un diálogo con más contenido que la pantalla, la lista de candidatos (scroll propio) se encogía a altura 0 por el dimensionamiento de la rejilla; `.account-dialog > form.access-form` usa `grid-auto-rows: max-content`. Validación: Playwright completo 79 + 1 omisión prevista, y las 2 fallas (inscribir y familia en móvil, esa lista) aprobadas tras la corrección junto con `academic`, `courses` y `enrollment-resilience` (10/10). Flutter 74, análisis sin observaciones.
+- Recorridos: `qa-pro.mjs`/`run-pro.ps1` (todas las pantallas del menú por cuenta, escritorio y 390 px) y `qa-dialogs.mjs`/`run-dialogs.ps1` (12 diálogos principales, sin guardar). Evidencia en `.local/qa/evidencia/pro-2026-11-06/`; app en `gestion-2026-11-06/app-*`.
+
 ## Gestión sencilla para Dirección y docentes — 6 de noviembre de 2026, leer primero
 
 - Solicitud: ponerse en el lugar del docente y de Dirección (crear bimestres y todo) para simplificar la gestión, en web y app.

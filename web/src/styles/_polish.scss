@@ -1,0 +1,264 @@
+/* Page-level polish from the full visual review (owner request: professional look on every screen). Loaded last. */
+
+/* Welcome: greeting stays on one line when it fits; the name never starts an indented second line. */
+.reference-welcome > div:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.reference-welcome h1 {
+  overflow-wrap: normal;
+}
+.reference-welcome h1 span {
+  margin-left: 0;
+}
+
+/* Status pills: a neutral tint when no color variant is given (zero specificity so .mint/.gold/... still win). */
+:where(.pill) {
+  background: #f1eee8;
+  color: #3d4043;
+}
+:where(.pill).suspended {
+  background: #f1eee8;
+  color: #5d6063;
+}
+
+/* Cycle setup steps: compact rows. */
+.setup-steps li {
+  padding: 10px 0;
+  min-height: 0;
+}
+.setup-steps li:first-child {
+  border-top: none;
+}
+.setup-guide .section-heading {
+  margin-bottom: 4px;
+}
+.setup-steps .period-copy small {
+  font-size: 12px;
+}
+
+/* Filter bars: values in regular weight (labels stay bold), search box with one focus ring. */
+.filters input,
+.filters select,
+.select-field select,
+.search-field input {
+  font-weight: 450;
+  color: var(--ink);
+}
+.search-field input::placeholder {
+  font-weight: 400;
+}
+.search-field > div {
+  border-color: var(--field-border);
+  border-radius: var(--field-radius);
+  background: #fff;
+  transition:
+    border-color 0.15s var(--ease),
+    box-shadow 0.15s var(--ease);
+}
+.search-field > div:hover {
+  border-color: var(--field-border-hover);
+}
+.search-field > div:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 70%, #7a5a00);
+  box-shadow: var(--focus-ring);
+}
+.search-field input:focus {
+  box-shadow: none;
+  border: none;
+}
+
+/* Buttons inside tables and pagination: compact, same scale as the row text. */
+td .button,
+.pagination .button,
+.course-item .button {
+  min-height: 36px;
+  padding: 7px 14px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+td .button app-icon,
+.pagination .button app-icon {
+  width: 17px;
+  height: 17px;
+}
+td .text-button {
+  font-size: 13px;
+}
+
+/* Checkbox inside a filter bar: a normal checkbox row aligned with the fields, never a 44px box. */
+.filters .checkbox-field {
+  flex-direction: row;
+  align-items: center;
+  align-self: flex-end;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.filters input[type='checkbox'] {
+  min-height: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+}
+
+/* Grade publication: fixed columns so progress and actions line up on every row. */
+@media (min-width: 768px) {
+  .publication-list li {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) 170px minmax(220px, auto);
+    align-items: center;
+  }
+  .publication-list li > :nth-child(n + 4) {
+    justify-self: end;
+  }
+}
+.publication-list .progress-copy {
+  width: auto;
+}
+.progress-bar {
+  background: #ece8e0;
+}
+
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Cards stacked in the page flow never touch each other. */
+.page-content > .card + .card,
+.page-content > .card + section.card,
+.page-content > .detail-grid + .card,
+.page-content > .card + .detail-grid {
+  margin-top: 18px;
+}
+
+/* Small buttons: one size everywhere (rows, lists, toolbars). */
+.button.compact-button {
+  min-height: 36px;
+  padding: 7px 14px;
+  font-size: 13px;
+  border-radius: 10px;
+  gap: 7px;
+}
+.button.compact-button app-icon {
+  width: 17px;
+  height: 17px;
+}
+
+/* Gate, card and kiosk dialogs had no styling: same look as the rest of the dialogs. */
+.access-dialog {
+  width: 520px;
+  max-width: calc(100dvw - 32px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  margin: auto;
+  padding: 24px;
+  border: none;
+  border-radius: 18px;
+  color: var(--ink);
+  background: #fff;
+  box-shadow:
+    0 24px 80px -12px #0b0d1066,
+    0 0 0 1px #00000010;
+}
+.access-dialog::backdrop {
+  background: #0d1114a6;
+  backdrop-filter: blur(3px);
+}
+.access-dialog > h2 {
+  margin: 0 0 14px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.access-dialog .access-form {
+  margin-top: 14px;
+}
+.access-dialog .dialog-actions {
+  margin-top: 18px;
+}
+@media (max-width: 767px) {
+  .access-dialog {
+    width: 100%;
+    max-width: 100%;
+    margin: auto 0 0;
+    border-radius: 20px 20px 0 0;
+    padding: 20px 18px calc(18px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Gate report: compact date filter and breathing room around the text filter. */
+.filter-bar .form-field {
+  flex: 0 1 260px;
+}
+.state-filters + .form-field {
+  margin-top: 14px;
+}
+.gate-report-list {
+  margin-top: 8px;
+}
+
+/* Selected tabs use the institutional accent, like the menu (green stays for "done/ok" states only). */
+.course-tabs a.active {
+  background: color-mix(in srgb, var(--accent) 20%, #fff);
+  color: var(--ink);
+}
+.period-tabs a.active {
+  border-color: color-mix(in srgb, var(--accent) 75%, #6b4c00);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* Module tabs scroll sideways on phones instead of wrapping into two rows. */
+@media (max-width: 767px) {
+  .module-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: -18px;
+    padding-inline: 18px;
+  }
+  .module-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .module-tabs a {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
+/* Fields placed in a two-column grid are not indented as sub-options. */
+.form-grid > .nested-field {
+  margin-left: 0;
+}
+
+/* Expandable form sections: a chevron instead of the native triangle. */
+.form-extra summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  list-style: none;
+  color: var(--ink);
+  font-weight: 600;
+}
+.form-extra summary::-webkit-details-marker {
+  display: none;
+}
+.form-extra summary::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-right: 1.8px solid var(--muted);
+  border-bottom: 1.8px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s var(--ease);
+  flex-shrink: 0;
+}
+.form-extra[open] > summary::before {
+  transform: rotate(45deg);
+}
+.form-extra summary:hover {
+  color: var(--ink);
+}

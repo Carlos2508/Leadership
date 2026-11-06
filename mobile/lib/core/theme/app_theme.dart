@@ -165,14 +165,6 @@ abstract final class AppTheme {
           borderSide: BorderSide(color: scheme.error, width: 2),
         ),
       ),
-      chipTheme: base.chipTheme.copyWith(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-        side: BorderSide(color: colors.border),
-        labelStyle: textTheme.labelMedium,
-        showCheckmark: false,
-        selectedColor: colors.tone(AppTone.brand).background,
-        backgroundColor: colors.cardBackground,
-      ),
       // Navigation mirrors the web sidebar: dark gradient surface, gold translucent pill on the active item.
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: palette.deep,
@@ -242,6 +234,59 @@ abstract final class AppTheme {
         ),
       ),
       dividerTheme: DividerThemeData(color: colors.border, space: 1),
+      // Form controls: same gold selection as the web (switches, checkboxes, radios, date picker).
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled) ? colors.border : Colors.white,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? colors.border.withValues(alpha: 0.5)
+              : states.contains(WidgetState.selected)
+              ? palette.accent
+              : (isDark ? const Color(0xFF3A3F44) : const Color(0xFFD6D0C4)),
+        ),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+        thumbIcon: const WidgetStatePropertyAll(null),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected) ? palette.accent : Colors.transparent,
+        ),
+        checkColor: WidgetStatePropertyAll(palette.deep),
+        side: BorderSide(color: colors.muted.withValues(alpha: 0.6), width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected) ? palette.accent : colors.muted,
+        ),
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: isDark ? colors.cardBackground : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        headerBackgroundColor: palette.deep,
+        headerForegroundColor: Colors.white,
+        todayBorder: BorderSide(color: palette.accent),
+        dayBackgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected) ? palette.accent : null,
+        ),
+        dayForegroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected) ? palette.deep : null,
+        ),
+        confirmButtonStyle: TextButton.styleFrom(
+          foregroundColor: isDark ? palette.accent : palette.deep,
+        ),
+        cancelButtonStyle: TextButton.styleFrom(foregroundColor: colors.muted),
+      ),
+      chipTheme: base.chipTheme.copyWith(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        side: BorderSide(color: colors.border),
+        labelStyle: textTheme.labelMedium,
+        showCheckmark: false,
+        selectedColor: palette.accent.withValues(alpha: 0.28),
+        backgroundColor: colors.cardBackground,
+      ),
       listTileTheme: ListTileThemeData(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
         iconColor: colors.muted,

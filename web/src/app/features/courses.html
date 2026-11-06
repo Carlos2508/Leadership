@@ -278,7 +278,7 @@
               @for (person of staff(); track person.id) {
                 <label class="radio-option"
                   ><input type="radio" name="staff" [value]="person.id" [(ngModel)]="assignForm.staffId" /><span
-                    >{{ person.name }} <small>· {{ person.position }}</small></span
+                    >{{ person.name }} <small>{{ person.position }}</small></span
                   ></label
                 >
               }

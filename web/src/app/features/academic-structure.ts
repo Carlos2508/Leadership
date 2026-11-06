@@ -206,6 +206,24 @@ export class AcademicStructure {
     await this.loadYear(year.id);
   }
 
+  /** Preview periods with their position inside the cycle, for the timeline bars. */
+  bars(): { startsOn: string; endsOn: string; left: number; width: number }[] {
+    const y = this.mode() === 'year' ? this.yearForm : this.detail()?.year;
+    const list = this.preview();
+    if (!y?.startsOn || !y?.endsOn || !list.length) return [];
+    const day = (v: string) => Date.parse(v + 'T00:00:00Z') / 86_400_000;
+    const total = day(y.endsOn) - day(y.startsOn) + 1;
+    return list.map((p) => ({
+      ...p,
+      left: ((day(p.startsOn) - day(y.startsOn)) / total) * 100,
+      width: ((day(p.endsOn) - day(p.startsOn) + 1) / total) * 100,
+    }));
+  }
+
+  shortDate(value: string): string {
+    return new Date(value + 'T12:00:00').toLocaleDateString(this.school.locale.culture, { day: 'numeric', month: 'short' });
+  }
+
   preview(): { startsOn: string; endsOn: string }[] {
     const y = this.mode() === 'year' ? this.yearForm : this.detail()?.year;
     const count = this.mode() === 'year' ? this.setupForm.periods : this.generateCount;

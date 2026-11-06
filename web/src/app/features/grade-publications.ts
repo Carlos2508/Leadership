@@ -64,7 +64,7 @@ interface PublicationView {
                 <span class="period-number">{{ item.sequence }}</span>
                 <span class="person-copy"
                   ><strong>{{ item.name }}</strong
-                  ><small>{{ date(item.startsOn) }} – {{ date(item.endsOn) }}</small></span
+                  ><small>{{ date(item.startsOn) }} – {{ date(item.endsOn) }}@if (item.published) { · Corte: {{ item.cutoff }}}</small></span
                 >
                 <span class="progress-copy">
                   <span class="progress-bar" aria-hidden="true"
@@ -73,10 +73,12 @@ interface PublicationView {
                   <small>{{ item.recorded }} de {{ item.expected | plural: 'nota' : 'notas' }}</small>
                 </span>
                 @if (item.published) {
-                  <span class="pill mint">Publicado · {{ item.cutoff }}</span>
-                  <button class="button outline compact-button" (click)="openReports(item)">
-                    Informes PDF <span class="sr-only">de {{ item.name }}</span>
-                  </button>
+                  <span class="row-actions">
+                    <span class="pill mint">Publicado</span>
+                    <button class="button outline compact-button" (click)="openReports(item)">
+                      Informes PDF <span class="sr-only">de {{ item.name }}</span>
+                    </button>
+                  </span>
                 } @else if (canPublish()) {
                   <button class="button outline compact-button" (click)="openPublish(item)" [disabled]="!cutoffs().length">
                     Publicar <span class="sr-only">{{ item.name }}</span>

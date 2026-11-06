@@ -1,7 +1,7 @@
 :root {
   --ink: #193b2b;
   --muted: #586e59;
-  --border: #e3ebe3;
+  --border: #e8e3dc;
   --mint: #e6f5ec;
   --gold-soft: #fff1d2;
   font-family: Inter, 'Segoe UI', Arial, sans-serif;
@@ -276,7 +276,7 @@ h2 {
   display: grid;
   place-items: center;
   background: #fff;
-  box-shadow: 0 15px 80px #073b2512;
+  box-shadow: 0 15px 80px #0d111412;
 }
 .school-seal img {
   width: 195px;
@@ -293,7 +293,7 @@ h2 {
   border: 1px solid var(--border);
   border-radius: 16px;
   background: #fff;
-  box-shadow: 0 10px 40px #073b2510;
+  box-shadow: 0 10px 40px #0d111410;
 }
 .floating-card strong {
   font-size: 12px;
@@ -645,7 +645,7 @@ h2 {
   gap: 16px;
   border-bottom: 1px solid var(--border);
   border-top: 1px dashed #eed6ae;
-  background: linear-gradient(to bottom, transparent 49.5%, #e3ebe3 50%, transparent 50.5%);
+  background: linear-gradient(to bottom, transparent 49.5%, #e8e3dc 50%, transparent 50.5%);
 }
 .chart-column {
   display: flex;
@@ -768,7 +768,7 @@ h2 {
   display: flex;
   gap: 9px;
   align-items: center;
-  border: 1px solid #ccd9ce;
+  border: 1px solid #dcd6cb;
   border-radius: 9px;
   padding: 0 12px;
 }
@@ -789,7 +789,7 @@ h2 {
 .select-field select {
   color: var(--ink);
   background: white;
-  border: 1px solid #ccd9ce;
+  border: 1px solid #dcd6cb;
   border-radius: 9px;
   min-height: 42px;
   padding: 9px 32px 9px 12px;
@@ -811,7 +811,7 @@ table {
 }
 th {
   padding: 15px 24px;
-  background: #f8faf7;
+  background: #f8f6f2;
   color: var(--muted);
   border-block: 1px solid var(--border);
   font-size: 10px;
@@ -1043,7 +1043,7 @@ tr:last-child td {
     position: fixed;
     inset: 0;
     border: none;
-    background: #11291ed0;
+    background: #0d1114d0;
     z-index: 25;
   }
   .mobile-menu {

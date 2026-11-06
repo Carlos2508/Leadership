@@ -434,7 +434,7 @@
   font-size: 16px;
 }
 .year-item:hover {
-  border-color: #b6c9bb;
+  border-color: #cfc8bb;
 }
 .year-item.selected {
   border-color: var(--primary);
@@ -653,7 +653,7 @@
 .date-field input {
   color: var(--ink);
   background: white;
-  border: 1px solid #ccd9ce;
+  border: 1px solid #dcd6cb;
   border-radius: 9px;
   min-height: 42px;
   padding: 9px 12px;
@@ -695,7 +695,7 @@
 .inline-select,
 .score-input {
   min-height: 42px;
-  border: 1px solid #ccd9ce;
+  border: 1px solid #dcd6cb;
   border-radius: 9px;
   padding: 8px 10px;
   font-size: 13px;
@@ -750,7 +750,7 @@
 kbd {
   display: inline-block;
   padding: 0 6px;
-  border: 1px solid #ccd9ce;
+  border: 1px solid #dcd6cb;
   border-bottom-width: 2px;
   border-radius: 5px;
   background: #fff;
@@ -901,7 +901,7 @@ kbd {
 }
 .quick-tile:hover,
 .quick-tile:focus-visible {
-  border-color: #b6c9bb;
+  border-color: #cfc8bb;
   box-shadow: 0 6px 18px #11422910;
 }
 .quick-tile .icon-tile {
@@ -1011,7 +1011,7 @@ kbd {
 .note-field input {
   width: 100%;
   min-height: 40px;
-  border: 1px solid #ccd9ce;
+  border: 1px solid #dcd6cb;
   border-radius: 9px;
   padding: 8px 12px;
   font-size: 13px;
@@ -1297,7 +1297,7 @@ kbd {
 }
 .kpi-card:hover,
 .kpi-card:focus-visible {
-  border-color: #b6c9bb;
+  border-color: #cfc8bb;
   box-shadow: 0 8px 22px #11422914;
   transform: translateY(-1px);
 }
@@ -1399,7 +1399,7 @@ kbd {
 .day-step {
   width: 44px;
   height: 44px;
-  border: 1px solid #ccd9ce;
+  border: 1px solid #dcd6cb;
   border-radius: 11px;
   background: #fff;
   color: var(--deep);
@@ -1700,7 +1700,7 @@ kbd {
   margin: 2px 0 4px 28px;
   padding: 10px 14px;
   border-radius: 12px;
-  background: #f8faf7;
+  background: #f8f6f2;
   display: grid;
   gap: 4px;
   font-size: 13px;

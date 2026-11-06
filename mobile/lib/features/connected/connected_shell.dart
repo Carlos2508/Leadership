@@ -171,24 +171,29 @@ class SectionChips<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return Wrap(
-      spacing: Spacing.sm,
-      runSpacing: Spacing.sm,
-      children: [
-        for (final e in options.entries)
-          ChoiceChip(
-            avatar: Icon(
-              e.value.$2,
-              size: 18,
-              color: e.key == selected ? colors.deep : colors.muted,
+    // One scrollable row: options never wrap into a second, orphaned line on narrow phones.
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      clipBehavior: Clip.none,
+      child: Row(
+        children: [
+          for (final e in options.entries) ...[
+            if (e.key != options.keys.first) const SizedBox(width: Spacing.sm),
+            ChoiceChip(
+              avatar: Icon(
+                e.value.$2,
+                size: 18,
+                color: e.key == selected ? colors.deep : colors.muted,
+              ),
+              label: Text(e.value.$1),
+              selected: e.key == selected,
+              selectedColor: colors.accent.withValues(alpha: 0.28),
+              side: BorderSide(color: e.key == selected ? colors.accent : colors.border),
+              onSelected: (_) => onSelected(e.key),
             ),
-            label: Text(e.value.$1),
-            selected: e.key == selected,
-            selectedColor: colors.accent.withValues(alpha: 0.28),
-            side: BorderSide(color: e.key == selected ? colors.accent : colors.border),
-            onSelected: (_) => onSelected(e.key),
-          ),
-      ],
+          ],
+        ],
+      ),
     );
   }
 }

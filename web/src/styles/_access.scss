@@ -67,10 +67,10 @@
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 28px;
-  box-shadow: 0 20px 100px #073b2530;
+  box-shadow: 0 20px 100px #0d111430;
 }
 .account-dialog::backdrop {
-  background: #11291ec9;
+  background: #0d1114c9;
 }
 .dialog-heading {
   display: flex;
@@ -107,7 +107,7 @@
   width: 100%;
   color: var(--ink);
   background: #fff;
-  border: 1px solid #b6c9bb;
+  border: 1px solid #cfc8bb;
   border-radius: 9px;
   padding: 12px;
   font: inherit;

@@ -25,7 +25,7 @@ import { DailyReport, DailyRow, GateEvent, directionLabel, gateStates } from '..
             <button type="button" class="state-chip gold" [class.active]="state() === 'Absent'" [attr.aria-pressed]="state() === 'Absent'" (click)="state.set('Absent')">Sin marcas <strong>{{ r.absent }}</strong></button>
             <button type="button" class="text-button export-button" (click)="exportCsv()" [disabled]="!filtered().length">Exportar CSV</button>
           </div>
-          <label class="form-field">Filtrar por nombre, código o grupo<input name="filter" [(ngModel)]="filter" type="search" /></label>
+          <label class="form-field">Filtrar por nombre, código o grupo<input name="filter" [(ngModel)]="filter" type="search" placeholder="Ej. Ana, QA-001 o Primero" autocomplete="off" /></label>
           <ul class="payment-list gate-report-list">@for (row of filtered(); track row.studentId) {
             <li><span class="person-copy"><strong>{{ row.name }}</strong><small>{{ row.code }} · {{ row.placement }}</small><small>Entrada {{ api.time(row.firstIn) }} · Salida {{ api.time(row.lastOut) }}</small></span><span class="pill" [class.mint]="row.state === 'Inside'" [class.blue]="row.state === 'Left'" [class.gold]="row.state === 'Absent'">{{ states[row.state] }}</span><button class="button outline compact-button" (click)="history(row)" [disabled]="busy()">Ver marcas<span class="sr-only"> {{ row.code }}</span></button></li>
           } @empty { <li>No hay estudiantes para esta consulta.</li> }</ul>

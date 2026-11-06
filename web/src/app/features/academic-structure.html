@@ -338,102 +338,121 @@
           /></label>
           <div class="form-grid">
             <label class="form-field"
-              ><span>Inicio</span><input name="startsOn" type="date" [(ngModel)]="yearForm.startsOn" required
+              ><span>Inicio de clases</span><input name="startsOn" type="date" [(ngModel)]="yearForm.startsOn" required
             /></label>
             <label class="form-field"
-              ><span>Fin</span><input name="endsOn" type="date" [(ngModel)]="yearForm.endsOn" required
+              ><span>Fin del ciclo</span><input name="endsOn" type="date" [(ngModel)]="yearForm.endsOn" required
             /></label>
           </div>
           @if (!editingId()) {
-            <fieldset class="choice-group setup-options">
-              <legend>Dejarlo listo de una vez</legend>
-              <label class="checkbox-field"
-                ><input type="checkbox" name="setupGenerate" [(ngModel)]="setupForm.generate" /><span
-                  >Generar los {{ school.terms.period.toLowerCase() }}s<small>Del mismo largo; después puedes ajustar sus fechas.</small></span
-                ></label
-              >
+            <p class="dialog-section-title">Preparación automática</p>
+            <div class="option-list">
+              <label class="option-card"
+                ><span class="option-icon"><app-icon name="calendar" /></span
+                ><span class="option-copy"
+                  ><strong>Crear los {{ school.terms.period.toLowerCase() }}s</strong
+                  ><small>Del mismo largo. Podrás ajustar cada fecha después.</small></span
+                ><input type="checkbox" class="switch" role="switch" name="setupGenerate" [(ngModel)]="setupForm.generate"
+              /></label>
               @if (setupForm.generate) {
-                <label class="count-row nested-option"
-                  ><span>Cantidad</span
-                  ><select name="setupPeriods" class="count-select" [(ngModel)]="setupForm.periods">
+                <div class="option-detail">
+                  <div class="segmented" role="radiogroup" [attr.aria-label]="'Cantidad de ' + school.terms.period.toLowerCase() + 's'">
                     @for (n of [2, 3, 4, 5, 6]; track n) {
-                      <option [ngValue]="n">{{ n }} {{ school.terms.period.toLowerCase() }}s</option>
+                      <label
+                        ><input type="radio" name="setupPeriods" [value]="n" [(ngModel)]="setupForm.periods" />{{ n }}</label
+                      >
                     }
-                  </select></label
-                >
-              }
-              @if (setupForm.generate && preview().length) {
-                <ol class="period-preview">
-                  @for (p of preview(); track p.startsOn; let i = $index) {
-                    <li><strong>{{ school.terms.period }} {{ i + 1 }}</strong> {{ date(p.startsOn) }} – {{ date(p.endsOn) }}</li>
+                  </div>
+                  @if (bars().length) {
+                    <ol class="timeline">
+                      @for (p of bars(); track p.startsOn; let i = $index) {
+                        <li>
+                          <strong>{{ school.terms.period }} {{ i + 1 }}</strong>
+                          <span class="bar" aria-hidden="true"><span [style.left.%]="p.left" [style.width.%]="p.width"></span></span>
+                          <time>{{ shortDate(p.startsOn) }} – {{ shortDate(p.endsOn) }}</time>
+                        </li>
+                      }
+                    </ol>
                   }
-                </ol>
+                </div>
               }
               @if (latest(); as source) {
-                <label class="checkbox-field"
-                  ><input type="checkbox" name="setupSections" [(ngModel)]="setupForm.sections" /><span
-                    >Copiar las secciones de {{ source.label }}</span
-                  ></label
-                >
-                <label class="checkbox-field"
-                  ><input type="checkbox" name="setupCourses" [(ngModel)]="setupForm.courses" /><span
-                    >Copiar los cursos de {{ source.label }}</span
-                  ></label
-                >
-                <label class="checkbox-field nested-option"
+                <label class="option-card"
+                  ><span class="option-icon"><app-icon name="folder" /></span
+                  ><span class="option-copy"
+                    ><strong>Copiar secciones de {{ source.label }}</strong
+                    ><small>Mismos nombres, jornada y cupo.</small></span
+                  ><input type="checkbox" class="switch" role="switch" name="setupSections" [(ngModel)]="setupForm.sections"
+                /></label>
+                <label class="option-card"
+                  ><span class="option-icon"><app-icon name="book" /></span
+                  ><span class="option-copy"
+                    ><strong>Copiar cursos de {{ source.label }}</strong
+                    ><small>Misma materia por grado o sección.</small></span
+                  ><input type="checkbox" class="switch" role="switch" name="setupCourses" [(ngModel)]="setupForm.courses"
+                /></label>
+                <label class="option-card sub" [class.disabled]="!setupForm.courses"
+                  ><span class="option-copy"
+                    ><strong>Con los mismos docentes</strong
+                    ><small>Quienes seguían asignados al terminar {{ source.label }}.</small></span
                   ><input
                     type="checkbox"
+                    class="switch"
+                    role="switch"
                     name="setupTeachers"
                     [(ngModel)]="setupForm.teachers"
                     [disabled]="!setupForm.courses"
-                  /><span>Con los mismos docentes<small>Solo quienes seguían asignados al terminar {{ source.label }}.</small></span></label
-                >
+                /></label>
               }
-            </fieldset>
+            </div>
           }
         }
         @case ('generate') {
-          <p class="action-explanation">
-            Divide el ciclo en {{ school.terms.period.toLowerCase() }}s del mismo largo. Después puedes editar cada uno
-            (por ejemplo, para respetar vacaciones).
+          <p class="muted-copy dialog-lead">
+            Divide {{ detail()?.year?.label }} en {{ school.terms.period.toLowerCase() }}s del mismo largo. Después puedes
+            ajustar cada fecha, por ejemplo para respetar vacaciones.
           </p>
-          <label class="form-field"
-            ><span>Cantidad</span
-            ><select name="generateCount" [(ngModel)]="generateCount">
-              @for (n of [2, 3, 4, 5, 6]; track n) {
-                <option [ngValue]="n">{{ n }} {{ school.terms.period.toLowerCase() }}s</option>
-              }
-            </select></label
-          >
-          <ol class="period-preview">
-            @for (p of preview(); track p.startsOn; let i = $index) {
-              <li><strong>{{ school.terms.period }} {{ i + 1 }}</strong> {{ date(p.startsOn) }} – {{ date(p.endsOn) }}</li>
+          <div class="segmented" role="radiogroup" [attr.aria-label]="'Cantidad de ' + school.terms.period.toLowerCase() + 's'">
+            @for (n of [2, 3, 4, 5, 6]; track n) {
+              <label><input type="radio" name="generateCount" [value]="n" [(ngModel)]="generateCount" />{{ n }}</label>
+            }
+          </div>
+          <ol class="timeline">
+            @for (p of bars(); track p.startsOn; let i = $index) {
+              <li>
+                <strong>{{ school.terms.period }} {{ i + 1 }}</strong>
+                <span class="bar" aria-hidden="true"><span [style.left.%]="p.left" [style.width.%]="p.width"></span></span>
+                <time>{{ shortDate(p.startsOn) }} – {{ shortDate(p.endsOn) }}</time>
+              </li>
             }
           </ol>
         }
         @case ('copy') {
-          <p class="action-explanation">
-            Copia la organización de {{ previous()?.label }}. No mueve estudiantes ni notas, y no cambia lo que ya existe en
-            este ciclo.
+          <p class="muted-copy dialog-lead">
+            Trae la organización de {{ previous()?.label }}. No mueve estudiantes ni notas, y no cambia lo que ya existe.
           </p>
-          <fieldset class="choice-group setup-options">
-            <legend>¿Qué copiar?</legend>
-            <label class="checkbox-field"
-              ><input type="checkbox" name="copySections" [(ngModel)]="copyForm.sections" /><span
-                >Secciones<small>Mismos nombres, jornada y cupo.</small></span
-              ></label
-            >
-            <label class="checkbox-field"
-              ><input type="checkbox" name="copyCourses" [(ngModel)]="copyForm.courses" /><span
-                >Cursos<small>Misma materia por grado o por sección.</small></span
-              ></label
-            >
-            <label class="checkbox-field nested-option"
-              ><input type="checkbox" name="copyTeachers" [(ngModel)]="copyForm.teachers" [disabled]="!copyForm.courses" /><span
-                >Con los mismos docentes</span
-              ></label
-            >
-          </fieldset>
+          <div class="option-list">
+            <label class="option-card"
+              ><span class="option-icon"><app-icon name="folder" /></span
+              ><span class="option-copy"><strong>Secciones</strong><small>Mismos nombres, jornada y cupo.</small></span
+              ><input type="checkbox" class="switch" role="switch" name="copySections" [(ngModel)]="copyForm.sections"
+            /></label>
+            <label class="option-card"
+              ><span class="option-icon"><app-icon name="book" /></span
+              ><span class="option-copy"><strong>Cursos</strong><small>Misma materia por grado o sección.</small></span
+              ><input type="checkbox" class="switch" role="switch" name="copyCourses" [(ngModel)]="copyForm.courses"
+            /></label>
+            <label class="option-card sub" [class.disabled]="!copyForm.courses"
+              ><span class="option-copy"><strong>Con los mismos docentes</strong></span
+              ><input
+                type="checkbox"
+                class="switch"
+                role="switch"
+                name="copyTeachers"
+                [(ngModel)]="copyForm.teachers"
+                [disabled]="!copyForm.courses"
+            /></label>
+          </div>
         }
         @case ('status') {
           <p class="action-explanation">

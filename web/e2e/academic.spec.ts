@@ -85,15 +85,15 @@ test('prepare a school year, enroll without inventing a section and keep placeme
   await page.getByRole('button', { name: 'Nuevo ciclo' }).click();
   await expect(page.getByRole('heading', { name: 'Nuevo ciclo escolar' })).toBeVisible();
   await page.getByLabel('Nombre del ciclo').fill(label);
-  await page.getByLabel('Inicio', { exact: true }).fill(`${calendarYear}-01-15`);
-  await page.getByLabel('Fin', { exact: true }).fill(`${calendarYear}-10-30`);
+  await page.getByLabel('Inicio de clases').fill(`${calendarYear}-01-15`);
+  await page.getByLabel('Fin del ciclo').fill(`${calendarYear}-10-30`);
   const dialog = page.getByRole('dialog');
-  for (const name of [/^Copiar las secciones/, /^Copiar los cursos/]) {
-    const option = dialog.getByRole('checkbox', { name });
+  for (const name of [/^Copiar secciones/, /^Copiar cursos/]) {
+    const option = dialog.getByRole('switch', { name });
     if (await option.count()) await option.uncheck();
   }
-  await dialog.getByLabel('Cantidad').selectOption({ label: '4 bimestres' });
-  await expect(dialog.locator('.period-preview li')).toHaveCount(4);
+  await dialog.getByRole('radio', { name: '4', exact: true }).check();
+  await expect(dialog.locator('.timeline li')).toHaveCount(4);
   await expectAccessible(page);
   await dialog.getByRole('button', { name: 'Crear ciclo', exact: true }).click();
   await expect(page.locator('.sp-toast')).toContainText('4 bimestres generados');

@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, computed, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { InstitutionService } from '../core/institution';
 import { Icon } from './icon';
@@ -413,6 +413,17 @@ export class Shell {
     // Inputs are bound after construction; read preview() once they are.
     queueMicrotask(() => {
       if (!this.preview()) this.notifications.start();
+    });
+    // Long menus scroll on their own: keep the current page's entry visible (only the menu scrolls, never the page).
+    afterNextRender(() => {
+      setTimeout(() => {
+        const nav = this.host.nativeElement.querySelector('.sidebar nav') as HTMLElement | null;
+        const active = nav?.querySelector('a.active') as HTMLElement | null;
+        if (!nav || !active) return;
+        const top = active.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
+        if (top + active.offsetHeight > nav.scrollTop + nav.clientHeight - 24 || top < nav.scrollTop)
+          nav.scrollTop = Math.max(0, top - nav.clientHeight / 2);
+      }, 0);
     });
   }
   iconFor(kind: NotificationKind): string {

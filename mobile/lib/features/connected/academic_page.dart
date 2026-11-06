@@ -472,24 +472,148 @@ class _PeriodPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = AppColors.of(context);
+    final s = DateTime.utc(start.year, start.month, start.day);
+    final total = DateTime.utc(end.year, end.month, end.day).difference(s).inDays + 1;
+    String day(DateTime d) => DateFormat('d MMM', 'es').format(d);
+    return Column(
+      children: [
+        for (final (i, (from, to)) in splitCalendar(start, end, count).indexed)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 74,
+                  child: Text('Período ${i + 1}', style: theme.textTheme.labelMedium),
+                ),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, box) {
+                      final left = from.difference(s).inDays / total * box.maxWidth;
+                      final width = (to.difference(from).inDays + 1) / total * box.maxWidth;
+                      return Container(
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: colors.border,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          margin: EdgeInsets.only(left: left),
+                          width: width,
+                          decoration: BoxDecoration(
+                            color: colors.accent,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: Spacing.sm),
+                SizedBox(
+                  width: 112,
+                  child: Text(
+                    '${day(from)} – ${day(to)}',
+                    textAlign: TextAlign.right,
+                    style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Group of options inside a bordered card: icon, title, description and a switch, like the web dialogs.
+class _OptionGroup extends StatelessWidget {
+  const _OptionGroup({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Container(
-      padding: const EdgeInsets.all(Spacing.md),
       decoration: BoxDecoration(
-        color: colors.tone(AppTone.neutral).background,
+        border: Border.all(color: colors.border),
         borderRadius: BorderRadius.circular(Radii.md),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final (i, (from, to)) in splitCalendar(start, end, count).indexed)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Text(
-                'Período ${i + 1}:  ${_short(from)} – ${_short(to)}',
-                style: theme.textTheme.bodySmall,
-              ),
-            ),
+          for (final (i, child) in children.indexed) ...[
+            if (i > 0) Divider(height: 1, color: colors.border),
+            child,
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _OptionTile extends StatelessWidget {
+  const _OptionTile({
+    required this.title,
+    required this.value,
+    required this.onChanged,
+    this.subtitle,
+    this.icon,
+  });
+
+  final String title;
+  final String? subtitle;
+  final IconData? icon;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = AppColors.of(context);
+    return MergeSemantics(
+      child: InkWell(
+        onTap: onChanged == null ? null : () => onChanged!(!value),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(icon == null ? 62 : Spacing.md, 12, Spacing.sm, 12),
+          child: Row(
+            children: [
+              if (icon != null) ...[
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: colors.accent.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, size: 19, color: colors.deep),
+                ),
+                const SizedBox(width: Spacing.md),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: onChanged == null ? colors.muted : null,
+                      ),
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle!,
+                        style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
+                      ),
+                  ],
+                ),
+              ),
+              Switch(value: value, onChanged: onChanged),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -502,12 +626,16 @@ class _CountChips extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: Spacing.sm,
-    children: [
-      for (final n in const [2, 3, 4, 5, 6])
-        _GoldChip(label: '$n', selected: n == value, onSelected: () => onChanged(n)),
-    ],
+  Widget build(BuildContext context) => SizedBox(
+    width: double.infinity,
+    child: SegmentedButton<int>(
+      showSelectedIcon: false,
+      segments: [
+        for (final n in const [2, 3, 4, 5, 6]) ButtonSegment(value: n, label: Text('$n')),
+      ],
+      selected: {value},
+      onSelectionChanged: (v) => onChanged(v.first),
+    ),
   );
 }
 
@@ -629,23 +757,29 @@ class _CopySheetState extends ConsumerState<_CopySheet> {
     error: _error,
     children: [
       const Text('No mueve estudiantes ni notas, y no cambia lo que ya existe.'),
-      SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        title: const Text('Secciones'),
-        value: _sections,
-        onChanged: (v) => setState(() => _sections = v),
-      ),
-      SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        title: const Text('Cursos'),
-        value: _courses,
-        onChanged: (v) => setState(() => _courses = v),
-      ),
-      SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        title: const Text('Con los mismos docentes'),
-        value: _courses && _teachers,
-        onChanged: _courses ? (v) => setState(() => _teachers = v) : null,
+      const SizedBox(height: Spacing.md),
+      _OptionGroup(
+        children: [
+          _OptionTile(
+            icon: Icons.folder_outlined,
+            title: 'Secciones',
+            subtitle: 'Mismos nombres, jornada y cupo.',
+            value: _sections,
+            onChanged: (v) => setState(() => _sections = v),
+          ),
+          _OptionTile(
+            icon: Icons.menu_book_outlined,
+            title: 'Cursos',
+            subtitle: 'Misma materia por grado o sección.',
+            value: _courses,
+            onChanged: (v) => setState(() => _courses = v),
+          ),
+          _OptionTile(
+            title: 'Con los mismos docentes',
+            value: _courses && _teachers,
+            onChanged: _courses ? (v) => setState(() => _teachers = v) : null,
+          ),
+        ],
       ),
     ],
   );
@@ -885,15 +1019,26 @@ class _NewYearSheetState extends ConsumerState<_NewYearSheet> {
         TextField(
           controller: _label,
           maxLength: 40,
-          decoration: const InputDecoration(labelText: 'Nombre del ciclo'),
+          decoration: const InputDecoration(labelText: 'Nombre del ciclo', counterText: ''),
         ),
+        const SizedBox(height: Spacing.md),
+        Row(
+          children: [
+            Expanded(
+              child: Text('Inicio de clases', style: Theme.of(context).textTheme.labelMedium),
+            ),
+            const SizedBox(width: Spacing.sm),
+            Expanded(child: Text('Fin del ciclo', style: Theme.of(context).textTheme.labelMedium)),
+          ],
+        ),
+        const SizedBox(height: 6),
         Row(
           children: [
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _pick(true),
                 icon: const Icon(Icons.event),
-                label: Text(_start == null ? 'Inicio' : _short(_start!)),
+                label: Text(_start == null ? 'Elegir' : _short(_start!)),
               ),
             ),
             const SizedBox(width: Spacing.sm),
@@ -901,40 +1046,56 @@ class _NewYearSheetState extends ConsumerState<_NewYearSheet> {
               child: OutlinedButton.icon(
                 onPressed: () => _pick(false),
                 icon: const Icon(Icons.event),
-                label: Text(_end == null ? 'Fin' : _short(_end!)),
+                label: Text(_end == null ? 'Elegir' : _short(_end!)),
               ),
             ),
           ],
         ),
-        const SizedBox(height: Spacing.md),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Generar los períodos'),
-          subtitle: const Text('Del mismo largo; después puedes ajustarlos.'),
-          value: _generate,
-          onChanged: (v) => setState(() => _generate = v),
+        const SizedBox(height: Spacing.lg),
+        Text(
+          'PREPARACIÓN AUTOMÁTICA',
+          style: Theme.of(context).textTheme.labelSmall
+              ?.copyWith(color: AppColors.of(context).muted),
         ),
-        if (_generate) ...[
-          _CountChips(value: _periods, onChanged: (n) => setState(() => _periods = n)),
-          if (_start != null && _end != null) ...[
-            const SizedBox(height: Spacing.sm),
-            _PeriodPreview(start: _start!, end: _end!, count: _periods),
+        const SizedBox(height: Spacing.sm),
+        _OptionGroup(
+          children: [
+            _OptionTile(
+              icon: Icons.date_range_outlined,
+              title: 'Crear los períodos',
+              subtitle: 'Del mismo largo. Podrás ajustarlos después.',
+              value: _generate,
+              onChanged: (v) => setState(() => _generate = v),
+            ),
+            if (_generate)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Spacing.md, Spacing.sm, Spacing.md, Spacing.md),
+                child: Column(
+                  children: [
+                    _CountChips(value: _periods, onChanged: (n) => setState(() => _periods = n)),
+                    if (_start != null && _end != null) ...[
+                      const SizedBox(height: Spacing.md),
+                      _PeriodPreview(start: _start!, end: _end!, count: _periods),
+                    ],
+                  ],
+                ),
+              ),
+            if (latestLabel != null) ...[
+              _OptionTile(
+                icon: Icons.content_copy_outlined,
+                title: 'Copiar secciones y cursos de $latestLabel',
+                subtitle: 'No mueve estudiantes ni notas.',
+                value: _copy,
+                onChanged: (v) => setState(() => _copy = v),
+              ),
+              _OptionTile(
+                title: 'Con los mismos docentes',
+                value: _copy && _teachers,
+                onChanged: _copy ? (v) => setState(() => _teachers = v) : null,
+              ),
+            ],
           ],
-        ],
-        if (latestLabel != null) ...[
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text('Copiar secciones y cursos de $latestLabel'),
-            value: _copy,
-            onChanged: (v) => setState(() => _copy = v),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Con los mismos docentes'),
-            value: _copy && _teachers,
-            onChanged: _copy ? (v) => setState(() => _teachers = v) : null,
-          ),
-        ],
+        ),
       ],
     );
   }

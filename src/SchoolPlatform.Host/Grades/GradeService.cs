@@ -141,10 +141,11 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
         var publications = await db.GradePublications.AsNoTracking().Where(x => x.AcademicYearId == yearId)
             .Join(db.ClearanceCutoffs, p => p.CutoffId, c => c.Id, (p, c) => new { p.PeriodId, p.PublishedAt, Cutoff = c.Name })
             .ToDictionaryAsync(x => x.PeriodId, ct);
+        var completeness = await CompletenessAsync(yearId, yearCourses, periods, ct);
         var result = new List<PublicationView>();
         foreach (var period in periods)
         {
-            var (expected, recorded) = await CompletenessAsync(yearCourses, period, ct);
+            var (expected, recorded) = completeness[period.Id];
             publications.TryGetValue(period.Id, out var publication);
             result.Add(new(period.Id, period.Sequence, period.Name, period.StartsOn, period.EndsOn, period.Published,
                 publication?.PublishedAt, publication?.Cutoff, expected, recorded));
@@ -166,7 +167,7 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
         if (period.Published) throw new OperationException(409, "already-published", "Ese período ya fue publicado.");
         if (!await db.ClearanceCutoffs.AnyAsync(x => x.Id == request.CutoffId && x.AcademicYearId == yearId, ct))
             throw OperationException.Invalid("Selecciona un corte de solvencia del mismo ciclo.");
-        var (expected, recorded) = await CompletenessAsync(await courses.CoursesAsync(yearId, null, ct), period, ct);
+        var (expected, recorded) = (await CompletenessAsync(yearId, await courses.CoursesAsync(yearId, null, ct), [period], ct))[period.Id];
         if (expected == 0) throw new OperationException(409, "nothing-to-publish", "No hay estudiantes en cursos durante ese período.");
         if (recorded < expected)
             throw new OperationException(409, "incomplete", $"Faltan {expected - recorded} notas por registrar (o marcar como pendiente/exonerado) antes de publicar.");
@@ -244,16 +245,41 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
         .OrderBy(x => x.FamilyNames).ThenBy(x => x.GivenNames)
         .Select(x => new CourseStudent(x.StudentId, PeopleService.Display(x.GivenNames, x.FamilyNames, x.PreferredName), x.StudentCode)).ToArray();
 
-    private async Task<(int Expected, int Recorded)> CompletenessAsync(CourseView[] yearCourses, SheetPeriod period, CancellationToken ct)
+    /// <summary>
+    /// Expected and recorded scores per period for every course of the year, with the same membership rule as
+    /// <see cref="StudentsAsync"/> (dated placements overlapping the period, empty intervals excluded). Three queries for
+    /// the whole year instead of two per course and period, so the dashboard and publication screens stay fast.
+    /// </summary>
+    private async Task<Dictionary<Guid, (int Expected, int Recorded)>> CompletenessAsync(Guid yearId, CourseView[] yearCourses,
+        IReadOnlyCollection<SheetPeriod> periods, CancellationToken ct)
     {
-        var expected = 0;
-        var recorded = 0;
-        foreach (var course in yearCourses)
+        var placements = await (from p in db.Placements.AsNoTracking()
+                                join e in db.Enrollments on p.EnrollmentId equals e.Id
+                                where e.AcademicYearId == yearId && e.Status != EnrollmentStatus.Cancelled
+                                join person in db.Persons on e.StudentId equals person.Id
+                                join student in db.Students on e.StudentId equals student.PersonId
+                                select new { e.StudentId, p.GradeLevelId, p.SectionId, p.StartsOn, p.EndsOn }).ToArrayAsync(ct);
+        var periodIds = periods.Select(x => x.Id).ToArray();
+        var scored = (await db.PeriodScores.AsNoTracking()
+                .Where(x => periodIds.Contains(x.PeriodId) && db.Courses.Any(c => c.Id == x.CourseId && c.AcademicYearId == yearId))
+                .Select(x => new { x.CourseId, x.PeriodId, x.StudentId }).ToArrayAsync(ct))
+            .Select(x => (x.CourseId, x.PeriodId, x.StudentId)).ToHashSet();
+        var result = new Dictionary<Guid, (int Expected, int Recorded)>();
+        foreach (var period in periods)
         {
-            var ids = (await StudentsAsync(course, period, ct)).Select(x => x.Id).ToArray();
-            expected += ids.Length;
-            recorded += await db.PeriodScores.CountAsync(x => x.CourseId == course.Id && x.PeriodId == period.Id && ids.Contains(x.StudentId), ct);
+            var expected = 0;
+            var recorded = 0;
+            foreach (var course in yearCourses)
+            {
+                var ids = placements
+                    .Where(p => p.GradeLevelId == course.GradeLevelId && (course.SectionId == null || p.SectionId == course.SectionId) &&
+                                p.StartsOn <= period.EndsOn && (p.EndsOn == null || (p.EndsOn > period.StartsOn && p.EndsOn > p.StartsOn)))
+                    .Select(p => p.StudentId).Distinct().ToArray();
+                expected += ids.Length;
+                recorded += ids.Count(id => scored.Contains((course.Id, period.Id, id)));
+            }
+            result[period.Id] = (expected, recorded);
         }
-        return (expected, recorded);
+        return result;
     }
 }

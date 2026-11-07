@@ -76,6 +76,17 @@ export class FinanceCashier {
   readonly todayLoading = signal(false);
   readonly todayError = signal('');
   readonly todayTotal = computed(() => this.today().filter((x) => !x.reversed).reduce((sum, x) => sum + x.amount, 0));
+  /** Cash-up of the day: confirmed receipts grouped by payment method (reversed ones excluded). */
+  readonly todayByMethod = computed(() => {
+    const totals = new Map<string, { label: string; amount: number; count: number }>();
+    for (const p of this.today().filter((x) => !x.reversed)) {
+      const t = totals.get(p.method) ?? { label: this.methodLabels[p.method] ?? p.method, amount: 0, count: 0 };
+      t.amount += p.amount;
+      t.count++;
+      totals.set(p.method, t);
+    }
+    return [...totals.values()].sort((a, b) => b.amount - a.amount);
+  });
 
   constructor() {
     this.route.queryParamMap.pipe(

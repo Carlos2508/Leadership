@@ -43,7 +43,9 @@
             <button class="result-item" (click)="choose(person)">
               <span class="avatar small" aria-hidden="true">{{ person.givenNames.slice(0, 1) }}</span>
               <span class="person-copy"
-                ><strong>{{ person.displayName }}</strong><small>{{ person.studentCode }}</small></span
+                ><strong>{{ person.displayName }}</strong><small
+                  >{{ person.studentCode }}{{ person.placement ? ' · ' + person.placement : '' }}</small
+                ></span
               >
               <app-icon name="arrow" />
             </button>
@@ -190,6 +192,14 @@
         <p class="feedback error-feedback" role="alert">{{ todayError() }}</p>
         <button class="button outline" (click)="loadToday()">Reintentar recibos</button>
       } @else if (today().length) {
+        <div class="cash-up" aria-label="Cierre de caja por forma de pago">
+          @for (m of todayByMethod(); track m.label) {
+            <span
+              ><small>{{ m.label }} · {{ m.count }} {{ m.count === 1 ? 'recibo' : 'recibos' }}</small
+              ><strong>{{ money(m.amount) }}</strong></span
+            >
+          }
+        </div>
         <ul class="payment-list">
           @for (payment of today(); track payment.id) {
             <li [class.reversed]="payment.reversed">

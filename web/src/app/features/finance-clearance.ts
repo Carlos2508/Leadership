@@ -78,6 +78,9 @@ import { Icon } from '../shared/icon';
             <span class="summary-clear"><strong>{{ r.clear }}</strong> {{ r.clear === 1 ? "solvente" : "solventes" }}</span>
             <span class="summary-blocked"><strong>{{ r.blocked }}</strong> con saldo pendiente</span>
             <span><strong>{{ r.pendingSetup }}</strong> con configuración incompleta</span>
+            @if (r.rows.length) {
+              <button type="button" class="text-button export-button" (click)="exportCsv(r)">Exportar a Excel (CSV)</button>
+            }
           </div>
           @if (r.rows.length) {
             <div class="table-scroll" tabindex="0" role="region" aria-label="Solvencia por estudiante">
@@ -104,7 +107,7 @@ import { Icon } from '../shared/icon';
                         <span
                           class="pill"
                           [class.mint]="row.status === 'Clear'"
-                          [class.suspended]="row.status === 'Blocked'"
+                          [class.due]="row.status === 'Blocked'"
                           [class.gold]="row.status === 'PendingFinancialSetup'"
                           >{{ labels[row.status] }}</span
                         >
@@ -155,6 +158,20 @@ export class FinanceClearance {
       distinctUntilChanged(),
       takeUntilDestroyed(),
     ).subscribe(() => void this.load());
+  }
+  /** Spreadsheet copy of the rows on screen (UTF-8 with BOM so Excel keeps accents), e.g. to follow up on balances. */
+  exportCsv(r: ClearanceReport): void {
+    const cell = (value: string) => '"' + value.replaceAll('"', '""') + '"';
+    const lines = [['Código', 'Estudiante', 'Grado', 'Sección', 'Estado', 'Saldo pendiente', 'Cuotas sin cargo'].map(cell).join(',')];
+    for (const row of r.rows)
+      lines.push([row.studentCode, row.studentName, row.grade ?? '', row.section ?? '', this.labels[row.status] ?? row.status,
+        row.pendingBalance.toFixed(2), String(row.missingPeriods)].map(cell).join(','));
+    const url = URL.createObjectURL(new Blob([String.fromCharCode(0xfeff) + lines.join(String.fromCharCode(13, 10))], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'solvencia-' + r.cutoff.toLowerCase().replace(/[^a-z0-9áéíóúñü]+/g, '-') + '.csv';
+    link.click();
+    URL.revokeObjectURL(url);
   }
   format(value: number): string {
     return money(value, this.setup()?.currency ?? this.school.locale.currency, this.school.locale.culture);

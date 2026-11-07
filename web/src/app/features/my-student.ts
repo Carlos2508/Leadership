@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -75,21 +75,36 @@ interface StudentTask {
                 }
               </div>
               @if (grades(); as g) {
+                @if (matrix(); as m) {
+                  <!-- One report-card table: subjects in rows, available periods in columns. -->
+                  <div class="table-scroll grade-matrix-wrap" tabindex="0" role="region" aria-label="Calificaciones por período">
+                    <table class="grade-matrix">
+                      <caption class="sr-only">Calificaciones publicadas por materia y período</caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">Materia</th>
+                          @for (p of m.periods; track p.periodId) {
+                            <th scope="col">{{ p.name }}</th>
+                          }
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (row of m.rows; track row.subject) {
+                          <tr>
+                            <th scope="row">{{ row.subject }}</th>
+                            @for (cell of row.cells; track $index) {
+                              <td [class.muted-copy]="cell.muted">{{ cell.text }}</td>
+                            }
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
                 @for (period of g.periods; track period.periodId) {
+                  @if (period.status !== 'Available') {
                   <div class="grade-period">
                     <h3 class="subheading">{{ period.name }}</h3>
-                    @if (period.status === 'Available') {
-                      <ul class="payment-list">
-                        @for (grade of period.grades; track grade.subject) {
-                          <li>
-                            <span class="person-copy"><strong>{{ grade.subject }}</strong></span>
-                            <strong class="grade-value">{{
-                              grade.status === 'Scored' ? grade.score : grade.status === 'Excused' ? 'Exonerado' : 'Pendiente'
-                            }}</strong>
-                          </li>
-                        }
-                      </ul>
-                    } @else {
                       <div class="blocked-grades" role="note">
                         <app-icon name="shield" />
                         <div>
@@ -110,8 +125,8 @@ interface StudentTask {
                           <small>El acceso a tareas y entregas continúa disponible.</small>
                         </div>
                       </div>
-                    }
                   </div>
+                  }
                 } @empty {
                   <p class="muted-copy">Aún no hay calificaciones publicadas.</p>
                 }
@@ -378,6 +393,24 @@ export class MyStudent {
       pending: { chargeId: string | null; label: string; balance: number }[];
     }[];
   } | null>(null);
+  /** Available periods as one table (subjects × periods); withheld periods are explained below it. */
+  readonly matrix = computed(() => {
+    const periods = (this.grades()?.periods ?? []).filter((p) => p.status === 'Available');
+    if (!periods.length) return null;
+    const subjects = [...new Set(periods.flatMap((p) => p.grades.map((g) => g.subject)))].sort((a, b) => a.localeCompare(b, 'es'));
+    return {
+      periods,
+      rows: subjects.map((subject) => ({
+        subject,
+        cells: periods.map((p) => {
+          const g = p.grades.find((x) => x.subject === subject);
+          if (!g) return { text: '—', muted: true };
+          if (g.status === 'Scored') return { text: String(g.score), muted: false };
+          return { text: g.status === 'Excused' ? 'Exonerado' : 'Pendiente', muted: true };
+        }),
+      })),
+    };
+  });
   readonly notFound = signal(false);
   readonly error = signal('');
   readonly faculties = facultyLabels;

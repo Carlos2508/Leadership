@@ -120,6 +120,10 @@ public sealed class AcademicSqlTests : SqlTestBase
         var roster = await Enrollment(x => x.ListAsync(year, null, b, null, null, 1, default));
         Assert.Equal(id, Assert.Single(roster.Items).Id);
         Assert.Empty((await Enrollment(x => x.ListAsync(year, null, a, null, null, 1, default))).Items);
+        // Directory and cashier searches show the current grade and section to tell homonyms apart.
+        async Task<string?> Shown() => Assert.Single((await Use<PeopleService, PagedResult<PersonSummary>>(x =>
+            x.ListAsync("H-1", "student", null, 1, default))).Items).Placement;
+        Assert.Equal("Tercero primaria · B", await Shown());
 
         await Assert.ThrowsAsync<OperationException>(() => Enrollment(x =>
             x.WithdrawAsync(Owner, id, new(history.Version, moveOn.AddDays(-1), Reason), default)));
@@ -127,6 +131,7 @@ public sealed class AcademicSqlTests : SqlTestBase
         await Enrollment(x => x.WithdrawAsync(Owner, id, new(history.Version, withdrawOn, Reason), default));
         history = await History(student);
         Assert.Equal(EnrollmentStatus.Withdrawn, history.Status);
+        Assert.Null(await Shown());
         Assert.All(history.Placements, p => Assert.NotNull(p.EndsOn));
         await Assert.ThrowsAsync<OperationException>(() => Enrollment(x =>
             x.ReactivateAsync(Owner, id, new(history.Version, grade, b, withdrawOn.AddDays(-1), Reason), default)));

@@ -2,6 +2,10 @@
 
 Actualizado: 6 de noviembre de 2026, America/Guatemala.
 
+## Prueba de uso real (integrada en main)
+
+- Colegio ficticio de tamaño real usado por seis roles. Se corrigieron lentitud con volumen, homónimos en búsquedas, cierre de caja, exportación de solvencia, vista de notas y saldo total para familias y menú del docente con muchos cursos. Ocho mejoras quedan recomendadas en `QA_USO_REAL_2026-11-06.md`.
+
 ## Chat privado por cursos y desbloqueo biométrico — estado vigente
 
 - Solicitud del propietario: publicar el merge en `main` y después añadir huella al app y chat tipo conversación privada. `ce563a7` se subió al iniciar; el alcance del chat se confirmó expresamente: solo docentes de los cursos del estudiante. Implementación en `feat/private-chat-biometric-unlock`, conservando la instalación independiente por colegio.

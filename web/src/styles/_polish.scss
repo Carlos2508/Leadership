@@ -324,3 +324,93 @@ td .text-button {
     flex-wrap: wrap;
   }
 }
+
+/* Report-card table for families: subjects in rows, published periods in columns. */
+.grade-matrix-wrap {
+  margin: 4px 0 8px;
+}
+.grade-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.grade-matrix th,
+.grade-matrix td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  white-space: nowrap;
+}
+.grade-matrix thead th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.grade-matrix th {
+  background: transparent;
+}
+.grade-matrix th[scope='row'] {
+  font-size: 14px;
+  color: var(--ink);
+}
+.grade-matrix th[scope='row'],
+.grade-matrix thead th:first-child {
+  text-align: left;
+  font-weight: 600;
+  white-space: normal;
+}
+.grade-matrix td {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.grade-matrix td:last-child {
+  color: var(--ink);
+}
+.grade-matrix td.muted-copy {
+  font-weight: 500;
+}
+
+/* Cash-up of the day by payment method. */
+.cash-up {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 4px 0 12px;
+}
+.cash-up span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 150px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--soft-bg);
+}
+.cash-up small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.cash-up strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Teacher menu with many courses: one small heading per group, compact course links. */
+.sidebar .nav-subgroup {
+  display: block;
+  margin: 10px 14px 2px;
+  font-size: 11px;
+  font-weight: 650;
+  color: color-mix(in srgb, var(--accent) 70%, #fff);
+  letter-spacing: 0.02em;
+}
+.sidebar nav a.nav-compact {
+  min-height: 36px;
+  padding-block: 7px;
+}
+
+/* Balance pending: a soft red so it stands out in long lists (AA contrast). */
+.pill.due {
+  background: #fff2ef;
+  color: #922c2c;
+}

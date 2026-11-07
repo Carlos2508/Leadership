@@ -2,6 +2,7 @@ using System.Net.Mail;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using SchoolPlatform.Host.Academic;
 using SchoolPlatform.Host.Branding;
 using SchoolPlatform.Host.Common;
 using SchoolPlatform.Host.IdentityAccess;
@@ -48,8 +49,21 @@ public sealed partial class PeopleService(SchoolDbContext db, SchoolAudit audit,
                 Account = db.AccountLinks.Where(l => l.PersonId == x.Id && l.UnlinkedAt == null)
                     .Join(db.Accounts, l => l.UserId, a => a.Id, (l, a) => a.UserName).FirstOrDefault()
             }).ToArrayAsync(ct);
+        // Current grade and section of the students on this page (latest open year), so homonyms can be told apart.
+        var studentIds = items.Where(x => x.StudentCode != null).Select(x => x.Id).ToArray();
+        var placements = studentIds.Length == 0 ? [] : await (from e in db.Enrollments.AsNoTracking()
+                where studentIds.Contains(e.StudentId) && e.Status == EnrollmentStatus.Active
+                join y in db.Years on e.AcademicYearId equals y.Id
+                where y.Status != YearStatus.Closed
+                from p in db.Placements.Where(p => p.EnrollmentId == e.Id && p.EndsOn == null)
+                join g in db.Grades on p.GradeLevelId equals g.Id
+                from s in db.Sections.Where(s => s.Id == p.SectionId).DefaultIfEmpty()
+                select new { e.StudentId, y.StartsOn, Grade = g.Name, Section = s == null ? null : s.Name }).ToArrayAsync(ct);
+        var current = placements.GroupBy(x => x.StudentId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.StartsOn).Select(x => x.Section == null ? x.Grade : $"{x.Grade} · {x.Section}").First());
         return new(items.Select(x => new PersonSummary(x.Id, Display(x.GivenNames, x.FamilyNames, x.PreferredName),
-            x.GivenNames, x.FamilyNames, x.StudentCode, x.IsGuardian, x.Status, x.Account, x.IsStaff)).ToArray(), total, page, PageSize);
+            x.GivenNames, x.FamilyNames, x.StudentCode, x.IsGuardian, x.Status, x.Account, x.IsStaff,
+            current.GetValueOrDefault(x.Id))).ToArray(), total, page, PageSize);
     }
 
     public async Task<PersonDetail> GetAsync(Guid id, CancellationToken ct)

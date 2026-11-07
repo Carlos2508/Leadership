@@ -101,6 +101,8 @@ export class Courses {
   createForm = { grades: {} as Record<string, boolean>, perSection: false, subjects: {} as Record<string, boolean> };
   copyTeachers = true;
   assignForm = { search: '', staffId: '', role: 'Lead', startsOn: '' };
+  /** Courses that receive the teacher in one step (several grades/sections at once). */
+  assignCourses: Record<string, boolean> = {};
   reason = '';
 
   constructor() {
@@ -198,13 +200,22 @@ export class Courses {
       .filter((g) => this.createForm.grades[g])
       .reduce((n, g) => n + subjects * (this.createForm.perSection ? Math.max(1, this.sectionsFor(g).length) : 1), 0);
   }
-  openAssign(course: CourseView): void {
+  openAssign(course: CourseView | null): void {
     this.selectedCourse.set(course);
-    this.assignForm = { search: '', staffId: '', role: course.teachers.length ? 'Assistant' : 'Lead', startsOn: '' };
+    this.assignCourses = course ? { [course.id]: true } : {};
+    this.assignForm = { search: '', staffId: '', role: course?.teachers.length ? 'Assistant' : 'Lead', startsOn: '' };
     this.staff.set([]);
     this.open('assign');
-    this.reason = `Asignación de carga académica ${course.year}`;
+    this.reason = `Asignación de carga académica ${course?.year ?? this.courses()[0]?.year ?? ''}`.trim();
     void this.searchStaff();
+  }
+  chosenCourses(): string[] {
+    return Object.keys(this.assignCourses).filter((id) => this.assignCourses[id]);
+  }
+  chooseGrade(courses: CourseView[]): void {
+    const next = { ...this.assignCourses };
+    for (const c of courses) next[c.id] = true;
+    this.assignCourses = next;
   }
   openUnassign(course: CourseView, teacher: TeacherView): void {
     this.selectedCourse.set(course);
@@ -317,13 +328,21 @@ export class Courses {
             this.dialogError.set('Selecciona a la persona docente.');
             return;
           }
-          await this.api.post(`/api/v1/courses/${this.selectedCourse()!.id}/teachers`, {
+          const ids = this.chosenCourses();
+          if (!ids.length) {
+            this.dialogError.set('Selecciona al menos un curso.');
+            return;
+          }
+          const r = await this.api.post<{ assigned: number; alreadyAssigned: number }>('/api/v1/academic/teachers/assign-many', {
             staffId: this.assignForm.staffId,
             role: this.assignForm.role,
+            courseIds: ids,
             startsOn: this.assignForm.startsOn || null,
             reason: this.reason,
           });
-          message = 'La asignación docente quedó registrada.';
+          message =
+            (r.assigned === 1 ? 'La asignación docente quedó registrada.' : `Se asignaron ${r.assigned} cursos.`) +
+            (r.alreadyAssigned ? ` ${r.alreadyAssigned} ya estaban asignados a esa persona.` : '');
           break;
         }
         case 'unassign':

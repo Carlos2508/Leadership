@@ -126,6 +126,14 @@ interface StudentTask {
                         </div>
                       </div>
                   </div>
+                  } @else if (period.pending.length) {
+                    <!-- Grades and payments are separate: pending items are informative and never hide results. -->
+                    <p class="muted-copy" role="note">
+                      {{ period.name }}: saldo pendiente
+                      @for (item of period.pending; track item.chargeId) {
+                        · {{ item.label }} {{ format(item.balance) }}
+                      }
+                    </p>
                   }
                 } @empty {
                   <p class="muted-copy">Aún no hay calificaciones publicadas.</p>
@@ -389,7 +397,7 @@ export class MyStudent {
       periodId: string;
       name: string;
       status: 'Available' | 'Blocked' | 'PendingFinancialSetup';
-      grades: { subject: string; score: number | null; status: string }[];
+      grades: { subject: string; score: number | null; status: string; label?: string | null }[];
       pending: { chargeId: string | null; label: string; balance: number }[];
     }[];
   } | null>(null);
@@ -405,7 +413,7 @@ export class MyStudent {
         cells: periods.map((p) => {
           const g = p.grades.find((x) => x.subject === subject);
           if (!g) return { text: '—', muted: true };
-          if (g.status === 'Scored') return { text: String(g.score), muted: false };
+          if (g.status === 'Scored') return { text: g.label ?? String(g.score), muted: false };
           return { text: g.status === 'Excused' ? 'Exonerado' : 'Pendiente', muted: true };
         }),
       })),

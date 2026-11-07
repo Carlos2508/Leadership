@@ -10,7 +10,7 @@ using SchoolPlatform.Host.Finance;
 
 namespace SchoolPlatform.Host.Documents;
 
-public sealed record ReportLine(string Subject, decimal? Score, string Status);
+public sealed record ReportLine(string Subject, decimal? Score, string Status, string? Label = null);
 /// <summary>One period of one student. Withheld carries the reason and no results.</summary>
 public sealed record ReportSection(string Period, ReportLine[] Lines, string? Withheld);
 public sealed record StudentReport(string StudentName, string StudentCode, string Placement, string Year, ReportSection[] Sections);
@@ -306,6 +306,10 @@ public sealed class PdfDocuments(IOptions<InstitutionOptions> options, BrandAsse
         if (line is null) { container.Text("—").FontColor(Muted); return; }
         switch (line.Status)
         {
+            case "Scored" when line.Label is not null:
+                // Qualitative scale (e.g. Preprimaria): print the level name, never a pass/fail color.
+                container.Text(line.Label).FontSize(highlight ? 10 : 9).SemiBold().FontColor(Ink);
+                break;
             case "Scored":
                 var color = School.Documents.PassingScore is { } pass ? (line.Score >= pass ? Success : Danger) : Ink;
                 container.Text(line.Score?.ToString("0.##", Culture) ?? "—").FontSize(highlight ? 13 : 11).ExtraBold().FontColor(color);

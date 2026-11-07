@@ -81,6 +81,10 @@ builder.Services.AddOptions<SchoolPlatform.Host.Learning.StorageOptions>().BindC
     .Validate(x => x.MaxFileBytes is > 0 and <= 50 * 1024 * 1024 && x.MaxFilesPerSubmission is > 0 and <= 20 && x.Root.Length > 0,
         "Configuración de almacenamiento inválida.").ValidateOnStart();
 builder.Services.AddScoped<SchoolPlatform.Host.Attendance.AttendanceService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Attendance.GroupAttendanceService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Academic.CycleSetupService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Academic.BulkEnrollmentService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Grades.OfficialReportService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Communication.CommunicationService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Chat.ChatService>();
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
@@ -289,7 +293,7 @@ app.MapGet("/api/v1/bootstrap", (IOptions<InstitutionOptions> options, IWebHostE
     {
         institution.DisplayName, institution.ShortName, institution.CampusLabel, institution.Tagline,
         institution.WelcomeMessage, institution.Contact, institution.Assets, institution.Theme,
-        institution.Locale, institution.Terms, institution.Public, previewEnabled = env.IsDevelopment()
+        institution.Locale, institution.Terms, institution.Public, institution.Academic, previewEnabled = env.IsDevelopment()
     });
 }).AllowAnonymous();
 app.MapGet("/api/v1/session", async (ClaimsPrincipal user, IOptions<InstitutionOptions> options, IdentityDbContext db,
@@ -306,8 +310,9 @@ app.MapGet("/api/v1/session", async (ClaimsPrincipal user, IOptions<InstitutionO
         .Join(school.Persons, l => l.PersonId, p => p.Id, (l, p) => new { p.Id, p.GivenNames, p.FamilyNames, p.PreferredName, p.Status,
             IsStudent = school.Students.Any(s => s.PersonId == p.Id), IsGuardian = school.Guardians.Any(g => g.PersonId == p.Id),
             IsStaff = school.Staff.Any(s => s.PersonId == p.Id) }).FirstOrDefaultAsync(ct);
-    var roleLabel = await db.AccountRoleAssignments.Where(a => a.UserId == userId)
-        .Join(db.AccessRoles, a => a.RoleKey, r => r.Key, (a, r) => r.Label).FirstOrDefaultAsync(ct);
+    var roleLabels = await db.AccountRoleAssignments.Where(a => a.UserId == userId)
+        .Join(db.AccessRoles, a => a.RoleKey, r => r.Key, (a, r) => r.Label).OrderBy(x => x).ToArrayAsync(ct);
+    var roleLabel = roleLabels.Length == 0 ? null : string.Join(" + ", roleLabels);
     return Results.Ok(new
     {
         userId, username = user.Identity!.Name, schoolId = options.Value.SchoolId,

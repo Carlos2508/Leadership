@@ -14,6 +14,7 @@ import 'biometric_settings.dart';
 import 'biometric_vault.dart';
 import 'chat_page.dart';
 import 'connected_session.dart';
+import 'offline_store.dart';
 import 'school_api.dart';
 import 'school_tab.dart';
 import 'students_tab.dart';
@@ -23,10 +24,18 @@ import 'teaching_tab.dart';
 final apiGetProvider = FutureProvider.autoDispose.family<dynamic, String>((ref, path) async {
   final session = ref.watch(connectedControllerProvider);
   if (session == null) throw const ApiFailure('Tu sesión venció. Vuelve a ingresar.', status: 401);
+  final offline = ref.read(offlineStoreProvider);
   try {
-    return await session.api.get(path);
+    final data = await session.api.get(path);
+    unawaited(offline?.remember(path, data));
+    return data;
   } on ApiFailure catch (e) {
     if (e.unauthorized) ref.read(connectedControllerProvider.notifier).expire();
+    // No signal: class lists and grade sheets seen before stay usable (marked with 'offline').
+    if (isOfflineFailure(e)) {
+      final copy = offline?.recall(path);
+      if (copy != null) return copy;
+    }
     rethrow;
   }
 });

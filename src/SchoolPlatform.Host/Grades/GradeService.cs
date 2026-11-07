@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using SchoolPlatform.Host.Branding;
 using SchoolPlatform.Host.Academic;
 using SchoolPlatform.Host.Common;
 using SchoolPlatform.Host.Finance;
@@ -14,22 +16,32 @@ public sealed record SavedScore(Guid StudentId, decimal? Score, string Status, s
 public sealed record SaveScoresResult(int Changed, SavedScore[] Rows);
 public sealed record SheetRow(Guid StudentId, string Name, string Code, decimal? Score, string? Status, string? Version);
 public sealed record SheetPeriod(Guid Id, int Sequence, string Name, DateOnly StartsOn, DateOnly EndsOn, bool Published);
-public sealed record GradeSheet(CourseView Course, SheetPeriod Period, SheetPeriod[] Periods, bool CanEdit, bool RequiresReason, SheetRow[] Rows);
+public sealed record GradeSheet(CourseView Course, SheetPeriod Period, SheetPeriod[] Periods, bool CanEdit, bool RequiresReason, SheetRow[] Rows,
+    EvaluationScale? Scale = null);
 public sealed record PublicationView(Guid PeriodId, int Sequence, string Name, DateOnly StartsOn, DateOnly EndsOn, bool Published,
     DateTimeOffset? PublishedAt, string? Cutoff, int Expected, int Recorded);
 public sealed record PublishRequest(Guid PeriodId, Guid CutoffId, string Note);
-public sealed record MyGrade(string Subject, decimal? Score, string Status);
+public sealed record MyGrade(string Subject, decimal? Score, string Status, string? Label = null);
 public sealed record MyGradesPeriod(Guid PeriodId, int Sequence, string Name, string Status, MyGrade[] Grades, PendingItem[] Pending);
 public sealed record MyGrades(Guid StudentId, string? Year, MyGradesPeriod[] Periods);
 
 /// <summary>
 /// Period scores per course, with revisions; publication per period tied to a clearance cutoff; and the family/student
-/// view, which requires the AcademicRecords faculty (or being the student) and clearance for each publication on every read.
+/// view, which requires the AcademicRecords faculty (or being the student). Clearance for each publication is evaluated on
+/// every read only when the school sets Academic:GradesRequireClearance; by default grades and payments are separate.
+/// Stages with a qualitative scale (Academic:Scales) accept only the scale's level values and show their labels.
 /// Only captured period scores are published: annual averages and rounding remain internal until the policy is approved.
 /// </summary>
 public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProvider time, CourseService courses,
-    ClearanceService clearance, PeopleService people)
+    ClearanceService clearance, PeopleService people, IOptions<InstitutionOptions> institution)
 {
+    private AcademicPolicyOptions Policy => institution.Value.Academic;
+
+    /// <summary>Evaluation scale of the course's grade stage, or null for numeric 0–100.</summary>
+    public async Task<EvaluationScale?> ScaleAsync(Guid gradeLevelId, CancellationToken ct) =>
+        Policy.Scales.Length == 0 ? null
+            : Policy.ScaleFor(await db.Grades.AsNoTracking().Where(x => x.Id == gradeLevelId).Select(x => x.Stage).SingleOrDefaultAsync(ct));
+
     public async Task<GradeSheet?> SheetAsync(Guid userId, Guid courseId, Guid? periodId, CancellationToken ct)
     {
         if (!await courses.CanViewAsync(userId, courseId, ct)) return null;
@@ -47,7 +59,7 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
         return new(course, period, periods, period.Published ? isManager : canCapture, period.Published,
             students.Select(s => scores.TryGetValue(s.Id, out var score)
                 ? new SheetRow(s.Id, s.Name, s.Code, score.Score, score.Status, Versions.Encode(score.Version))
-                : new SheetRow(s.Id, s.Name, s.Code, null, null, null)).ToArray());
+                : new SheetRow(s.Id, s.Name, s.Code, null, null, null)).ToArray(), await ScaleAsync(course.GradeLevelId, ct));
     }
 
     public async Task<SaveScoresResult> SaveAsync(Guid userId, Guid courseId, SaveScoresRequest request, CancellationToken ct)
@@ -72,9 +84,12 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
         var entries = request.Entries ?? [];
         if (entries.Length is 0 or > 200 || entries.Select(x => x.StudentId).Distinct().Count() != entries.Length)
             throw OperationException.Invalid("Envía una fila por estudiante.");
+        var scale = await ScaleAsync(course.GradeLevelId, ct);
         foreach (var entry in entries)
         {
             if (!ScoreStatus.All.Contains(entry.Status)) throw OperationException.Invalid("Estado de nota inválido.");
+            if (scale is not null && entry.Status == ScoreStatus.Scored && !scale.Levels.Any(l => l.Value == entry.Score))
+                throw OperationException.Invalid($"En {scale.Name} elige uno de los niveles: {string.Join(", ", scale.Levels.Select(l => l.Label))}.");
             if (entry.Status == ScoreStatus.Scored && (entry.Score is null or < 0 or > 100 || decimal.Round(entry.Score.Value, 2) != entry.Score))
                 throw OperationException.Invalid("Cada nota debe estar entre 0 y 100, con hasta dos decimales.");
             if (entry.Status != ScoreStatus.Scored && entry.Score is not null)
@@ -197,8 +212,9 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
         foreach (var publication in publications)
         {
             // Clearance is evaluated from confirmed SQL data on every read; nothing about blocked results is returned.
-            var check = await clearance.CheckAsync(studentId, publication.CutoffId, ct);
-            if (check.Status != ClearanceStatus.Clear)
+            // Only when the school ties grades to payments; otherwise pending items are informative and never hide grades.
+            var check = Policy.GradesRequireClearance || canSeeFinance ? await clearance.CheckAsync(studentId, publication.CutoffId, ct) : null;
+            if (Policy.GradesRequireClearance && check is not null && check.Status != ClearanceStatus.Clear)
             {
                 result.Add(new(publication.PeriodId, publication.Sequence, publication.Name,
                     check.Status == ClearanceStatus.PendingFinancialSetup ? "PendingFinancialSetup" : "Blocked", [],
@@ -206,11 +222,14 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
                 continue;
             }
             var grades = await db.PeriodScores.AsNoTracking().Where(x => x.StudentId == studentId && x.PeriodId == publication.PeriodId)
-                .Join(db.Courses, s => s.CourseId, c => c.Id, (s, c) => new { s.Score, s.Status, c.SubjectId })
-                .Join(db.Subjects, x => x.SubjectId, subject => subject.Id, (x, subject) => new { Subject = subject.Name, x.Score, x.Status })
+                .Join(db.Courses, s => s.CourseId, c => c.Id, (s, c) => new { s.Score, s.Status, c.SubjectId, c.GradeLevelId })
+                .Join(db.Subjects, x => x.SubjectId, subject => subject.Id, (x, subject) => new { Subject = subject.Name, x.Score, x.Status, x.GradeLevelId })
+                .Join(db.Grades, x => x.GradeLevelId, g => g.Id, (x, g) => new { x.Subject, x.Score, x.Status, g.Stage })
                 .OrderBy(x => x.Subject).ToArrayAsync(ct);
+            var pending = canSeeFinance && check is not null && check.Status == ClearanceStatus.Blocked ? check.Pending : Array.Empty<PendingItem>();
             result.Add(new(publication.PeriodId, publication.Sequence, publication.Name, "Available",
-                grades.Select(x => new MyGrade(x.Subject, x.Score, x.Status)).ToArray(), []));
+                grades.Select(x => new MyGrade(x.Subject, x.Score, x.Status, x.Status == ScoreStatus.Scored ? Policy.ScaleFor(x.Stage)?.LabelFor(x.Score) : null))
+                    .ToArray(), pending));
         }
         return new(studentId, enrollment.Label, result.ToArray());
     }

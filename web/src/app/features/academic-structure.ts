@@ -450,35 +450,59 @@ export class AcademicStructure {
         done.push(`${this.setupForm.periods} ${this.school.terms.period.toLowerCase()}s generados.`);
       }
       if (source && (this.setupForm.sections || this.setupForm.courses))
-        done.push(...(await this.copyFrom(id, source.id, this.setupForm)));
+        done.push(...(await this.copyFrom(id, source.id, { ...this.setupForm, periods: false })));
     } catch (error) {
       void this.alerts.error('El ciclo se creó, pero falta un paso', this.api.message(error));
     }
     return done.join(' ');
   }
 
+  /** One server call: periods (if missing), sections, courses and optionally teachers of the source cycle. */
   private async copyFrom(
     yearId: string,
     sourceId: string,
-    options: { sections: boolean; courses: boolean; teachers: boolean },
+    options: { sections: boolean; courses: boolean; teachers: boolean; periods?: boolean },
   ): Promise<string[]> {
     const done: string[] = [];
-    if (options.sections) {
-      const r = await this.api.post<{ created: number }>(`/api/v1/academic/years/${yearId}/sections/copy`, {
-        sourceYearId: sourceId,
-      });
+    if (options.sections && !options.courses) {
+      const r = await this.api.post<{ created: number }>(`/api/v1/academic/years/${yearId}/sections/copy`, { sourceYearId: sourceId });
       if (r.created) done.push(`${r.created} sección${r.created === 1 ? '' : 'es'} copiada${r.created === 1 ? '' : 's'}.`);
+      return done;
     }
-    if (options.courses) {
-      const r = await this.api.post<{ created: number; skipped: number; teachers: number }>(
-        `/api/v1/years/${yearId}/courses/copy`,
-        { sourceYearId: sourceId, teachers: options.teachers },
-      );
-      if (r.created) done.push(`${r.created} curso${r.created === 1 ? '' : 's'} copiado${r.created === 1 ? '' : 's'}.`);
-      if (r.teachers) done.push(`${r.teachers} docente${r.teachers === 1 ? '' : 's'} asignado${r.teachers === 1 ? '' : 's'}.`);
-      if (r.skipped) done.push(`${r.skipped} curso${r.skipped === 1 ? '' : 's'} sin copiar (grado, sección o materia ya no vigente).`);
-    }
+    if (!options.courses) return done;
+    const r = await this.api.post<{ periods: number; sections: number; courses: number; skipped: number; teachers: number }>(
+      `/api/v1/years/${yearId}/copy-cycle`,
+      { sourceYearId: sourceId, periods: !!options.periods, teachers: options.teachers },
+    );
+    if (r.periods) done.push(`${r.periods} ${this.school.terms.period.toLowerCase()}${r.periods === 1 ? '' : 's'} creados.`);
+    if (r.sections) done.push(`${r.sections} sección${r.sections === 1 ? '' : 'es'} copiada${r.sections === 1 ? '' : 's'}.`);
+    if (r.courses) done.push(`${r.courses} curso${r.courses === 1 ? '' : 's'} copiado${r.courses === 1 ? '' : 's'}.`);
+    if (r.teachers) done.push(`${r.teachers} docente${r.teachers === 1 ? '' : 's'} asignado${r.teachers === 1 ? '' : 's'}.`);
+    if (r.skipped) done.push(`${r.skipped} curso${r.skipped === 1 ? '' : 's'} sin copiar (grado, sección o materia ya no vigente).`);
     return done;
+  }
+
+  /** «Igual que el ciclo anterior»: copies everything that is still missing in one confirmation. */
+  async copyEverything(): Promise<void> {
+    const year = this.detail()?.year;
+    const source = this.previous();
+    if (!year || !source || this.busy()) return;
+    const ok = await this.alerts.confirm({
+      title: `¿Preparar ${year.label} igual que ${source.label}?`,
+      text: `Se copian los ${this.school.terms.period.toLowerCase()}s (si faltan), secciones, cursos y docentes vigentes. No mueve estudiantes ni notas y no cambia lo que ya existe.`,
+      confirmText: 'Sí, copiar todo',
+    });
+    if (!ok) return;
+    this.busy.set(true);
+    try {
+      const done = await this.copyFrom(year.id, source.id, { sections: true, courses: true, teachers: true, periods: true });
+      this.alerts.success(done.join(' ') || 'No había nada nuevo que copiar.');
+      await this.load();
+    } catch (error) {
+      this.alerts.error(this.api.message(error));
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   async quick(action: 'default' | 'remove-period' | 'remove-section', section?: SectionView) {

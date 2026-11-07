@@ -6,9 +6,16 @@
       <p>Define cada ciclo escolar, sus {{ school.terms.period.toLowerCase() }}s y las secciones de cada grado.</p>
     </div>
     @if (canManage()) {
-      <button class="button" (click)="openYear()" [disabled]="busy()">
-        <app-icon name="calendar" />Nuevo ciclo
-      </button>
+      <div class="inline-actions">
+        @if (previous() && detail()?.year?.status !== 'Closed') {
+          <button class="button outline" (click)="copyEverything()" [disabled]="busy()">
+            <app-icon name="folder" />Igual que {{ previous()!.label }}
+          </button>
+        }
+        <button class="button" (click)="openYear()" [disabled]="busy()">
+          <app-icon name="calendar" />Nuevo ciclo
+        </button>
+      </div>
     }
   </div>
   @if (notice()) {

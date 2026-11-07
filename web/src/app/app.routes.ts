@@ -104,6 +104,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/academic-structure').then((x) => x.AcademicStructure),
   },
   {
+    path: 'workspace/enrollment/bulk',
+    canActivate: [permissionGuard('enrollment.manage')],
+    loadComponent: () => import('./features/enrollment-bulk').then((x) => x.EnrollmentBulk),
+  },
+  {
     path: 'workspace/enrollment',
     canActivate: [permissionGuard('academic.read')],
     loadComponent: () => import('./features/enrollment-roster').then((x) => x.EnrollmentRoster),
@@ -131,6 +136,21 @@ export const routes: Routes = [
     canDeactivate: [pendingChangesGuard],
     runGuardsAndResolvers: 'paramsOrQueryParamsChange',
     loadComponent: () => import('./features/course-grades').then((x) => x.CourseGrades),
+  },
+  {
+    path: 'workspace/attendance',
+    canActivate: [sessionGuard],
+    loadComponent: () => import('./features/group-attendance').then((x) => x.GroupAttendance),
+  },
+  {
+    path: 'workspace/multigrade',
+    canActivate: [sessionGuard],
+    loadComponent: () => import('./features/multigrade-grades').then((x) => x.MultigradeGrades),
+  },
+  {
+    path: 'workspace/reports',
+    canActivate: [permissionGuard('academic.read')],
+    loadComponent: () => import('./features/official-reports').then((x) => x.OfficialReports),
   },
   {
     path: 'workspace/grades',

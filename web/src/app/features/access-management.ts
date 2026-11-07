@@ -79,6 +79,15 @@ export class AccessManagement {
       account.status
     ];
   }
+  /** Several roles may be combined in one account; permissions are their union. */
+  roles: Record<string, boolean> = {};
+  chosenRoles(): string[] {
+    return Object.keys(this.roles).filter((k) => this.roles[k]);
+  }
+  rolesLabel(account: AccountSummary): string {
+    const keys = account.profiles?.length ? account.profiles : [account.profile];
+    return keys.map((k) => this.profileLabel(k)).join(' + ');
+  }
   profileLabel(key: string): string {
     if (key === 'custom') return 'Permisos personalizados';
     return this.profiles().find((x) => x.key === key)?.label ?? 'Rol no disponible';
@@ -87,6 +96,7 @@ export class AccessManagement {
     this.resetDialog();
     this.username = '';
     this.profile = '';
+    this.roles = {};
     this.mode.set('invite');
     this.selected.set(null);
     this.dialog.nativeElement.showModal();
@@ -95,6 +105,7 @@ export class AccessManagement {
     this.resetDialog();
     this.selected.set(account);
     this.profile = account.profile;
+    this.roles = Object.fromEntries((account.profiles?.length ? account.profiles : [account.profile]).map((k) => [k, true]));
     this.operation = 'profile';
     this.mode.set('manage');
     this.dialog.nativeElement.showModal();
@@ -124,7 +135,8 @@ export class AccessManagement {
     try {
       const code = await this.api.post<AccessCode>('/api/v1/access/invitations', {
         username: this.username,
-        profile: this.profile,
+        profile: this.chosenRoles()[0] ?? '',
+        profiles: this.chosenRoles(),
         reason: this.reason,
       });
       this.code.set(code);
@@ -180,7 +192,8 @@ export class AccessManagement {
         await this.api.post<void>(root + '/' + route, {
           version: account.version,
           reason: this.reason,
-          profile: this.profile,
+          profile: this.chosenRoles()[0] ?? this.profile,
+          profiles: this.operation === 'profile' ? this.chosenRoles() : null,
           isActive: account.status === 'Suspended',
         });
         this.busy.set(false);

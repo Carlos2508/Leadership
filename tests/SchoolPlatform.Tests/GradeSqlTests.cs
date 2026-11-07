@@ -16,6 +16,9 @@ public sealed class GradeSqlTests : SqlTestBase
     private static readonly DateOnly Start = new(2026, 1, 12);
     private Guid year, period, grade, course, student, outsider, cutoff, relationship, teacherUser, otherTeacherUser;
 
+    // These tests cover the optional rule that ties published grades to payments (Academic:GradesRequireClearance).
+    protected override Dictionary<string, string?> ExtraConfiguration => new() { ["Institution:Academic:GradesRequireClearance"] = "true" };
+
     public override async Task InitializeAsync()
     {
         await base.InitializeAsync();

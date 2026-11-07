@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../../core/providers.dart';
 import 'biometric_vault.dart';
+import 'offline_store.dart';
 import 'school_api.dart';
 
 /// Linked student as returned by `/api/v1/me` (guardians) or the account's own student record.
@@ -149,6 +150,12 @@ class ConnectedController extends Notifier<ConnectedSession?> {
       /* Still close the server session if secure storage is unavailable. */
     }
     if (current == null) return;
+    try {
+      // Copies of class lists stay only while signed in; waiting writes are kept for this account.
+      await OfflineStore(ref.read(sharedPreferencesProvider), '${current.api.server.host}|${current.username}').forgetCopies();
+    } on Object {
+      /* Preferences unavailable: nothing else to clear. */
+    }
     try {
       await current.api.logout();
     } on Object {

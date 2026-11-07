@@ -495,3 +495,51 @@ button.outline:not(.button):disabled {
     flex-wrap: nowrap;
   }
 }
+
+/* Teacher menu: one collapsible entry per grade/section with its subjects inside. */
+.sidebar .nav-section summary .nav-text small {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+/* Group pickers (daily attendance, multigrade grades, bulk actions): wrapping checkboxes. */
+.group-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.group-options legend {
+  font-size: 13px;
+  font-weight: 650;
+  margin-bottom: 6px;
+}
+.check-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+}
+.check-option small {
+  color: var(--muted);
+}
+.check-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 4px 16px;
+  max-height: 320px;
+  overflow: auto;
+  padding: 4px 0;
+}
+.import-table td.error {
+  color: #922c2c;
+}
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}

@@ -248,7 +248,7 @@ class _Grades extends StatelessWidget {
 
   // Pending is not zero and the app never recomputes approval or averages.
   static String _score(Map<String, dynamic> g) => switch (g['status']) {
-    'Scored' => '${g['score']}',
+    'Scored' => (g['label'] as String?) ?? '${g['score']}',
     'Missing' => 'Pendiente',
     'Excused' => 'Exonerado',
     _ => '—',

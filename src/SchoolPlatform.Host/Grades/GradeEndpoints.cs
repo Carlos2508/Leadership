@@ -21,6 +21,15 @@ public static class GradeEndpoints
         var read = app.MapGroup("/api/v1").RequireAuthorization(Permissions.AcademicRead).AddEndpointFilter<ApiWriteFilter>();
         read.MapGet("/years/{yearId:guid}/publications", (Guid yearId, GradeService service, CancellationToken ct) => service.PublicationsAsync(yearId, ct));
         read.MapGet("/years/{yearId:guid}/clearance-cutoffs", (Guid yearId, GradeService service, CancellationToken ct) => service.CutoffsAsync(yearId, ct));
+        // Official exports (.xlsx): enrollment list, period board, yearly consolidated board and attendance summary.
+        read.MapGet("/years/{yearId:guid}/reports/enrollments", async (Guid yearId, Guid? gradeId, Guid? sectionId, OfficialReportService reports,
+            CancellationToken ct) => Xlsx(await reports.EnrollmentListAsync(yearId, gradeId, sectionId, ct)));
+        read.MapGet("/years/{yearId:guid}/reports/board", async (Guid yearId, Guid periodId, Guid gradeId, Guid? sectionId, OfficialReportService reports,
+            CancellationToken ct) => Xlsx(await reports.PeriodBoardAsync(yearId, periodId, gradeId, sectionId, ct)));
+        read.MapGet("/years/{yearId:guid}/reports/consolidated", async (Guid yearId, Guid gradeId, Guid? sectionId, OfficialReportService reports,
+            CancellationToken ct) => Xlsx(await reports.ConsolidatedAsync(yearId, gradeId, sectionId, ct)));
+        read.MapGet("/years/{yearId:guid}/reports/attendance", async (Guid yearId, Guid gradeId, Guid? sectionId, DateOnly? from, DateOnly? to,
+            OfficialReportService reports, CancellationToken ct) => Xlsx(await reports.AttendanceAsync(yearId, gradeId, sectionId, from, to, ct)));
         app.MapGroup("/api/v1").RequireAuthorization(Permissions.AcademicManage).AddEndpointFilter<ApiWriteFilter>()
             .MapPost("/years/{yearId:guid}/publications", async (Guid yearId, PublishRequest request, ClaimsPrincipal user, GradeService service, CancellationToken ct) =>
             {
@@ -28,6 +37,8 @@ public static class GradeEndpoints
                 return Results.NoContent();
             });
     }
+
+    private static IResult Xlsx(ReportFile file) => Results.File(file.Content, OfficialReportService.ContentType, file.FileName);
 
     private static Guid Actor(ClaimsPrincipal user) => PeopleEndpoints.Actor(user);
 }

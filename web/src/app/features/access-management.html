@@ -82,7 +82,7 @@
                       >{{ status(account) }}</span
                     >
                   </td>
-                  <td>{{ profileLabel(account.profile) }}</td>
+                  <td>{{ rolesLabel(account) }}</td>
                   <td>
                     @if (account.codeExpiresAt) {
                       <span class="code-expiry">Vence {{ api.date(account.codeExpiresAt) }}</span>
@@ -200,15 +200,14 @@
             >Usa letras sin acentos, números, punto, guion o guion bajo.</small
           ></label
         >
-        <label class="form-field"
-          ><span>Rol de acceso</span
-          ><select name="profile" [(ngModel)]="profile" required>
-            <option value="" disabled>Selecciona un rol</option>
+        <fieldset class="group-options">
+            <legend>Roles de acceso <small>(puedes marcar varios)</small></legend>
             @for (profile of profiles(); track profile.key) {
-              <option [value]="profile.key">{{ profile.label }}</option>
+              <label class="check-option"
+                ><input type="checkbox" [name]="'role-' + profile.key" [(ngModel)]="roles[profile.key]" /><span>{{ profile.label }}</span></label
+              >
             }
-          </select></label
-        >
+          </fieldset>
         <label class="form-field"
           ><span id="invite-reason-label">Motivo de la invitación</span
           ><textarea
@@ -267,14 +266,14 @@
           </select></label
         >
         @if (operation === 'profile') {
-          <label class="form-field"
-            ><span>Nuevo rol</span
-            ><select name="profile" [(ngModel)]="profile">
-              @for (profile of profiles(); track profile.key) {
-                <option [value]="profile.key">{{ profile.label }}</option>
-              }
-            </select></label
-          >
+          <fieldset class="group-options">
+            <legend>Roles de la cuenta <small>(puedes marcar varios)</small></legend>
+            @for (profile of profiles(); track profile.key) {
+              <label class="check-option"
+                ><input type="checkbox" [name]="'role-' + profile.key" [(ngModel)]="roles[profile.key]" /><span>{{ profile.label }}</span></label
+              >
+            }
+          </fieldset>
           <p class="muted-copy">
             Al cambiar el perfil se cerrarán las sesiones de esta cuenta para aplicar el nuevo
             acceso.

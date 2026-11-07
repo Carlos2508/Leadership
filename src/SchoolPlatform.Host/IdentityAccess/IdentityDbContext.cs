@@ -35,7 +35,8 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
         });
         builder.Entity<AccountRoleAssignment>(entity =>
         {
-            entity.HasKey(x => x.UserId);
+            // An account may combine several roles (e.g. Secretaría + Caja in a small school); permissions are their union.
+            entity.HasKey(x => new { x.UserId, x.RoleKey });
             entity.Property(x => x.RoleKey).HasMaxLength(80).IsUnicode(false);
             entity.HasOne<AccessRole>().WithMany().HasForeignKey(x => x.RoleKey).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);

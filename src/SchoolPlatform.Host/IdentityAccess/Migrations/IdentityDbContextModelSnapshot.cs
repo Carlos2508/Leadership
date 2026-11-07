@@ -287,7 +287,7 @@ namespace SchoolPlatform.Host.IdentityAccess.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(80)");
 
-                    b.HasKey("UserId");
+                    b.HasKey("UserId", "RoleKey");
 
                     b.HasIndex("RoleKey");
 

@@ -19,6 +19,8 @@ public sealed class InstitutionOptions
     public ThemeOptions Theme { get; set; } = new();
     public LocaleOptions Locale { get; set; } = new();
     public TermOptions Terms { get; set; } = new();
+    /// <summary>Academic policy of this school: evaluation scale per stage and whether grades depend on payments.</summary>
+    public AcademicPolicyOptions Academic { get; set; } = new();
     /// <summary>Content of the public home page (optional; empty sections are not shown).</summary>
     public PublicSiteOptions Public { get; set; } = new();
 }
@@ -142,6 +144,39 @@ public sealed class TermOptions
     public string Period { get; set; } = "";
 }
 
+public sealed class AcademicPolicyOptions
+{
+    /// <summary>
+    /// When true, families see published grades only if the student is clear at the publication cutoff (previous rule).
+    /// Default false: grades and payments are separate; finance pending items are shown apart and never hide grades.
+    /// </summary>
+    public bool GradesRequireClearance { get; set; }
+    /// <summary>Non-numeric scales for some stages (e.g. Preprimaria). Stages without a scale use numeric 0–100.</summary>
+    public EvaluationScale[] Scales { get; set; } = [];
+
+    public EvaluationScale? ScaleFor(string? stage) => string.IsNullOrWhiteSpace(stage) ? null :
+        Scales.FirstOrDefault(s => s.Stages.Any(x => string.Equals(x.Trim(), stage.Trim(), StringComparison.OrdinalIgnoreCase)));
+}
+
+/// <summary>
+/// Qualitative scale: each level is stored as its numeric <see cref="ScaleLevel.Value"/> (so revisions, publication and
+/// completeness keep working) and shown with its label. Values must be unique and between 0 and 100.
+/// </summary>
+public sealed class EvaluationScale
+{
+    public string Name { get; set; } = "";
+    public string[] Stages { get; set; } = [];
+    public ScaleLevel[] Levels { get; set; } = [];
+    public string? LabelFor(decimal? value) => value is null ? null : Levels.FirstOrDefault(l => l.Value == value)?.Label;
+}
+
+public sealed class ScaleLevel
+{
+    public string Code { get; set; } = "";
+    public string Label { get; set; } = "";
+    public decimal Value { get; set; }
+}
+
 public sealed class InstitutionValidator(IWebHostEnvironment environment) : IValidateOptions<InstitutionOptions>
 {
     public ValidateOptionsResult Validate(string? name, InstitutionOptions options)
@@ -172,6 +207,14 @@ public sealed class InstitutionValidator(IWebHostEnvironment environment) : IVal
             (!Uri.TryCreate(options.Contact.Website, UriKind.Absolute, out var uri) || uri.Scheme != "https"))
             errors.Add("El sitio institucional debe ser una URL HTTPS.");
         if (options.Documents.PassingScore is < 0 or > 100) errors.Add("Documents:PassingScore debe estar entre 0 y 100.");
+        foreach (var scale in options.Academic.Scales)
+        {
+            if (scale.Stages.Length == 0 || scale.Levels.Length is < 2 or > 10)
+                errors.Add($"Academic:Scales «{scale.Name}» necesita etapas y entre 2 y 10 niveles.");
+            if (scale.Levels.Any(l => l.Value is < 0 or > 100 || string.IsNullOrWhiteSpace(l.Label)) ||
+                scale.Levels.Select(l => l.Value).Distinct().Count() != scale.Levels.Length)
+                errors.Add($"Academic:Scales «{scale.Name}» tiene niveles sin nombre, repetidos o fuera de 0–100.");
+        }
         foreach (var url in new[] { options.Contact.Social.Facebook, options.Contact.Social.Instagram, options.Contact.Social.YouTube,
                      options.Contact.Social.TikTok })
             if (url.Length > 0 && (!Uri.TryCreate(url, UriKind.Absolute, out var social) || social.Scheme != "https"))

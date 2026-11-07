@@ -1,5 +1,13 @@
 # Handoff para la siguiente sesión
 
+## Mejoras por críticas de la guía — 7 de noviembre de 2026, leer primero
+
+- Rama `feat/mejoras-criticas-guia` desde `main` `5fdc9fb`. El propietario pidió explícitamente NO compilar ni ejecutar (ahorro); probará a mano. Antes de integrar: `dotnet build`, `dotnet test`, `./scripts/Invoke-Web.ps1 run build`, `flutter analyze`/`flutter test`, y revisar escritorio/móvil.
+- Backend nuevo: `Attendance/GroupAttendanceService.cs`, `Academic/CycleSetupService.cs`, `Academic/CourseService.Bulk.cs`, `Academic/BulkEnrollmentService.cs`, `Academic/SpreadsheetReader.cs`, `Grades/OfficialReportService.cs`, `Grades/SpreadsheetWriter.cs`; cambios en `GradeService`/`GradeReportService` (política y escalas), `InstitutionOptions` (`Academic`), IAM multi-rol (`AccountAccessService.ProfilesAsync`, `AccessRoleService` proyección por unión, `SecurityAudit` recorta detalle a 120).
+- Migración Identity escrita a mano (migración, Designer y snapshot): verificar con `dotnet ef migrations has-pending-model-changes` antes de aplicar. El asistente de migración local solo prepara Roster: actualizar el esquema por el flujo normal.
+- Web: `group-attendance.ts`, `multigrade-grades.ts`, `enrollment-bulk.ts`, `official-reports.ts`, rutas nuevas, menú agrupado (`shell.ts`), Cursos (asignación múltiple), Ciclos (copia completa), Accesos (casillas de roles), libreta (selector de escala), familia (etiqueta/saldo informativo). App: `offline_store.dart`, `teaching_extras.dart` y ajustes en `teaching_tab.dart`, `connected_shell.dart`, `connected_session.dart`, `students_tab.dart`.
+- Riesgos conocidos: la asistencia por grupo sobrescribe sin control de versión los registros del mismo día (última escritura gana); la cola sin conexión guarda IDs y notas en `SharedPreferences` del teléfono hasta enviarse; los reportes no siguen todavía la plantilla exacta de SIRE/MINEDUC (confirmar formato oficial); la importación asigna códigos `AAAA-0001` cuando la fila no trae código.
+
 ## Revisión completa de flujos — 6 de noviembre de 2026 (noche), integrada en main
 
 - Solicitud: volver a probar todos los flujos buscando fallas visuales y de lógica. Rama `qa/revision-flujos` desde `main` `f84af4d`, worktree `.local/worktrees/qa-uso-real`; el otro agente trabaja en `feat/chat-presence-receipts` en la carpeta principal (no tocada). Informe `QA_REVISION_2026-11-06.md`.

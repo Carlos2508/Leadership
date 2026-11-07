@@ -72,12 +72,28 @@ public static class AcademicEndpoints
         enrollmentRead.MapGet("/years/{yearId:guid}/enrollments", (Guid yearId, Guid? gradeId, Guid? sectionId, string? status,
                 string? search, int? page, EnrollmentService service, CancellationToken ct) =>
             service.ListAsync(yearId, gradeId, sectionId, status, search, page ?? 1, ct));
+        enrollmentRead.MapGet("/years/{yearId:guid}/enrollments/candidates", (Guid yearId, string? search, Guid? fromYearId, Guid? fromGradeId,
+                Guid? fromSectionId, BulkEnrollmentService service, CancellationToken ct) =>
+            service.CandidatesAsync(yearId, search, fromYearId, fromGradeId, fromSectionId, ct));
         enrollmentRead.MapGet("/people/{id:guid}/enrollments", (Guid id, EnrollmentService service, CancellationToken ct) =>
             service.StudentHistoryAsync(id, ct));
 
         var enrollment = app.MapGroup("/api/v1/enrollments").RequireAuthorization(Permissions.EnrollmentManage).AddEndpointFilter<ApiWriteFilter>();
         enrollment.MapPost("", async (EnrollRequest request, ClaimsPrincipal user, EnrollmentService service, CancellationToken ct) =>
             Results.Ok(new { id = await service.EnrollAsync(Actor(user), request, ct) }));
+        enrollment.MapPost("/bulk", async (BulkEnrollRequest request, ClaimsPrincipal user, BulkEnrollmentService service, CancellationToken ct) =>
+            Results.Ok(await service.EnrollManyAsync(Actor(user), request, ct)));
+        enrollment.MapPost("/import", async (Guid yearId, bool? apply, IFormFile file, ClaimsPrincipal user, BulkEnrollmentService service,
+            CancellationToken ct) =>
+        {
+            if (file.Length is 0 or > 5 * 1024 * 1024) throw OperationException.Invalid("Sube un archivo .xlsx o .csv de hasta 5 MB.");
+            await using var stream = file.OpenReadStream();
+            return Results.Ok(await service.ImportAsync(Actor(user), yearId, stream, file.FileName, apply == true, ct));
+        }).WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(6 * 1024 * 1024));
+        enrollment.MapGet("/import/template", () => Results.File(
+            System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(
+                "Nombres;Apellidos;Código;Fecha de nacimiento;Grado;Sección\r\nAna Lucía;Pérez López;;15/03/2018;1P;A\r\n")).ToArray(),
+            "text/csv; charset=utf-8", "plantilla-inscripcion.csv"));
         enrollment.MapPost("/{id:guid}/placement", async (Guid id, PlacementRequest request, ClaimsPrincipal user, EnrollmentService service, CancellationToken ct) =>
         {
             await service.ChangePlacementAsync(Actor(user), id, request, ct);
@@ -115,6 +131,10 @@ public static class AcademicEndpoints
             Results.Ok(new { created = await service.CreateCoursesAsync(Actor(user), yearId, request, ct) }));
         manage.MapPost("/years/{yearId:guid}/courses/copy", async (Guid yearId, CopyCoursesRequest request, ClaimsPrincipal user, CourseService service, CancellationToken ct) =>
             Results.Ok(await service.CopyCoursesAsync(Actor(user), yearId, request, ct)));
+        manage.MapPost("/years/{yearId:guid}/copy-cycle", async (Guid yearId, CopyCycleRequest request, ClaimsPrincipal user, CycleSetupService service,
+                CancellationToken ct) => Results.Ok(await service.CopyAsync(Actor(user), yearId, request, ct)));
+        manage.MapPost("/academic/teachers/assign-many", async (AssignManyRequest request, ClaimsPrincipal user, CourseService service,
+                CancellationToken ct) => Results.Ok(await service.AssignManyAsync(Actor(user), request, ct)));
         manage.MapPost("/courses/{id:guid}/teachers", async (Guid id, AssignTeacherRequest request, ClaimsPrincipal user, CourseService service, CancellationToken ct) =>
             Results.Ok(new { id = await service.AssignAsync(Actor(user), id, request, ct) }));
         manage.MapPost("/courses/{id:guid}/teachers/{assignmentId:guid}/end", async (Guid id, Guid assignmentId, EndAssignmentRequest request,

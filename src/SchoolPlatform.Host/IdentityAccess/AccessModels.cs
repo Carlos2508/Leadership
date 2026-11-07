@@ -32,11 +32,11 @@ public sealed class AccountAccessOptions
 }
 
 public sealed record IssueCodeResult(Guid UserId, string Code, string Purpose, DateTimeOffset ExpiresAt);
-public sealed record InviteRequest(string Username, string Profile, string Reason);
-public sealed record AccountChangeRequest(string Version, string Reason, string? Profile = null, bool? IsActive = null);
+public sealed record InviteRequest(string Username, string Profile, string Reason, string[]? Profiles = null);
+public sealed record AccountChangeRequest(string Version, string Reason, string? Profile = null, bool? IsActive = null, string[]? Profiles = null);
 public sealed record IssueCodeRequest(string Version, string Purpose, string VerificationNote, bool IdentityVerified);
 public sealed record AccountSummary(Guid Id, string Username, string Status, string Profile, string Version,
-    DateTimeOffset? CodeExpiresAt, string? CodePurpose, bool TwoFactorEnabled = false);
+    DateTimeOffset? CodeExpiresAt, string? CodePurpose, bool TwoFactorEnabled = false, string[]? Profiles = null);
 public sealed record PageResult<T>(T[] Items, int Total, int Page, int PageSize);
 
 public sealed class AccessOperationException(int status, string code, string message)

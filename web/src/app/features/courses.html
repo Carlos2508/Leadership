@@ -10,6 +10,11 @@
         @if (previous() && !courses().length && !gradeFilter) {
           <button class="button outline" (click)="openCopy()" [disabled]="busy()">Copiar de {{ previous()!.label }}</button>
         }
+        @if (courses().length) {
+          <button class="button outline" (click)="openAssign(null)" [disabled]="busy()">
+            <app-icon name="users" />Asignar docente a varios cursos
+          </button>
+        }
         <button class="button" (click)="openCreate()" [disabled]="busy()"><app-icon name="book" />Crear cursos</button>
       </div>
     }
@@ -255,10 +260,24 @@
           >
         }
         @case ('assign') {
-          <p class="managed-user">
-            {{ selectedCourse()?.subject }}
-            <span class="muted-copy">· {{ selectedCourse()?.grade }} {{ selectedCourse()?.section ? '· Sección ' + selectedCourse()?.section : '' }}</span>
-          </p>
+          <fieldset class="choice-group">
+            <legend>Cursos ({{ chosenCourses().length }} seleccionados)</legend>
+            <div class="inline-actions">
+              @for (group of groups(); track group.grade) {
+                <button type="button" class="text-button" (click)="chooseGrade(group.courses)">Todo {{ group.grade }}</button>
+              }
+              <button type="button" class="text-button" (click)="assignCourses = {}">Ninguno</button>
+            </div>
+            <div class="check-list">
+              @for (course of courses(); track course.id) {
+                <label class="check-option"
+                  ><input type="checkbox" [name]="'c-' + course.id" [(ngModel)]="assignCourses[course.id]" /><span
+                    >{{ course.subject }} <small>{{ course.grade }}{{ course.section ? ' · ' + course.section : '' }}</small></span
+                  ></label
+                >
+              }
+            </div>
+          </fieldset>
           <div class="candidate-search">
             <label class="form-field"
               ><span>Buscar personal</span

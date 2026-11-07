@@ -1,6 +1,14 @@
 # Progreso
 
-Actualizado: 6 de noviembre de 2026, America/Guatemala.
+Actualizado: 7 de noviembre de 2026, America/Guatemala.
+
+## Mejoras de la guía (12 críticas) — rama `feat/mejoras-criticas-guia`, SIN COMPILAR NI PROBAR
+
+- Solicitud del propietario (7-nov-2026): corregir 12 críticas de la guía de la plataforma solo con código, sin levantar ni compilar; el propietario hará las pruebas manuales. Nada de esto está validado todavía.
+- 1 Menú docente: siempre agrupado por grado/sección (desplegable) con las materias dentro. 2 Asistencia diaria por grupo `/workspace/attendance`: una marca por día que se escribe en todos los cursos del grupo que el docente tiene (`GroupAttendanceService`, `/api/v1/attendance/group(s)`). 3 Asignar un docente a varios cursos de una vez (`/api/v1/academic/teachers/assign-many`, diálogo en Cursos). 4 Aulas multigrado: asistencia de varios grupos juntos y `/workspace/multigrade` (Notas por aula: una tabla, cada nota se guarda en el curso de su grado).
+- 5 Escalas cualitativas por etapa en `Institution:Academic:Scales` (ejemplo Preprimaria: Logrado/En proceso/Necesita apoyo, guardadas como 100/70/40); libreta web con selector, app con leyenda, familia/boletín muestran la etiqueta. 6 Notas y cobros separados: `Institution:Academic:GradesRequireClearance` = false por defecto (las pruebas de solvencia lo activan); el saldo pendiente se muestra aparte.
+- 7 «Igual que el ciclo anterior» en Ciclos: un clic copia períodos (si faltan), secciones, cursos y docentes (`/api/v1/years/{id}/copy-cycle`). 8 Inscripción masiva `/workspace/enrollment/bulk`: promover un grupo del ciclo anterior o buscar y marcar varios; importar .xlsx/.csv con vista previa y aplicación en una transacción (crea fichas faltantes por código e inscribe; no crea cuentas, encargados, notas ni cobros).
+- 9 Varios roles por cuenta: migración Identity `20261107060000_MultipleAccountRoles` (PK `UserId+RoleKey`), permisos = unión, casillas en Accesos. 10 App docente: crear tarea (borrador o publicada) y publicar borradores. 11 App sin conexión: copia local de libretas/listas vistas y cola de asistencia/notas que se envía al reconectar (versiones validadas por el servidor; lo rechazado se informa). 12 Reportes oficiales `/workspace/reports`: nómina, cuadro de período, consolidado anual (sin promedios) y asistencia en .xlsx.
 
 ## Revisión completa de flujos (integrada en main)
 

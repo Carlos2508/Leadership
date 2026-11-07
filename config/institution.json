@@ -83,6 +83,20 @@
         { "Title": "¿Puedo coordinar una visita al colegio?", "Text": "Sí. Comunícate con nuestro equipo para consultar disponibilidad y coordinar tu visita." }
       ]
     },
+    "Academic": {
+      "GradesRequireClearance": false,
+      "Scales": [
+        {
+          "Name": "Preprimaria",
+          "Stages": [ "Preprimaria", "Preescolar", "Inicial" ],
+          "Levels": [
+            { "Code": "L", "Label": "Logrado", "Value": 100 },
+            { "Code": "EP", "Label": "En proceso", "Value": 70 },
+            { "Code": "NA", "Label": "Necesita apoyo", "Value": 40 }
+          ]
+        }
+      ]
+    },
     "Terms": { "StudentPlural": "Estudiantes", "GuardianPlural": "Encargados", "Tuition": "Colegiatura", "Period": "Bimestre" }
   }
 }

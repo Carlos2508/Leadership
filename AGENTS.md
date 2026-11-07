@@ -21,7 +21,7 @@ Lee primero `docs/PROGRESS.md`, `docs/HANDOFF.md`, `docs/PROJECT_DEFINITION.md` 
 - Excepción de autenticación de portería (ADR-009): solo `/api/v1/gate/device/whoami` y `/api/v1/gate/device/scan` aceptan el esquema `GateDevice` con bearer revocable; no usarlo en módulos escolares. QR de emparejamiento solo una vez, sin URLs/logs/capturas/persistencia web.
 - Las muestras sintéticas solo existen en `Development`, bajo `/api/v1/preview`. Nunca reutilizarlas como repositorio de producción ni como valores predeterminados ante errores.
 - Conservar resultados ordinarios y revisiones. No publicar una política pendiente como si la hubiera aprobado el colegio.
-- Notas familiares/estudiantiles: solo vía `GradeService.MyGradesAsync`, que exige facultad `AcademicRecords` (o ser el estudiante) y evalúa `ClearanceService` contra el corte de cada publicación en cada lectura. No publicar promedios anuales ni redondeos sin política aprobada.
+- Notas familiares/estudiantiles: solo vía `GradeService.MyGradesAsync`, que exige facultad `AcademicRecords` (o ser el estudiante). Por decisión del propietario (7-nov-2026) notas y cobros van separados: `Institution:Academic:GradesRequireClearance` es `false` por defecto; solo si un colegio lo activa se evalúa `ClearanceService` contra el corte de cada publicación en cada lectura. Escalas cualitativas por etapa en `Institution:Academic:Scales` (se guardan como valor numérico del nivel). No publicar promedios anuales ni redondeos sin política aprobada.
 
 ## Trabajo y validación
 

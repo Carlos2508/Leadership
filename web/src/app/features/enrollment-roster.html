@@ -6,9 +6,12 @@
       <p>Una inscripción por estudiante y ciclo; cada cambio de grado o sección queda fechado.</p>
     </div>
     @if (canEnroll() && open()) {
-      <button class="button" (click)="openEnroll()" [disabled]="busy()">
-        <app-icon name="school" />Inscribir estudiante
-      </button>
+      <div class="inline-actions">
+        <a class="button outline" routerLink="/workspace/enrollment/bulk"><app-icon name="users" />Inscribir varios / Excel</a>
+        <button class="button" (click)="openEnroll()" [disabled]="busy()">
+          <app-icon name="school" />Inscribir estudiante
+        </button>
+      </div>
     }
   </div>
   @if (notice()) {

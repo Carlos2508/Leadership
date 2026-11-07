@@ -10,6 +10,8 @@ import '../../core/widgets/states.dart';
 import '../../shared/page_layout.dart';
 import 'connected_session.dart';
 import 'connected_shell.dart';
+import 'offline_store.dart';
+import 'teaching_extras.dart';
 import 'school_api.dart';
 
 /// Courses assigned to the signed-in teacher. Gradebook and attendance use the same endpoints as the web.
@@ -38,6 +40,7 @@ class TeachingTab extends ConsumerWidget {
           title: 'Mis cursos',
           subtitle: 'Toca un botón para ir directo a la asistencia o la libreta.',
         ),
+        const SyncBanner(),
         if (session.courses.isEmpty)
           const EmptyState(
             icon: Icons.menu_book_outlined,
@@ -302,25 +305,22 @@ class _GradebookViewState extends ConsumerState<GradebookView> {
       _busy = true;
       _error = null;
     });
+    final periodId = (data['period'] as Map<String, dynamic>)['id'] as String;
+    final body = {
+      'periodId': periodId,
+      'entries': [
+        for (final r in changed)
+          {
+            'studentId': r.studentId,
+            'score': r.status == 'Scored' ? num.parse(r.score.text.trim().replaceAll(',', '.')) : null,
+            'status': r.status,
+            'version': r.version,
+          },
+      ],
+      'reason': requiresReason ? _reason.text.trim() : null,
+    };
     try {
-      await ref.read(connectedControllerProvider)!.api.post(
-        '/api/v1/courses/${widget.courseId}/grades',
-        {
-          'periodId': (data['period'] as Map<String, dynamic>)['id'],
-          'entries': [
-            for (final r in changed)
-              {
-                'studentId': r.studentId,
-                'score': r.status == 'Scored'
-                    ? num.parse(r.score.text.trim().replaceAll(',', '.'))
-                    : null,
-                'status': r.status,
-                'version': r.version,
-              },
-          ],
-          'reason': requiresReason ? _reason.text.trim() : null,
-        },
-      );
+      await ref.read(connectedControllerProvider)!.api.post('/api/v1/courses/${widget.courseId}/grades', body);
       _reason.clear();
       ref.invalidate(apiGetProvider(_path));
       if (mounted) {
@@ -328,7 +328,24 @@ class _GradebookViewState extends ConsumerState<GradebookView> {
             .showSnackBar(SnackBar(content: Text('Notas guardadas (${changed.length}).')));
       }
     } on ApiFailure catch (e) {
-      setState(() => _error = e.message);
+      final offline = ref.read(offlineStoreProvider);
+      if (isOfflineFailure(e) && offline != null) {
+        // No signal: keep the grades on the phone and send them when the school answers.
+        await offline.enqueue(PendingWrite(
+          path: '/api/v1/courses/${widget.courseId}/grades',
+          body: body,
+          label: 'Notas · ${(data['course'] as Map?)?['subject'] ?? 'curso'} · ${(data['period'] as Map)['name']}',
+          mergeKey: 'grades|${widget.courseId}|$periodId',
+        ));
+        ref.read(pendingCountProvider.notifier).refresh();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Sin conexión: las notas quedaron en el teléfono y se enviarán al reconectar.'),
+          ));
+        }
+      } else {
+        setState(() => _error = e.message);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -350,6 +367,19 @@ class _GradebookViewState extends ConsumerState<GradebookView> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (data['offline'] == true) const OfflineNotice(),
+            if (data['scale'] is Map)
+              // Qualitative scale (e.g. Preprimaria): each level is entered with its value.
+              Padding(
+                padding: const EdgeInsets.only(bottom: Spacing.md),
+                child: StatusPill(
+                  label: [
+                    for (final l in ((data['scale'] as Map)['levels'] as List).cast<Map>()) '${l['label']} = ${l['value']}',
+                  ].join(' · '),
+                  tone: AppTone.blue,
+                  icon: Icons.info_outline,
+                ),
+              ),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -526,30 +556,44 @@ class _AttendanceViewState extends ConsumerState<AttendanceView> {
       _busy = true;
       _error = null;
     });
+    final body = {
+      'date': _iso,
+      'entries': [
+        for (final r in rows)
+          if (_draft[r['studentId']] != null)
+            {
+              'studentId': r['studentId'],
+              'status': _draft[r['studentId']],
+              'note': r['note'] ?? '',
+              'version': r['version'],
+            },
+      ],
+    };
     try {
-      await ref.read(connectedControllerProvider)!.api.post(
-        '/api/v1/courses/${widget.courseId}/attendance',
-        {
-          'date': _iso,
-          'entries': [
-            for (final r in rows)
-              if (_draft[r['studentId']] != null)
-                {
-                  'studentId': r['studentId'],
-                  'status': _draft[r['studentId']],
-                  'note': r['note'] ?? '',
-                  'version': r['version'],
-                },
-          ],
-        },
-      );
+      await ref.read(connectedControllerProvider)!.api.post('/api/v1/courses/${widget.courseId}/attendance', body);
       ref.invalidate(apiGetProvider(_path));
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('Asistencia guardada.')));
       }
     } on ApiFailure catch (e) {
-      setState(() => _error = e.message);
+      final offline = ref.read(offlineStoreProvider);
+      if (isOfflineFailure(e) && offline != null) {
+        await offline.enqueue(PendingWrite(
+          path: '/api/v1/courses/${widget.courseId}/attendance',
+          body: body,
+          label: 'Asistencia del ${DateFormat("d 'de' MMMM", 'es').format(_date)}',
+          mergeKey: 'attendance|${widget.courseId}|$_iso',
+        ));
+        ref.read(pendingCountProvider.notifier).refresh();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Sin conexión: la asistencia quedó en el teléfono y se enviará al reconectar.'),
+          ));
+        }
+      } else {
+        setState(() => _error = e.message);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -589,6 +633,7 @@ class _AttendanceViewState extends ConsumerState<AttendanceView> {
           builder: (context, raw) {
             final data = raw as Map<String, dynamic>;
             final rows = (data['rows'] as List<dynamic>).cast<Map<String, dynamic>>();
+            final offlineCopy = data['offline'] == true;
             if (!identical(_loadedFor, raw)) {
               _loadedFor = raw;
               _draft
@@ -603,6 +648,7 @@ class _AttendanceViewState extends ConsumerState<AttendanceView> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (offlineCopy) const OfflineNotice(),
                 Text(
                   '$recorded de ${rows.length} registrados',
                   style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
@@ -691,28 +737,42 @@ class _AttendanceViewState extends ConsumerState<AttendanceView> {
 
 // ---------------------------------------------------------------- Tareas
 
-class _TasksView extends StatelessWidget {
+class _TasksView extends ConsumerWidget {
   const _TasksView({required this.courseId});
 
   final String courseId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colors = AppColors.of(context);
+    final create = FilledButton.icon(
+      onPressed: () => showNewTaskSheet(context, ref, courseId),
+      icon: const Icon(Icons.add),
+      label: const Text('Nueva tarea'),
+    );
     return ApiBuilder(
       path: '/api/v1/courses/$courseId/assignments',
       builder: (context, data) {
         final items = (data as List<dynamic>).cast<Map<String, dynamic>>();
         if (items.isEmpty) {
-          return const EmptyState(
-            icon: Icons.assignment_outlined,
-            title: 'Sin tareas',
-            message: 'Crea y publica tareas desde la web; aquí verás su avance.',
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const EmptyState(
+                icon: Icons.assignment_outlined,
+                title: 'Sin tareas',
+                message: 'Crea una tarea y publícala para el curso desde aquí.',
+              ),
+              create,
+            ],
           );
         }
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            create,
+            const SizedBox(height: Spacing.md),
             for (final t in items)
               Padding(
                 padding: const EdgeInsets.only(bottom: Spacing.md),
@@ -749,6 +809,15 @@ class _TasksView extends StatelessWidget {
                             ? 0
                             : (t['submitted'] as num) / (t['recipients'] as num),
                       ),
+                      if (t['status'] == 'Draft')
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () => publishTask(context, ref, courseId, t),
+                            icon: const Icon(Icons.send_outlined),
+                            label: const Text('Publicar'),
+                          ),
+                        ),
                     ],
                   ),
                 ),

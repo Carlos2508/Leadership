@@ -57,9 +57,12 @@ public sealed class AccessRoleService(IdentityDbContext db, SecurityAudit audit,
         var members = await db.AccountRoleAssignments.Where(a => a.RoleKey == role.Key).Select(a => a.UserId).ToArrayAsync(ct);
         if (!request.IsActive && members.Length > 0)
             throw new AccessOperationException(409, "role-in-use", "Reasigna sus cuentas antes de desactivar este rol.");
+        // Managers outside this role, or members who keep account management through another of their roles.
         if (!desired.Contains(Permissions.ManageAccounts) && members.Length > 0 &&
-            !await db.Users.AnyAsync(u => u.IsActive && u.PasswordHash != null && !members.Contains(u.Id) &&
-                db.AccountPermissions.Any(p => p.UserId == u.Id && p.Permission == Permissions.ManageAccounts), ct))
+            !await db.Users.AnyAsync(u => u.IsActive && u.PasswordHash != null && (!members.Contains(u.Id)
+                ? db.AccountPermissions.Any(p => p.UserId == u.Id && p.Permission == Permissions.ManageAccounts)
+                : db.AccountRoleAssignments.Any(a => a.UserId == u.Id && a.RoleKey != role.Key &&
+                    db.AccessRolePermissions.Any(p => p.RoleKey == a.RoleKey && p.Permission == Permissions.ManageAccounts))), ct))
             throw new AccessOperationException(409, "last-manager", "Debe quedar al menos un gestor de accesos activo. Asigna otro gestor antes de continuar.");
         role.Label = label;
         role.Description = description;
@@ -71,11 +74,18 @@ public sealed class AccessRoleService(IdentityDbContext db, SecurityAudit audit,
         foreach (var p in desired.Except(current.Select(p => p.Permission)))
             db.AccessRolePermissions.Add(new() { RoleKey = role.Key, Permission = p });
         // Durable effective projection: existing authorization queries remain server-side and change atomically.
+        // A member may hold other roles too, so the projection is the union of this role's new permissions and theirs.
+        var otherRoles = await db.AccountRoleAssignments.Where(a => members.Contains(a.UserId) && a.RoleKey != role.Key)
+            .Join(db.AccessRolePermissions, a => a.RoleKey, p => p.RoleKey, (a, p) => new { a.UserId, p.Permission }).ToArrayAsync(ct);
         var effective = await db.AccountPermissions.Where(p => members.Contains(p.UserId)).ToArrayAsync(ct);
-        db.AccountPermissions.RemoveRange(effective.Where(p => !desired.Contains(p.Permission)));
         foreach (var member in members)
-            foreach (var permission in desired.Except(effective.Where(p => p.UserId == member).Select(p => p.Permission)))
+        {
+            var wanted = desired.Union(otherRoles.Where(o => o.UserId == member).Select(o => o.Permission)).ToHashSet(StringComparer.Ordinal);
+            var mine = effective.Where(p => p.UserId == member).ToArray();
+            db.AccountPermissions.RemoveRange(mine.Where(p => !wanted.Contains(p.Permission)));
+            foreach (var permission in wanted.Except(mine.Select(p => p.Permission)))
                 db.AccountPermissions.Add(new() { UserId = member, Permission = permission });
+        }
         foreach (var user in await db.Users.Where(u => members.Contains(u.Id)).ToArrayAsync(ct))
         {
             user.SecurityStamp = Guid.NewGuid().ToString("N");

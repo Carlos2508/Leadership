@@ -30,8 +30,8 @@ public sealed class AccountAccessService(IdentityDbContext db, UserManager<Appli
         {
             var code = codes.Where(c => c.UserId == x.Id).OrderByDescending(c => c.ExpiresAt).FirstOrDefault();
             return new AccountSummary(x.Id, x.UserName!, !x.HasPassword ? "Pending" : x.IsActive ? "Active" : "Suspended",
-                assignments.SingleOrDefault(a => a.UserId == x.Id)?.RoleKey ?? "custom", x.ConcurrencyStamp!,
-                code?.ExpiresAt, code?.Purpose, x.TwoFactorEnabled);
+                assignments.Where(a => a.UserId == x.Id).Select(a => a.RoleKey).Order().FirstOrDefault() ?? "custom", x.ConcurrencyStamp!,
+                code?.ExpiresAt, code?.Purpose, x.TwoFactorEnabled, assignments.Where(a => a.UserId == x.Id).Select(a => a.RoleKey).Order().ToArray());
         }).ToArray(), total, page, pageSize);
     }
 
@@ -42,7 +42,7 @@ public sealed class AccountAccessService(IdentityDbContext db, UserManager<Appli
             throw Invalid("El usuario debe contener entre 1 y 100 caracteres.");
         await using var transaction = await BeginOperationAsync(ct);
         await RequireManagerAsync(actorId, ct);
-        var profile = await ProfileAsync(request.Profile, ct);
+        var profile = await ProfilesAsync(request.Profiles, request.Profile, ct);
         if (await users.FindByNameAsync(request.Username.Trim()) is not null)
             throw new AccessOperationException(409, "username-taken", "Ese usuario ya existe. Elige otro nombre de usuario.");
         var user = new ApplicationUser { Id = Guid.NewGuid(), UserName = request.Username.Trim(), IsActive = false };
@@ -60,7 +60,7 @@ public sealed class AccountAccessService(IdentityDbContext db, UserManager<Appli
         var reason = Reason(request.Reason);
         await using var transaction = await BeginOperationAsync(ct);
         await RequireManagerAsync(actorId, ct);
-        var profile = await ProfileAsync(request.Profile ?? "", ct);
+        var profile = await ProfilesAsync(request.Profiles, request.Profile, ct);
         var user = await TargetAsync(userId, request.Version, ct);
         await ProtectLastManagerAsync(user, user.IsActive, profile.Permissions.Contains(Permissions.ManageAccounts), ct);
         var previous = await db.AccountPermissions.Where(x => x.UserId == userId).ToArrayAsync(ct);
@@ -258,11 +258,28 @@ public sealed class AccountAccessService(IdentityDbContext db, UserManager<Appli
         return new(role.Key, role.Label, permissions);
     }
 
+    /// <summary>
+    /// One or several active roles combined: the key lists the roles (comma separated, for audit) and the permissions are
+    /// their union. <paramref name="single"/> keeps older clients that send only one profile working.
+    /// </summary>
+    private async Task<AccessProfile> ProfilesAsync(string[]? keys, string? single, CancellationToken ct)
+    {
+        var selected = (keys is { Length: > 0 } ? keys : [single ?? ""]).Select(k => k?.Trim() ?? "").Where(k => k != "")
+            .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
+        if (selected.Length is 0 or > 5) throw new AccessOperationException(400, "invalid-profile", "Selecciona entre 1 y 5 roles de acceso activos.");
+        var profiles = new List<AccessProfile>();
+        foreach (var key in selected) profiles.Add(await ProfileAsync(key, ct));
+        return new(string.Join(",", profiles.Select(p => p.Key)), string.Join(" + ", profiles.Select(p => p.Label)),
+            profiles.SelectMany(p => p.Permissions).Distinct(StringComparer.Ordinal).ToArray());
+    }
+
     private void SetProfile(Guid userId, AccessProfile profile, HashSet<string>? existing = null)
     {
-        var assignment = db.AccountRoleAssignments.SingleOrDefault(a => a.UserId == userId);
-        if (assignment is null) db.AccountRoleAssignments.Add(new() { UserId = userId, RoleKey = profile.Key });
-        else assignment.RoleKey = profile.Key;
+        var keys = profile.Key.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var current = db.AccountRoleAssignments.Where(a => a.UserId == userId).ToArray();
+        db.AccountRoleAssignments.RemoveRange(current.Where(a => !keys.Contains(a.RoleKey)));
+        foreach (var key in keys.Where(k => current.All(a => a.RoleKey != k)))
+            db.AccountRoleAssignments.Add(new() { UserId = userId, RoleKey = key });
         foreach (var permission in profile.Permissions.Where(x => existing is null || !existing.Contains(x)))
             db.AccountPermissions.Add(new() { UserId = userId, Permission = permission });
     }

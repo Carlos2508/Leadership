@@ -21,7 +21,7 @@ public sealed class SecurityAudit(IdentityDbContext db, TimeProvider time, IHttp
         db.AuditEvents.Add(new SecurityAuditEvent
         {
             Id = Guid.NewGuid(), OccurredAt = time.GetUtcNow(), Action = action,
-            ActorId = actorId, TargetId = targetId, Reason = reason, Detail = detail,
+            ActorId = actorId, TargetId = targetId, Reason = reason, Detail = detail.Length > 120 ? detail[..120] : detail,
             TraceId = http.HttpContext?.TraceIdentifier ?? "console"
         });
 }

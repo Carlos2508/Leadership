@@ -18,6 +18,8 @@ export interface AccountSummary {
   codeExpiresAt: string | null;
   codePurpose: string | null;
   twoFactorEnabled: boolean;
+  /** Every role of the account (an account may combine several). */
+  profiles?: string[];
 }
 export interface AccessCode {
   userId: string;

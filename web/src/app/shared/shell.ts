@@ -8,7 +8,9 @@ import {
   input,
   signal,
 } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs';
 import { InstitutionService } from '../core/institution';
 import { Icon } from './icon';
 import { SessionService } from '../core/session';
@@ -94,18 +96,21 @@ import { ChatInbox } from '../core/chat';
           }
           @if (!preview() && session.myCourses().length) {
             <span class="nav-group" aria-hidden="true">DOCENCIA</span>
-            @if (session.myCourses().length <= 6) {
-              @for (course of session.myCourses(); track course.id) {
-                <a [routerLink]="['/workspace/courses', course.id]" routerLinkActive="active" ariaCurrentWhenActive="page"
-                  ><app-icon name="book" /><span class="nav-text"
-                    >{{ course.subject }}<small>{{ course.grade }}{{ course.section ? ' · ' + course.section : '' }}</small></span
-                  ></a
-                >
-              }
-            } @else {
-              <!-- Many courses (homeroom teachers): grouped by grade and section, every course reachable. -->
-              @for (group of teachingGroups(); track group.label) {
-                <span class="nav-subgroup" aria-hidden="true">{{ group.label }}</span>
+            <a routerLink="/workspace/attendance" routerLinkActive="active" ariaCurrentWhenActive="page"
+              ><app-icon name="calendar" />Asistencia diaria</a
+            >
+            @if (teachingGroups().length > 1) {
+              <a routerLink="/workspace/multigrade" routerLinkActive="active" ariaCurrentWhenActive="page"
+                ><app-icon name="star" />Notas por aula</a
+              >
+            }
+            <!-- One entry per grade and section; its subjects open inside, so the menu stays short with many courses. -->
+            @for (group of teachingGroups(); track group.label) {
+              <details class="nav-section" [open]="teachingGroups().length === 1 || group.active">
+                <summary>
+                  <app-icon name="book" /><span class="nav-text">{{ group.label }}<small>{{ group.courses.length }} {{ group.courses.length === 1 ? 'materia' : 'materias' }}</small></span
+                  ><span class="nav-chevron" aria-hidden="true">⌄</span>
+                </summary>
                 @for (course of group.courses; track course.id) {
                   <a
                     class="nav-compact"
@@ -113,10 +118,10 @@ import { ChatInbox } from '../core/chat';
                     routerLinkActive="active"
                     ariaCurrentWhenActive="page"
                     [attr.aria-label]="course.subject + ', ' + group.label"
-                    ><app-icon name="book" /><span class="nav-text">{{ course.subject }}</span></a
+                    ><span class="nav-text">{{ course.subject }}</span></a
                   >
                 }
-              }
+              </details>
             }
           }
           @if (!preview()) {
@@ -171,6 +176,14 @@ import { ChatInbox } from '../core/chat';
             <a routerLink="/workspace/grades" routerLinkActive="active" ariaCurrentWhenActive="page"
               ><app-icon name="star" />Calificaciones</a
             >
+            <a routerLink="/workspace/reports" routerLinkActive="active" ariaCurrentWhenActive="page"
+              ><app-icon name="download" />Reportes oficiales</a
+            >
+            @if (session.can('academic.manage') && !session.myCourses().length) {
+              <a routerLink="/workspace/attendance" routerLinkActive="active" ariaCurrentWhenActive="page"
+                ><app-icon name="calendar" />Asistencia diaria</a
+              >
+            }
             <a
               routerLink="/workspace/academic"
               routerLinkActive="active"
@@ -466,7 +479,7 @@ export class Shell {
   readonly title = input('Vista general');
   /** Kept for compatibility with pages that still pass it; the bell uses NotificationService. */
   readonly unread = input(0);
-  /** Teacher courses grouped by grade and section, in grade order then subject. */
+  /** Teacher courses grouped by grade and section (in the order received: grade, section), subjects inside. */
   readonly teachingGroups = computed(() => {
     const groups = new Map<string, { label: string; courses: { id: string; subject: string }[] }>();
     for (const c of this.session.myCourses()) {
@@ -475,8 +488,21 @@ export class Shell {
       group.courses.push({ id: c.id, subject: c.subject });
       groups.set(label, group);
     }
-    return [...groups.values()].map((g) => ({ ...g, courses: g.courses.sort((a, b) => a.subject.localeCompare(b.subject, 'es')) }));
+    const url = this.currentUrl();
+    return [...groups.values()].map((g) => ({
+      ...g,
+      courses: g.courses.sort((a, b) => a.subject.localeCompare(b.subject, 'es')),
+      active: g.courses.some((c) => url.startsWith('/workspace/courses/' + c.id)),
+    }));
   });
+  /** Current address, so the group of the open course starts expanded. */
+  private readonly currentUrl = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map((e) => e.urlAfterRedirects),
+    ),
+    { initialValue: this.router.url },
+  );
   readonly menuOpen = signal(false);
   readonly notifications = inject(NotificationService);
   readonly chat = inject(ChatInbox);

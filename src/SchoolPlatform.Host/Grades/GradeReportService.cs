@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using SchoolPlatform.Host.Branding;
 using SchoolPlatform.Host.Academic;
 using SchoolPlatform.Host.Common;
 using SchoolPlatform.Host.Documents;
@@ -10,11 +12,11 @@ namespace SchoolPlatform.Host.Grades;
 
 /// <summary>
 /// Data for printable grade documents. Every path reuses the same rules as the screens: families go through
-/// <see cref="GradeService.MyGradesAsync"/> (AcademicRecords + clearance on each read); staff report cards cover published
+/// <see cref="GradeService.MyGradesAsync"/> (AcademicRecords, and clearance when the school requires it); staff report cards cover published
 /// periods only and withhold the results of students not cleared for the publication's cutoff, so a printed copy never
 /// bypasses the clearance rule.
 /// </summary>
-public sealed class GradeReportService(SchoolDbContext db, GradeService grades, ClearanceService clearance)
+public sealed class GradeReportService(SchoolDbContext db, GradeService grades, ClearanceService clearance, IOptions<InstitutionOptions> institution)
 {
     public async Task<StudentReport?> FamilyReportAsync(Guid userId, Guid studentId, CancellationToken ct)
     {
@@ -23,7 +25,7 @@ public sealed class GradeReportService(SchoolDbContext db, GradeService grades, 
         var student = await StudentAsync(studentId, ct);
         var placement = await PlacementLabelAsync(studentId, null, ct);
         return new(student.Name, student.Code, placement, mine.Year ?? "", mine.Periods.Select(p => new ReportSection(p.Name,
-            p.Grades.Select(g => new ReportLine(g.Subject, g.Score, g.Status)).ToArray(),
+            p.Grades.Select(g => new ReportLine(g.Subject, g.Score, g.Status, g.Label)).ToArray(),
             p.Status switch
             {
                 "Available" => null,
@@ -54,18 +56,22 @@ public sealed class GradeReportService(SchoolDbContext db, GradeService grades, 
         var scores = (await db.PeriodScores.AsNoTracking().Where(x => x.PeriodId == periodId && ids.Contains(x.StudentId))
                 .Join(db.Courses, s => s.CourseId, c => c.Id, (s, c) => new { s.StudentId, s.Score, s.Status, c.SubjectId })
                 .Join(db.Subjects, x => x.SubjectId, subject => subject.Id, (x, subject) => new { x.StudentId, Subject = subject.Name, x.Score, x.Status })
+                .Select(x => new { x.StudentId, x.Subject, x.Score, x.Status })
                 .ToArrayAsync(ct))
             .ToLookup(x => x.StudentId);
+        var scale = await grades.ScaleAsync(gradeId, ct);
         var reports = new List<StudentReport>();
         foreach (var student in students.OrderBy(x => x.FamilyNames).ThenBy(x => x.GivenNames))
         {
-            var check = await clearance.CheckAsync(student.StudentId, publication.CutoffId, ct);
-            var withheld = check.Status == ClearanceStatus.Clear ? null
+            var check = institution.Value.Academic.GradesRequireClearance
+                ? await clearance.CheckAsync(student.StudentId, publication.CutoffId, ct) : null;
+            var withheld = check is null || check.Status == ClearanceStatus.Clear ? null
                 : check.Status == ClearanceStatus.PendingFinancialSetup
                     ? "Informe retenido: falta completar la configuración de cobros del corte."
                     : $"Informe retenido: pagos pendientes del corte «{publication.Cutoff}». Entregar cuando el estudiante esté solvente.";
             var lines = withheld is null
-                ? scores[student.StudentId].OrderBy(x => x.Subject).Select(x => new ReportLine(x.Subject, x.Score, x.Status)).ToArray()
+                ? scores[student.StudentId].OrderBy(x => x.Subject)
+                    .Select(x => new ReportLine(x.Subject, x.Score, x.Status, x.Status == "Scored" ? scale?.LabelFor(x.Score) : null)).ToArray()
                 : [];
             reports.Add(new(PeopleService.Display(student.GivenNames, student.FamilyNames, student.PreferredName), student.StudentCode,
                 await PlacementLabelAsync(student.StudentId, yearId, ct, period.EndsOn), year.Label,

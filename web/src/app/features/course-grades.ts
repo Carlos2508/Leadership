@@ -39,6 +39,8 @@ interface GradeSheet {
   canEdit: boolean;
   requiresReason: boolean;
   rows: SheetRow[];
+  /** Qualitative scale of this grade's stage (e.g. Preprimaria); null for numeric 0–100. */
+  scale: { name: string; levels: { code: string; label: string; value: number }[] } | null;
 }
 interface EditableRow extends SheetRow {
   draftText: string;
@@ -132,7 +134,7 @@ export function parseScore(text: string): number | null | undefined {
                     <tr>
                       <th scope="col">Estudiante</th>
                       <th scope="col">Situación</th>
-                      <th scope="col">Nota (0–100)</th>
+                      <th scope="col">{{ s.scale ? 'Logro (' + s.scale.name + ')' : 'Nota (0–100)' }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -159,6 +161,23 @@ export function parseScore(text: string): number | null | undefined {
                           >
                         </td>
                         <td data-label="Nota">
+                          @if (s.scale) {
+                            <label
+                              ><span class="sr-only">Logro de {{ row.name }}</span
+                              ><select
+                                class="inline-select"
+                                [name]="'level-' + row.studentId"
+                                [(ngModel)]="row.draftText"
+                                (ngModelChange)="scoreChanged(row)"
+                                [disabled]="!s.canEdit || (row.draftStatus !== 'Scored' && row.draftStatus !== '')"
+                              >
+                                <option value="">—</option>
+                                @for (level of s.scale.levels; track level.value) {
+                                  <option [value]="'' + level.value">{{ level.label }}</option>
+                                }
+                              </select></label
+                            >
+                          } @else {
                           <label
                             ><span class="sr-only">Nota de {{ row.name }}</span
                             ><input
@@ -180,6 +199,7 @@ export function parseScore(text: string): number | null | undefined {
                           /></label>
                           @if (invalid(row)) {
                             <small class="field-error">Entre 0 y 100, hasta dos decimales.</small>
+                          }
                           }
                         </td>
                       </tr>

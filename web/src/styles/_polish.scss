@@ -414,3 +414,84 @@ td .text-button {
   background: #fff2ef;
   color: #922c2c;
 }
+
+/* Chat: its secondary buttons use `outline` without `button`; give them the platform's outline button look,
+   and the same chevron select as the rest of the forms (no changes to the chat component itself). */
+button.outline:not(.button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid var(--field-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    border-color 0.15s var(--ease),
+    background-color 0.15s var(--ease);
+}
+button.outline:not(.button):hover:not(:disabled) {
+  border-color: var(--field-border-hover);
+  background: var(--soft-bg);
+}
+button.outline:not(.button):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+button.outline:not(.button):disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.chat-heading label select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%235d6063' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px 8px;
+  border-color: var(--field-border);
+}
+
+/* Chat contacts dialog: same header, body and footer layout as the other dialogs. */
+.account-dialog.chat-contact-dialog > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+  padding: 22px 24px 4px;
+}
+.account-dialog.chat-contact-dialog > header .eyebrow {
+  margin: 0 0 4px;
+}
+.account-dialog.chat-contact-dialog > header h2 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.3px;
+}
+.account-dialog.chat-contact-dialog > .chat-contact-body {
+  margin: 0;
+  padding: 6px 24px 8px;
+}
+.account-dialog.chat-contact-dialog > footer {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0;
+  padding: 14px 24px 20px;
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 767px) {
+  .account-dialog.chat-contact-dialog {
+    width: 100%;
+  }
+  .account-dialog.chat-contact-dialog .chat-contact-search {
+    flex-wrap: nowrap;
+  }
+}

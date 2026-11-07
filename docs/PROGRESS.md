@@ -2,6 +2,10 @@
 
 Actualizado: 6 de noviembre de 2026, America/Guatemala.
 
+## Revisión completa de flujos (integrada en main)
+
+- Sin errores de lógica en 42 casos límite (dinero, notas, inscripción, permisos, portería y chat). Se corrigieron cuatro fallas visuales del chat, el orden de los carnets por grado y el aviso de nota inválida (ahora nombra al estudiante); la libreta del app tiene etiquetas accesibles.
+
 ## Doble check, hora de visto y actividad del chat — incremento vigente
 
 - Solicitud del propietario: entrega/lectura tipo WhatsApp y estado en línea/activo. Rama `feat/chat-presence-receipts`, sobre `main` `f84af4d`, conservando el incremento de uso real. Web y app muestran ✓ Enviado, ✓✓ Entregado y ✓✓ azul Visto a las…, con fechas completas en ayuda contextual y primera lectura inmutable.

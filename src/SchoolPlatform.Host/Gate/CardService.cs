@@ -103,14 +103,19 @@ public sealed class CardService(SchoolDbContext db, SchoolAudit audit, TimeProvi
         var year = await db.Years.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.YearId, ct) ?? throw OperationException.NotFound("No encontramos ese ciclo.");
         var today = courses.LocalDate(time.GetUtcNow());
         var date = today < year.StartsOn ? year.StartsOn : today > year.EndsOn ? year.EndsOn : today;
-        var ids = await (from e in db.Enrollments.AsNoTracking()
-                         join p in db.Placements on e.Id equals p.EnrollmentId
-                         join person in db.Persons on e.StudentId equals person.Id
-                         where e.AcademicYearId == year.Id && e.Status == EnrollmentStatus.Active && p.GradeLevelId == request.GradeId &&
-                               (request.SectionId == null || p.SectionId == request.SectionId) &&
-                               p.StartsOn <= date && (p.EndsOn == null || p.EndsOn > date)
-                         orderby person.FamilyNames, person.GivenNames
-                         select e.StudentId).Distinct().ToArrayAsync(ct);
+        // Ordered after Distinct (SQL DISTINCT does not keep ORDER BY): by section, then family and given names, so the
+        // printed sheets can be handed out classroom by classroom.
+        var rows = await (from e in db.Enrollments.AsNoTracking()
+                          join p in db.Placements on e.Id equals p.EnrollmentId
+                          join person in db.Persons on e.StudentId equals person.Id
+                          from section in db.Sections.Where(x => x.Id == p.SectionId).DefaultIfEmpty()
+                          where e.AcademicYearId == year.Id && e.Status == EnrollmentStatus.Active && p.GradeLevelId == request.GradeId &&
+                                (request.SectionId == null || p.SectionId == request.SectionId) &&
+                                p.StartsOn <= date && (p.EndsOn == null || p.EndsOn > date)
+                          select new { e.StudentId, Section = section == null ? "" : section.Name, person.FamilyNames, person.GivenNames })
+            .Distinct().ToArrayAsync(ct);
+        var ids = rows.OrderBy(x => x.Section, StringComparer.Ordinal).ThenBy(x => x.FamilyNames, StringComparer.CurrentCulture)
+            .ThenBy(x => x.GivenNames, StringComparer.CurrentCulture).Select(x => x.StudentId).Distinct().ToArray();
         return (ids, date);
     }
 

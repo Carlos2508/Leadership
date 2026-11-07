@@ -9,7 +9,7 @@ using SchoolPlatform.Host.SchoolData;
 
 namespace SchoolPlatform.Host.Chat;
 
-public sealed class ChatService(SchoolDbContext db, SchoolAudit audit, TimeProvider time, IOptions<InstitutionOptions> institution)
+public sealed partial class ChatService(SchoolDbContext db, SchoolAudit audit, TimeProvider time, IOptions<InstitutionOptions> institution)
 {
     public async Task<object> YearsAsync(Guid actor, CancellationToken ct) => await Pairs(actor)
         .Select(x => new { Id = x.YearId, Label = x.Year, x.Status }).Distinct().OrderByDescending(x => x.Label).ToArrayAsync(ct);
@@ -81,18 +81,29 @@ public sealed class ChatService(SchoolDbContext db, SchoolAudit audit, TimeProvi
             x.TeacherAccount != actor ? "Docente" : x.MemberId == x.StudentId ? "Estudiante" : "Encargado", x.Student)).ToArray(), total, page, 40);
     }
 
-    private IQueryable<ChatThread> Threads(Guid actor, Guid? year = null) =>
+    private IQueryable<ChatThread> Threads(Guid actor, Guid? year = null)
+    {
+        var now = time.GetUtcNow();
+        return
         from c in db.ChatConversations.AsNoTracking()
         join p in Pairs(actor, year) on new { Y = c.AcademicYearId, S = c.StudentId, T = c.TeacherId, M = c.MemberId }
             equals new { Y = p.YearId, S = p.StudentId, T = p.TeacherId, M = p.MemberId }
         let mine = p.TeacherAccount == actor ? c.TeacherId : c.MemberId
         let read = p.TeacherAccount == actor ? c.TeacherReadSequence : c.MemberReadSequence
+        let peer = p.TeacherAccount == actor ? p.MemberAccount : p.TeacherAccount
         select new ChatThread { Id = c.Id, AcademicYearId = c.AcademicYearId, Year = p.Year, Name = p.TeacherAccount == actor ? p.Member : p.Teacher,
             Role = p.TeacherAccount != actor ? "Docente" : c.MemberId == c.StudentId ? "Estudiante" : "Encargado", Student = p.Student,
             Preview = db.ChatMessages.Where(m => m.ConversationId == c.Id).OrderByDescending(m => m.Sequence).Select(m => m.Body.Length > 120 ? m.Body.Substring(0, 120) : m.Body).FirstOrDefault() ?? "",
             UpdatedAt = c.UpdatedAt, Unread = db.ChatMessages.Count(m => m.ConversationId == c.Id && m.SenderId != mine && m.Sequence > read),
             LastSequence = c.LastSequence, PeerReadSequence = p.TeacherAccount == actor ? c.MemberReadSequence : c.TeacherReadSequence,
+            PeerDeliveredSequence = p.TeacherAccount == actor ? c.MemberDeliveredSequence : c.TeacherDeliveredSequence,
+            DeliveredSequence = p.TeacherAccount == actor ? c.TeacherDeliveredSequence : c.MemberDeliveredSequence,
+            ServerNow = now,
+            PeerActiveUntil = db.ChatPresences.Where(s => s.UserId == peer &&
+                db.Accounts.Any(a => a.Id == peer && a.SecurityStamp == s.SecurityStamp)).Max(s => s.ActiveUntil),
+            PeerLastActiveAt = db.ChatPresences.Where(s => s.UserId == peer).Max(s => s.LastActiveAt),
             CanSend = p.Status == YearStatus.EnrollmentOpen || p.Status == YearStatus.Active };
+    }
 
     public async Task<ChatThread[]> ListAsync(Guid actor, Guid year, CancellationToken ct) =>
         await Threads(actor, year).OrderByDescending(x => x.UpdatedAt).Take(200).ToArrayAsync(ct);
@@ -109,12 +120,15 @@ public sealed class ChatService(SchoolDbContext db, SchoolAudit audit, TimeProvi
     public async Task<ChatSummary> SummaryAsync(Guid actor, CancellationToken ct)
     {
         var person = await db.AccountLinks.Where(x => x.UserId == actor && x.UnlinkedAt == null).Select(x => (Guid?)x.PersonId).SingleOrDefaultAsync(ct);
-        if (person is null) return new(false, 0, 0, "");
+        if (person is null) return new(false, 0, 0, "", []);
         var unread = await Threads(actor).Where(x => x.Unread > 0).Select(x => new { x.Id, x.Unread,
             Incoming = db.ChatMessages.Where(m => m.ConversationId == x.Id && m.SenderId != person).Max(m => (long?)m.Sequence) ?? 0 }).ToArrayAsync(ct);
-        return new(await Pairs(actor).AnyAsync(ct), unread.Sum(x => x.Unread), unread.Length,
-            Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
-                string.Join('|', unread.OrderBy(x => x.Id).Select(x => $"{x.Id:N}:{x.Incoming}"))))));
+        var deliveries = await Threads(actor).Where(t => db.ChatMessages.Any(m => m.ConversationId == t.Id && m.SenderId != person && m.Sequence > t.DeliveredSequence))
+            .OrderBy(t => t.UpdatedAt).Take(100).Select(t => new ChatDelivery(t.AcademicYearId, t.Id,
+                db.ChatMessages.Where(m => m.ConversationId == t.Id && m.SenderId != person).Max(m => m.Sequence))).ToArrayAsync(ct);
+        var revision = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
+            string.Join('|', unread.OrderBy(x => x.Id).Select(x => $"{x.Id:N}:{x.Incoming}")))));
+        return new(await Pairs(actor).AnyAsync(ct), unread.Sum(x => x.Unread), unread.Length, revision, deliveries);
     }
 
     public async Task<Guid> StartAsync(Guid actor, Guid year, StartChat request, CancellationToken ct)
@@ -136,15 +150,21 @@ public sealed class ChatService(SchoolDbContext db, SchoolAudit audit, TimeProvi
         return conversation.Id;
     }
 
-    public async Task<ChatPage> MessagesAsync(Guid actor, Guid year, Guid id, long? before, long? after, CancellationToken ct)
+    public async Task<ChatPage> MessagesAsync(Guid actor, Guid year, Guid id, long? before, long? after, CancellationToken ct,
+        long knownRead = 0, long knownDelivered = 0, long receiptFrom = 1)
     {
-        if (before is <= 0 || after is < 0 || before is not null && after is not null) throw OperationException.Invalid("El cursor de mensajes no es válido.");
+        if (before is <= 0 || after is < 0 || before is not null && after is not null || knownRead < 0 || knownDelivered < 0 || receiptFrom < 1)
+            throw OperationException.Invalid("El cursor de mensajes no es válido.");
         var thread = await Threads(actor, year).SingleOrDefaultAsync(x => x.Id == id, ct) ?? throw Denied();
         var person = await ActorPerson(actor, ct);
         var query = db.ChatMessages.AsNoTracking().Where(x => x.ConversationId == id && (before == null || x.Sequence < before) && (after == null || x.Sequence > after));
         var rows = after is null ? await query.OrderByDescending(x => x.Sequence).Take(51).ToArrayAsync(ct)
             : await query.OrderBy(x => x.Sequence).Take(51).ToArrayAsync(ct);
-        return new(thread, rows.Take(50).OrderBy(x => x.Sequence).Select(x => View(x, person)).ToArray(), rows.Length > 50);
+        var receipts = after is null ? [] : await db.ChatMessages.AsNoTracking().Where(m => m.ConversationId == id && m.SenderId == person &&
+            m.Sequence >= receiptFrom && m.Sequence <= after &&
+            ((m.ReadAt != null && m.Sequence > knownRead) || (m.DeliveredAt != null && m.Sequence > knownDelivered)))
+            .OrderBy(m => m.Sequence).Select(m => new ChatReceipt(m.Sequence, m.DeliveredAt, m.ReadAt)).ToArrayAsync(ct);
+        return new(thread, rows.Take(50).OrderBy(x => x.Sequence).Select(x => View(x, person)).ToArray(), rows.Length > 50, receipts);
     }
 
     public async Task<ChatMessageView> SendAsync(Guid actor, Guid year, Guid id, SendChat request, CancellationToken ct)
@@ -175,23 +195,12 @@ public sealed class ChatService(SchoolDbContext db, SchoolAudit audit, TimeProvi
         return View(message, person);
     }
 
-    public async Task ReadAsync(Guid actor, Guid year, Guid id, long through, CancellationToken ct)
-    {
-        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        await LockAsync(id.ToString("N"), ct);
-        if (!await Threads(actor, year).AnyAsync(x => x.Id == id, ct)) throw Denied();
-        var person = await ActorPerson(actor, ct);
-        var conversation = await db.ChatConversations.SingleAsync(x => x.Id == id, ct);
-        if (through < 0 || through > conversation.LastSequence) throw OperationException.Invalid("El mensaje leído no existe.");
-        if (person == conversation.TeacherId) conversation.TeacherReadSequence = Math.Max(conversation.TeacherReadSequence, through);
-        else conversation.MemberReadSequence = Math.Max(conversation.MemberReadSequence, through);
-        await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-    }
+    public Task ReadAsync(Guid actor, Guid year, Guid id, long through, CancellationToken ct) => ReceiptAsync(actor, year, id, through, true, ct);
+    public Task DeliveredAsync(Guid actor, Guid year, Guid id, long through, CancellationToken ct) => ReceiptAsync(actor, year, id, through, false, ct);
 
     private async Task<Guid> ActorPerson(Guid actor, CancellationToken ct) =>
         await db.AccountLinks.Where(x => x.UserId == actor && x.UnlinkedAt == null).Select(x => x.PersonId).SingleAsync(ct);
     private Task LockAsync(string key, CancellationToken ct) => db.Database.ExecuteSqlInterpolatedAsync($"DECLARE @result int; EXEC @result = sys.sp_getapplock @Resource={"SchoolPlatform.Chat:" + key}, @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=15000; IF @result < 0 THROW 51000, 'Chat lock unavailable', 1;", ct);
     private static OperationException Denied() => OperationException.NotFound("La conversación no está disponible o ya no tienes acceso.");
-    private static ChatMessageView View(ChatMessage m, Guid person) => new(m.Sequence, m.ClientMessageId, m.Body, m.SentAt, m.SenderId == person);
+    private static ChatMessageView View(ChatMessage m, Guid person) => new(m.Sequence, m.ClientMessageId, m.Body, m.SentAt, m.SenderId == person, m.DeliveredAt, m.ReadAt);
 }

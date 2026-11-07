@@ -1,5 +1,13 @@
 # Handoff para la siguiente sesión
 
+## Estados y actividad del chat — 6 de noviembre de 2026, leer primero
+
+- Solicitud vigente: doble check, visto a una hora y en línea/activo. Rama `feat/chat-presence-receipts`, base `main` `f84af4d` con las mejoras de uso real integradas. Leer ADR-016, `CHAT_Y_HUELLA.md` y `QA_CHAT_ESTADOS_2026-11-06.md`. No amplía participantes autorizados ni permisos del chat anterior.
+- `ChatActivityService.cs` parcial de ChatService: ACK de entrega/lectura serializable con applock y alcance SQL; primeras fechas inmutables. `/chat/activity` exige cuenta activa/sello/CSRF y acepta límites de entrega obtenidos del resumen. Web `core/chat.ts` y app `ChatInboxController` confirman desde primer plano; estar en Inicio no marca lectura. `ChatPage.Receipts` devuelve los cambios de recibos para mensajes ya cargados.
+- `chat.Presence`: cuenta + UUID por pestaña/proceso, versiones monotónicas, pulso 10 s/lease 45 s, máximo 32 registros y sello vigente. Cerrar un cliente no oculta otros; inactive tardío/active tardío se ordenan por versión. Solo Threads ya autorizado proyecta actividad del interlocutor. Web `shared/chat-presence.ts` y Flutter `chat_status.dart` hacen caducar localmente En línea con ajuste de reloj del servidor. Web cierra en visibilitychange/pagehide/salida de workspace; app en lifecycle/bloqueo/dispose.
+- Nueva migración `20261107000825_ChatReceiptsAndPresence` (fecha UTC), modelo/snapshot correctos. Inicializa entrega desde lectura previa y conserva NULL en fechas desconocidas. Prueba real de downgrade/upgrade exclusivamente en catálogo `SchoolPlatform_Test_*` del fixture. No aplicar desde el asistente local ni sobre la base escolar sin actualización normal.
+- Confirmado: 141 SQL (suite repetida tras rechazar payloads nulos/inválidos), 94 Flutter, 85 E2E web + 2 E2E de migración MariaDB/SQL aislados y dos E2E específicos de chat adicionales, análisis limpio, builds Angular/APK/Release. Las dos omisiones de migración se resolvieron en fixture aparte; rendimiento móvil se mide una vez en escritorio. Evidencia `.local/qa/evidencia/chat-presence-2026-11-06/`, TRX/logs `presence-*`; Release local `.local/publish/chat-presence/`. Integrado en main por autorización vigente del propietario. Sin despliegue ni datos reales; pruebas físicas de huella/iOS siguen pendientes.
+
 ## Prueba de uso real (integrada en main) — 6 de noviembre de 2026, leer primero
 
 - Solicitud: probar como si el colegio usara la plataforma, en otra rama porque otro agente trabaja en la carpeta principal (`feat/private-chat-biometric-unlock`). Rama **`qa/uso-real`**, worktree `.local/worktrees/qa-uso-real`, base `main` `ce563a7`. No se tocó `main` ni la carpeta del otro agente. Informe: `QA_USO_REAL_2026-11-06.md` (H1–H15).

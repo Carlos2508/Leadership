@@ -118,6 +118,11 @@
             <div>
               <h2>{{ thread.name }}</h2>
               <p>{{ thread.role }} · Sobre {{ thread.student }} · {{ thread.year }}</p>
+              <app-chat-presence
+                [until]="thread.peerActiveUntil"
+                [lastActive]="thread.peerLastActiveAt"
+                [serverNow]="thread.serverNow"
+              />
             </div>
           </header>
           <div
@@ -148,11 +153,11 @@
                   <time>{{ m.sentAt | date: 'dd/MM HH:mm' }}</time>
                   @if (m.mine) {
                     <span
-                      [class.read]="m.sequence <= thread.peerReadSequence"
-                      [attr.aria-label]="
-                        m.sequence <= thread.peerReadSequence ? 'Leído' : 'Enviado'
-                      "
-                      >{{ m.sequence <= thread.peerReadSequence ? '✓✓ Leído' : '✓ Enviado' }}</span
+                      [class.read]="isRead(m, thread)"
+                      [attr.aria-label]="receiptText(m, thread)"
+                      [title]="receiptDetails(m, thread)"
+                      ><span aria-hidden="true">{{ isDelivered(m, thread) ? '✓✓' : '✓' }}</span>
+                      {{ receiptText(m, thread) }}</span
                     >
                   }
                 </footer>

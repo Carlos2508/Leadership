@@ -6,7 +6,15 @@ Después de ingresar, busca el icono de conversación junto a la campana. El nú
 
 Elige el ciclo y pulsa **Nueva conversación**. Un estudiante puede elegir a los docentes de sus cursos. Un encargado puede elegirlos para cada estudiante con el que tenga vínculo y facultad de comunicaciones. Un docente puede escribir a esos estudiantes y encargados. Las conversaciones familiares y estudiantiles permanecen separadas.
 
-Puedes buscar por nombre del contacto o del estudiante, volver al historial y ver mensajes anteriores. **Enviado** confirma que se guardó en el servidor; **Leído** indica que la otra persona abrió esos mensajes. Si falla la conexión, el texto se conserva: pulsa **Reintentar**. No vuelve a enviarse como otro mensaje.
+Puedes buscar por nombre del contacto o del estudiante, volver al historial y ver mensajes anteriores. Tus mensajes muestran:
+
+- **✓ Enviado:** se guardó en el servidor.
+- **✓✓ Entregado:** la otra persona recibió el aviso mientras usaba la plataforma; todavía puede no haber abierto el chat.
+- **✓✓ Visto a las…**, en azul: abrió la conversación y llegó a esos mensajes. La primera hora de lectura se conserva. En mensajes anteriores a esta actualización puede aparecer solo «Visto», porque no se registraba esa hora.
+
+Al mantener el puntero sobre el estado, o mantener pulsado en el app, puedes consultar las fechas completas de envío, entrega y lectura. Si falla la conexión, el texto se conserva: pulsa **Reintentar**. No vuelve a enviarse como otro mensaje.
+
+Debajo del nombre aparece **En línea** cuando la persona está usando la plataforma visible y desbloqueada, o **Últ. vez** con su última actividad confirmada. No significa que esté mirando este chat. Si pierde la conexión o cierra de golpe, el estado caduca en hasta 45 segundos. Si usa varios dispositivos, sigue en línea mientras conserve alguno activo. Todo funciona automáticamente, sin pasos de configuración adicionales.
 
 Los mensajes se actualizan automáticamente mientras usas la plataforma. Los avisos de esta entrega aparecen dentro de la web/app; no son notificaciones de sistema con el app cerrado.
 
@@ -22,7 +30,7 @@ La sesión recordada dura hasta 14 días. Si vence o el colegio cierra tus sesio
 
 ## Preparar la instalación
 
-El código incluye la migración aditiva `20261106225356_PrivateChat`. Aplica las migraciones mediante el procedimiento normal de actualización, con la configuración y respaldo de esa instalación, antes de servir la nueva versión. No se aplicó a la base escolar durante el desarrollo ni se usaron personas reales.
+El código incluye las migraciones aditivas `20261106225356_PrivateChat` y `20261107000825_ChatReceiptsAndPresence`. Aplica las migraciones mediante el procedimiento normal de actualización, con la configuración y respaldo de esa instalación, antes de servir la nueva versión. No se aplicaron a la base escolar durante el desarrollo ni se usaron personas reales.
 
 Para ver contactos deben existir cuentas activas vinculadas a las personas, matrícula/ubicación en el ciclo y asignación docente vigente. Para encargados también debe estar concedida **Recibir comunicaciones**. Un cargo llamado «Docente» o un rol administrativo no reemplaza esos registros.
 

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/theme/app_colors.dart';
 import 'biometric_vault.dart';
+import 'chat_status.dart';
 import 'connected_session.dart';
 import 'school_api.dart';
 
@@ -28,6 +29,9 @@ String _clientId() {
 
 class ChatInboxController extends AsyncNotifier<ChatMap?> {
   bool _busy = false;
+  final _presenceClientId = _clientId();
+  int _version = 0;
+  bool _active = false;
   @override
   Future<ChatMap?> build() async {
     final api = ref.watch(connectedControllerProvider.select((s) => s?.api));
@@ -35,8 +39,18 @@ class ChatInboxController extends AsyncNotifier<ChatMap?> {
     final timer = Timer.periodic(const Duration(seconds: 10), (_) {
       if (_foreground() && !ref.read(biometricLockedProvider)) unawaited(refresh());
     });
-    ref.onDispose(timer.cancel);
-    return await api.get('/api/v1/chat/summary') as ChatMap;
+    ref.onDispose(() {
+      timer.cancel();
+      if (_active) unawaited(_announce(api, false));
+    });
+    final summary = await api.get('/api/v1/chat/summary') as ChatMap;
+    if (ref.mounted &&
+        _foreground() &&
+        !ref.read(biometricLockedProvider) &&
+        summary['available'] == true) {
+      await _announce(api, true, summary['pendingDeliveries'] as List? ?? const []);
+    }
+    return summary;
   }
 
   Future<void> refresh() async {
@@ -47,12 +61,40 @@ class ChatInboxController extends AsyncNotifier<ChatMap?> {
       final summary = await session.api.get('/api/v1/chat/summary') as ChatMap;
       if (ref.mounted && ref.read(connectedControllerProvider)?.api == session.api) {
         state = AsyncData(summary);
+        if (_foreground() && !ref.read(biometricLockedProvider) && summary['available'] == true) {
+          await _announce(session.api, true, summary['pendingDeliveries'] as List? ?? const []);
+        }
       }
     } on ApiFailure catch (e) {
       if (e.unauthorized && ref.mounted) ref.read(connectedControllerProvider.notifier).expire();
       // Keep the last confirmed count; opening the inbox shows a recoverable network error.
     } finally {
       _busy = false;
+    }
+  }
+
+  Future<void> _announce(SchoolApi api, bool active, [List<dynamic> deliveries = const []]) async {
+    _active = active;
+    final body = {
+      'clientId': _presenceClientId,
+      'version': ++_version,
+      'active': active,
+      'deliveries': deliveries,
+    };
+    try {
+      await api.post('/api/v1/chat/activity', body);
+    } on Object {
+      /* Presence expires automatically if this request cannot be confirmed. */
+    }
+  }
+
+  Future<void> setForeground(bool active) async {
+    final api = ref.read(connectedControllerProvider)?.api;
+    if (api == null) return;
+    if (active && _foreground() && !ref.read(biometricLockedProvider)) {
+      await refresh();
+    } else if (_active) {
+      await _announce(api, false);
     }
   }
 }
@@ -570,7 +612,9 @@ class _ChatThreadPageState extends ConsumerState<ChatThreadPage> {
     final atEnd = _atEnd;
     try {
       final after = _messages.lastOrNull?['sequence'] ?? 0;
-      final page = await _api.get('$_base/messages?after=$after') as ChatMap;
+      final page = await _api.get(
+        '$_base/messages?after=$after&knownRead=${_thread['peerReadSequence'] ?? 0}&knownDelivered=${_thread['peerDeliveredSequence'] ?? 0}&receiptFrom=${_messages.firstOrNull?['sequence'] ?? 1}',
+      ) as ChatMap;
       if (!mounted) return;
       final keys = _messages.map((m) => m['sequence']).toSet();
       final added = [
@@ -578,6 +622,13 @@ class _ChatThreadPageState extends ConsumerState<ChatThreadPage> {
           if (!keys.contains((m as ChatMap)['sequence'])) m,
       ];
       setState(() {
+        final receipts = {
+          for (final r in page['receipts'] as List? ?? const []) (r as ChatMap)['sequence']: r,
+        };
+        _messages = [
+          for (final m in _messages)
+            receipts.containsKey(m['sequence']) ? {...m, ...receipts[m['sequence']] as ChatMap} : m,
+        ];
         _thread = page['conversation'] as ChatMap;
         _messages.addAll(added);
         _error = null;
@@ -740,6 +791,7 @@ class _ChatThreadPageState extends ConsumerState<ChatThreadPage> {
       },
       child: Scaffold(
         appBar: AppBar(
+          toolbarHeight: 80 * MediaQuery.textScalerOf(context).scale(1).clamp(1, 1.6),
           leading: BackButton(onPressed: _back),
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -751,6 +803,7 @@ class _ChatThreadPageState extends ConsumerState<ChatThreadPage> {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall,
               ),
+              ChatPresenceLabel(thread: _thread),
             ],
           ),
         ),
@@ -779,9 +832,7 @@ class _ChatThreadPageState extends ConsumerState<ChatThreadPage> {
                           }
                           final m = _messages[_messages.length - 1 - i];
                           final mine = m['mine'] == true;
-                          final read =
-                              (m['sequence'] as num) <=
-                              ((_thread['peerReadSequence'] as num?) ?? 0);
+                          final read = chatRead(m, _thread);
                           return Align(
                             alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
                             child: ConstrainedBox(
@@ -812,12 +863,17 @@ class _ChatThreadPageState extends ConsumerState<ChatThreadPage> {
                                       style: Theme.of(context).textTheme.bodyMedium,
                                     ),
                                     const SizedBox(height: 5),
-                                    Text(
-                                      '${_time(m['sentAt'])}${mine ? (read ? '  ✓✓ Leído' : '  ✓ Enviado') : ''}',
-                                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                        color: read && mine
-                                            ? colors.tone(AppTone.blue).foreground
-                                            : colors.muted,
+                                    Tooltip(
+                                      message: mine
+                                          ? chatReceiptDetails(m, _thread)
+                                          : _time(m['sentAt']),
+                                      child: Text(
+                                        '${_time(m['sentAt'])}${mine ? '  ${chatDelivered(m, _thread) ? '✓✓' : '✓'} ${chatReceiptLabel(m, _thread)}' : ''}',
+                                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                          color: read && mine
+                                              ? colors.tone(AppTone.blue).foreground
+                                              : colors.muted,
+                                        ),
                                       ),
                                     ),
                                   ],

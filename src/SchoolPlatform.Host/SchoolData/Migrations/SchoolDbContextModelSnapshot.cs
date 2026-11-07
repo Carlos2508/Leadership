@@ -534,6 +534,9 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.Property<long>("LastSequence")
                         .HasColumnType("bigint");
 
+                    b.Property<long>("MemberDeliveredSequence")
+                        .HasColumnType("bigint");
+
                     b.Property<Guid>("MemberId")
                         .HasColumnType("uniqueidentifier");
 
@@ -542,6 +545,9 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
 
                     b.Property<Guid>("StudentId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("TeacherDeliveredSequence")
+                        .HasColumnType("bigint");
 
                     b.Property<Guid>("TeacherId")
                         .HasColumnType("uniqueidentifier");
@@ -565,6 +571,8 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
 
                     b.ToTable("Conversations", "chat", t =>
                         {
+                            t.HasCheckConstraint("CK_Chat_Delivery", "[TeacherDeliveredSequence] >= [TeacherReadSequence] AND [MemberDeliveredSequence] >= [MemberReadSequence] AND [TeacherDeliveredSequence] <= [LastSequence] AND [MemberDeliveredSequence] <= [LastSequence]");
+
                             t.HasCheckConstraint("CK_Chat_Distinct", "[TeacherId] <> [MemberId]");
 
                             t.HasCheckConstraint("CK_Chat_Sequences", "[LastSequence] >= 0 AND [TeacherReadSequence] >= 0 AND [MemberReadSequence] >= 0 AND [TeacherReadSequence] <= [LastSequence] AND [MemberReadSequence] <= [LastSequence]");
@@ -587,6 +595,12 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.Property<Guid>("ClientMessageId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("DeliveredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<Guid>("SenderId")
                         .HasColumnType("uniqueidentifier");
 
@@ -604,7 +618,44 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                         {
                             t.HasCheckConstraint("CK_ChatMessage_Body", "LEN(LTRIM(RTRIM([Body]))) > 0");
 
+                            t.HasCheckConstraint("CK_ChatMessage_Receipts", "([DeliveredAt] IS NULL OR [DeliveredAt] >= [SentAt]) AND ([ReadAt] IS NULL OR ([DeliveredAt] IS NOT NULL AND [ReadAt] >= [DeliveredAt]))");
+
                             t.HasCheckConstraint("CK_ChatMessage_Sequence", "[Sequence] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Chat.ChatPresence", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ActiveUntil")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("LastActiveAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("SecurityStamp")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long>("Version")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("UserId", "ClientId");
+
+                    b.HasIndex("UserId", "ActiveUntil");
+
+                    b.ToTable("Presence", "chat", t =>
+                        {
+                            t.HasCheckConstraint("CK_ChatPresence_Version", "[Version] > 0");
                         });
                 });
 
@@ -2136,6 +2187,9 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.Property<string>("PasswordHash")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("SecurityStamp")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
@@ -2358,6 +2412,15 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.HasOne("SchoolPlatform.Host.People.Person", null)
                         .WithMany()
                         .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Chat.ChatPresence", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

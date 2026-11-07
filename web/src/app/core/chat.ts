@@ -1,5 +1,5 @@
-import { Injectable, effect, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { DestroyRef, Injectable, effect, inject, signal } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
 import { AccessApi } from './access-api';
 import { Alerts } from './alerts';
 import { SessionService } from './session';
@@ -14,6 +14,12 @@ export interface ChatSummary {
   unread: number;
   conversations: number;
   revision: string;
+  pendingDeliveries: ChatDelivery[];
+}
+export interface ChatDelivery {
+  academicYearId: string;
+  conversationId: string;
+  throughSequence: number;
 }
 export interface ChatThread {
   id: string;
@@ -27,6 +33,10 @@ export interface ChatThread {
   unread: number;
   lastSequence: number;
   peerReadSequence: number;
+  peerDeliveredSequence: number;
+  peerActiveUntil: string | null;
+  peerLastActiveAt: string | null;
+  serverNow: string;
   canSend: boolean;
 }
 export interface ChatMessage {
@@ -35,11 +45,14 @@ export interface ChatMessage {
   body: string;
   sentAt: string;
   mine: boolean;
+  deliveredAt: string | null;
+  readAt: string | null;
 }
 export interface ChatPage {
   conversation: ChatThread;
   items: ChatMessage[];
   hasMore: boolean;
+  receipts: { sequence: number; deliveredAt: string | null; readAt: string | null }[];
 }
 export interface ChatContact {
   studentId: string;
@@ -62,18 +75,29 @@ export class ChatInbox {
     unread: 0,
     conversations: 0,
     revision: '',
+    pendingDeliveries: [],
   });
   readonly failed = signal(false);
   private owner = '';
   private busy = false;
   private timer?: ReturnType<typeof setInterval>;
+  private readonly clientId = crypto.randomUUID();
+  private version = 0;
+  private active = false;
   constructor() {
     effect(() => {
       const owner = this.session.state() === 'ready' ? this.session.userId() : '';
       if (owner === this.owner) return;
+      this.stop();
       this.owner = owner;
       clearInterval(this.timer);
-      this.summary.set({ available: false, unread: 0, conversations: 0, revision: '' });
+      this.summary.set({
+        available: false,
+        unread: 0,
+        conversations: 0,
+        revision: '',
+        pendingDeliveries: [],
+      });
       if (owner) {
         void this.refresh();
         this.timer = setInterval(() => {
@@ -81,12 +105,57 @@ export class ChatInbox {
         }, 10000);
       }
     });
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) void this.refresh();
+    const visibility = () => {
+      if (this.foreground()) void this.refresh();
+      else this.stop();
+    };
+    const hide = () => this.stop();
+    document.addEventListener('visibilitychange', visibility);
+    window.addEventListener('pagehide', hide);
+    const navigation = this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) visibility();
+    });
+    inject(DestroyRef).onDestroy(() => {
+      this.stop();
+      clearInterval(this.timer);
+      navigation.unsubscribe();
+      document.removeEventListener('visibilitychange', visibility);
+      window.removeEventListener('pagehide', hide);
+    });
+  }
+  private foreground(): boolean {
+    return !!this.owner && !document.hidden && this.router.url.startsWith('/workspace');
+  }
+  private stop(): void {
+    if (!this.active) return;
+    this.active = false;
+    const token = this.session.token();
+    if (!token) return;
+    void fetch('/api/v1/chat/activity', {
+      method: 'POST',
+      credentials: 'same-origin',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': token },
+      body: JSON.stringify({
+        clientId: this.clientId,
+        version: ++this.version,
+        active: false,
+        deliveries: [],
+      }),
+    }).catch(() => {});
+  }
+  private async activity(deliveries: ChatDelivery[]): Promise<void> {
+    if (!this.foreground()) return;
+    this.active = true;
+    await this.api.post('/api/v1/chat/activity', {
+      clientId: this.clientId,
+      version: ++this.version,
+      active: true,
+      deliveries,
     });
   }
   async refresh(): Promise<void> {
-    if (!this.owner || this.busy) return;
+    if (!this.foreground() || this.busy) return;
     const owner = this.owner;
     this.busy = true;
     try {
@@ -95,6 +164,7 @@ export class ChatInbox {
       const previous = this.summary();
       this.summary.set(next);
       this.failed.set(false);
+      if (next.available) await this.activity(next.pendingDeliveries ?? []);
       if (
         next.unread > 0 &&
         previous.revision !== next.revision &&

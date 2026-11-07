@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -89,9 +91,27 @@ class ConnectedHome extends ConsumerStatefulWidget {
   ConsumerState<ConnectedHome> createState() => _ConnectedHomeState();
 }
 
-class _ConnectedHomeState extends ConsumerState<ConnectedHome> {
+class _ConnectedHomeState extends ConsumerState<ConnectedHome> with WidgetsBindingObserver {
   int _index = 0;
   String? _chatRevision;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    unawaited(
+      ref.read(chatInboxProvider.notifier).setForeground(state == AppLifecycleState.resumed),
+    );
+  }
 
   List<_Destination> _destinations(ConnectedSession s) => [
     const _Destination(
@@ -154,6 +174,9 @@ class _ConnectedHomeState extends ConsumerState<ConnectedHome> {
       _chatRevision = revision;
     });
     ref.watch(chatInboxProvider);
+    ref.listen(biometricLockedProvider, (_, locked) {
+      unawaited(ref.read(chatInboxProvider.notifier).setForeground(!locked));
+    });
     ref.listen(connectedTabRequestProvider, (_, label) {
       if (label == null) return;
       final target = destinations.indexWhere((d) => d.label == label);

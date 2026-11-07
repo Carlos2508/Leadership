@@ -2,6 +2,13 @@
 
 Actualizado: 6 de noviembre de 2026, America/Guatemala.
 
+## Doble check, hora de visto y actividad del chat — incremento vigente
+
+- Solicitud del propietario: entrega/lectura tipo WhatsApp y estado en línea/activo. Rama `feat/chat-presence-receipts`, sobre `main` `f84af4d`, conservando el incremento de uso real. Web y app muestran ✓ Enviado, ✓✓ Entregado y ✓✓ azul Visto a las…, con fechas completas en ayuda contextual y primera lectura inmutable.
+- Entrega por confirmación explícita del destinatario tras recibir su resumen, lectura solo al llegar al final de la conversación visible. Actividad real de primer plano, pulso cada 10 s y caducidad 45 s; cierre/bloqueo de cada sesión, protección contra peticiones fuera de orden y varias sesiones simultáneas. Últ. vez y reloj corregido por servidor; presencia expuesta solo dentro de conversaciones autorizadas.
+- Migración aditiva `20261107000825_ChatReceiptsAndPresence`: recibos durables y presencia acotada por cuenta/sello. Conserva lecturas antiguas sin inventar fechas. Aplicada solo en fixtures, pendiente actualización normal de la instalación. ADR-016 y guía `CHAT_Y_HUELLA.md` actualizados; evidencia y resultados en `QA_CHAT_ESTADOS_2026-11-06.md`.
+- Validación confirmada: 141 .NET/SQL, 94 Flutter, 85 E2E web + 2 de migración MariaDB/SQL aislados (resuelven dos omisiones ordinarias; rendimiento móvil se mide en escritorio) y dos recorridos específicos adicionales de chat, análisis limpio, Angular/APK/Release correctos y modelo School sin diferencias. Integrado en `main` por solicitud vigente de merge/push. Sin datos reales, despliegue o cambios del legado.
+
 ## Prueba de uso real (integrada en main)
 
 - Colegio ficticio de tamaño real usado por seis roles. Se corrigieron lentitud con volumen, homónimos en búsquedas, cierre de caja, exportación de solvencia, vista de notas y saldo total para familias y menú del docente con muchos cursos. Ocho mejoras quedan recomendadas en `QA_USO_REAL_2026-11-06.md`.

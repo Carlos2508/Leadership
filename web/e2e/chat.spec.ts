@@ -140,6 +140,10 @@ test('private course chat notifies on login, retries once, keeps read receipts a
     const conversation = new URL(student.p.url()).searchParams.get('conversation')!;
     await signIn(teacherUser.p, teacherUser.username, password);
     await expect(teacherUser.p.locator('.sp-toast')).toContainText('Tienes un mensaje sin leer');
+    await expect(student.p.locator('.chat-bubble').first()).toContainText('✓✓ Entregado', {
+      timeout: 15000,
+    });
+    await expect(student.p.locator('.chat-presence')).toHaveText('En línea', { timeout: 15000 });
     await teacherUser.p.getByRole('link', { name: /^Mensajes: 1 sin leer/ }).click();
     await teacherUser.p.locator('.chat-thread').filter({ hasText: 'Ana' }).click();
     await expect(
@@ -147,9 +151,29 @@ test('private course chat notifies on login, retries once, keeps read receipts a
         .locator('.chat-history')
         .getByText('Hola, ¿podemos revisar mi tarea?', { exact: true }),
     ).toBeVisible();
-    await expect(student.p.locator('.chat-bubble .read')).toHaveText('✓✓ Leído', {
+    await expect(student.p.locator('.chat-bubble .read')).toHaveText(/✓✓\s+Visto a las/, {
       timeout: 15000,
     });
+    const messagesUrl = `/api/v1/years/${f.yearId}/chat/conversations/${conversation}/messages`;
+    const firstRead = (await (await student.p.request.get(messagesUrl)).json()).items[0].readAt;
+    expect(firstRead).toBeTruthy();
+    await post(teacherUser.p, messagesUrl.replace(/messages$/, 'read'), { throughSequence: 1 });
+    expect((await (await student.p.request.get(messagesUrl)).json()).items[0].readAt).toBe(
+      firstRead,
+    );
+    // Exercise the actual foreground lifecycle: a hidden tab closes its own lease.
+    await teacherUser.p.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect(student.p.locator('.chat-presence')).toContainText('Últ. vez:', {
+      timeout: 15000,
+    });
+    await teacherUser.p.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect(student.p.locator('.chat-presence')).toHaveText('En línea', { timeout: 15000 });
     await teacherUser.p
       .getByLabel('Escribe un mensaje', { exact: true })
       .fill('Claro, mañana lo vemos en clase.');

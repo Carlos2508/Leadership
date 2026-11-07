@@ -11,6 +11,7 @@ public sealed class AccountRef
     public string? UserName { get; set; }
     public bool IsActive { get; set; }
     public string? PasswordHash { get; set; }
+    public string? SecurityStamp { get; set; }
 }
 
 public sealed class PermissionRef

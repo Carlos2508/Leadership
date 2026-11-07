@@ -22,6 +22,24 @@
     font-weight: 600;
   }
 }
+.chat-presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #62635c;
+}
+.chat-presence.online {
+  color: #246342;
+  font-weight: 600;
+}
+.chat-presence.online i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
 .chat-heading select,
 .chat-composer textarea,
 .chat-contact-search input {

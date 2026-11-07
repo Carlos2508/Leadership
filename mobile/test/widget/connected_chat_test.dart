@@ -11,6 +11,7 @@ import 'package:school_platform_app/core/theme/app_theme.dart';
 import 'package:school_platform_app/features/connected/biometric_lock.dart';
 import 'package:school_platform_app/features/connected/biometric_vault.dart';
 import 'package:school_platform_app/features/connected/chat_page.dart';
+import 'package:school_platform_app/features/connected/chat_status.dart';
 import 'package:school_platform_app/features/connected/connected_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,6 +26,7 @@ void main() {
   late FakeVault vault;
   late List<ChatMap> messages;
   late List<String> attempts;
+  late List<ChatMap> activity;
   late ChatMap thread;
   bool failSend = false;
   Completer<http.Response>? delayedSend;
@@ -41,6 +43,7 @@ void main() {
     school = FakeSchool();
     vault = FakeVault();
     attempts = [];
+    activity = [];
     failSend = false;
     delayedSend = null;
     peerRead = 0;
@@ -71,8 +74,20 @@ void main() {
         http.Response(jsonEncode(data), status, headers: {'content-type': 'application/json'});
     final client = MockClient((request) async {
       final path = request.url.path;
+      if (path == '/api/v1/chat/activity') {
+        activity.add(jsonDecode(request.body) as ChatMap);
+        return http.Response('', 204);
+      }
       if (path == '/api/v1/chat/summary') {
-        return json({'available': true, 'unread': 1, 'conversations': 1, 'revision': 'r1'});
+        return json({
+          'available': true,
+          'unread': 1,
+          'conversations': 1,
+          'revision': 'r1',
+          'pendingDeliveries': [
+            {'academicYearId': 'y1', 'conversationId': 'c1', 'throughSequence': 1},
+          ],
+        });
       }
       if (path == '/api/v1/chat/years') {
         return json([
@@ -125,6 +140,16 @@ void main() {
           'conversation': {...thread, 'peerReadSequence': peerRead},
           'items': messages.where((m) => (m['sequence'] as int) > after).toList(),
           'hasMore': false,
+          'receipts': messages
+              .where((m) => m['mine'] == true)
+              .map(
+                (m) => {
+                  'sequence': m['sequence'],
+                  'deliveredAt': m['deliveredAt'],
+                  'readAt': m['readAt'],
+                },
+              )
+              .toList(),
         });
       }
       if (path.endsWith('/read')) return http.Response('', 204);
@@ -191,10 +216,16 @@ void main() {
       expect(attempts.toSet().length, 1);
       expect(find.text('Mensaje importante'), findsOneWidget);
       expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, isEmpty);
-      peerRead = 2;
+      thread['peerDeliveredSequence'] = 2;
+      messages.last['deliveredAt'] = '2027-02-01T10:02:00Z';
       await tester.pump(const Duration(seconds: 3));
       await tester.pumpAndSettle();
-      expect(find.textContaining('✓✓ Leído'), findsOneWidget);
+      expect(find.textContaining('✓✓ Entregado'), findsOneWidget);
+      peerRead = 2;
+      messages.last['readAt'] = '2027-02-01T10:03:00Z';
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('✓✓ Visto a las'), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
@@ -220,6 +251,65 @@ void main() {
     expect(attempts, isEmpty);
     await tester.pumpWidget(const SizedBox.shrink());
   });
+  testWidgets('presence expires on screen despite a skewed device clock and a failed network', (
+    tester,
+  ) async {
+    var deviceNow = DateTime.utc(2035);
+    final presence = {
+      'serverNow': '2027-02-01T10:00:00Z',
+      'peerActiveUntil': '2027-02-01T10:00:45Z',
+      'peerLastActiveAt': '2027-02-01T10:00:00Z',
+    };
+    await prepare(tester, ChatPresenceLabel(thread: presence, now: () => deviceNow));
+    expect(find.text('En línea'), findsOneWidget);
+    deviceNow = deviceNow.add(const Duration(seconds: 46));
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('En línea'), findsNothing);
+    expect(find.textContaining('Últ. vez:'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  test('old read cursors show seen without inventing a historical time', () {
+    final message = {'sequence': 1, 'sentAt': '2027-02-01T10:00:00Z'};
+    expect(chatReceiptLabel(message, {}), 'Enviado');
+    expect(chatReceiptLabel(message, {'peerDeliveredSequence': 1}), 'Entregado');
+    expect(chatReceiptLabel(message, {'peerReadSequence': 1}), 'Visto');
+    expect(chatReceiptDetails(message, {'peerReadSequence': 1}), contains('hora no registrada'));
+  });
+
+  testWidgets(
+    'foreground acknowledges delivery and background or lock closes only its own presence',
+    (tester) async {
+      await prepare(
+        tester,
+        Consumer(
+          builder: (context, ref, child) {
+            ref.watch(chatInboxProvider);
+            return const SizedBox.shrink();
+          },
+        ),
+      );
+      expect(activity.last['active'], isTrue);
+      expect(activity.last['deliveries'], [
+        {'academicYearId': 'y1', 'conversationId': 'c1', 'throughSequence': 1},
+      ]);
+      final clientId = activity.last['clientId'];
+      final controller = container.read(chatInboxProvider.notifier);
+      await controller.setForeground(false);
+      expect(activity.last['active'], isFalse);
+      final version = activity.last['version'] as int;
+      await controller.setForeground(true);
+      expect(activity.last['active'], isTrue);
+      expect(activity.last['clientId'], clientId);
+      expect(activity.last['version'], greaterThan(version));
+      container.read(biometricLockedProvider.notifier).state = true;
+      await controller.setForeground(true);
+      expect(activity.last['active'], isFalse);
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.invalidate(chatInboxProvider);
+      await tester.pump();
+    },
+  );
   testWidgets(
     'a committed message confirmed by polling does not lock the composer when its response is lost',
     (tester) async {

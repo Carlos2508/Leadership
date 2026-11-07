@@ -151,6 +151,11 @@ builder.Services.AddRateLimiter(options =>
         {
             PermitLimit = 60, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
         }));
+    options.AddPolicy("chat-activity", context => System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "local", _ => new()
+        {
+            PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+        }));
 });
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
 builder.Services.AddResponseCompression(options =>

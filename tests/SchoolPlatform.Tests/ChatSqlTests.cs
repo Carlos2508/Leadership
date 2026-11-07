@@ -1,6 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using SchoolPlatform.Host.Branding;
 using SchoolPlatform.Host.Academic;
 using SchoolPlatform.Host.Chat;
 using SchoolPlatform.Host.Common;
@@ -51,6 +55,122 @@ public sealed class ChatSqlTests : SqlTestBase
         return user;
     }
     private Task<Guid> StartChat(Guid actor, Guid? member = null) => Use<ChatService, Guid>(s => s.StartAsync(actor, year, new(student, teacher, member ?? student), default));
+    private Task<string> Stamp(Guid actor) => Use<IdentityDbContext,string>(d => d.Users.Where(u => u.Id == actor).Select(u => u.SecurityStamp!).SingleAsync());
+    private sealed class Clock : TimeProvider
+    {
+        public DateTimeOffset Now = new(2027, 2, 1, 12, 0, 0, TimeSpan.Zero);
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
+    private Task<T> At<T>(Clock clock, Func<ChatService,Task<T>> action) => Use<SchoolDbContext,T>(d =>
+        action(new ChatService(d, new SchoolAudit(d,clock,new Microsoft.AspNetCore.Http.HttpContextAccessor()),clock,App.Services.GetRequiredService<IOptions<InstitutionOptions>>())));
+    private async Task At(Clock clock, Func<ChatService,Task> action) => await At(clock,async s => { await action(s); return true; });
+
+    [Fact]
+    public async Task Delivery_is_not_reading_and_first_delivery_and_seen_times_survive_retries_and_later_reads()
+    {
+        var clock = new Clock(); var id = await StartChat(studentAccount);
+        await At(clock,s=>s.SendAsync(studentAccount,year,id,new(Guid.NewGuid(),"Consulta"),default));
+        await At(clock,s=>s.MessagesAsync(teacherAccount,year,id,null,null,default)); // Fetch alone is not an acknowledgment.
+        var original = await At(clock,s=>s.MessagesAsync(studentAccount,year,id,null,null,default));
+        Assert.Null(original.Items[0].DeliveredAt); Assert.Null(original.Items[0].ReadAt);
+        var inbox = await At(clock,s=>s.SummaryAsync(teacherAccount,default));
+        Assert.Equal(1,Assert.Single(inbox.PendingDeliveries).ThroughSequence);
+        var client = Guid.NewGuid(); var stamp = await Stamp(teacherAccount);
+        clock.Now=clock.Now.AddSeconds(10);
+        await At(clock,s=>s.ActivityAsync(teacherAccount,stamp,new(client,1,true,inbox.PendingDeliveries),default));
+        var delivered = await At(clock,s=>s.MessagesAsync(studentAccount,year,id,null,null,default));
+        Assert.Equal(clock.Now,delivered.Items[0].DeliveredAt); Assert.Null(delivered.Items[0].ReadAt);
+        Assert.Equal(1,delivered.Conversation.PeerDeliveredSequence); Assert.Equal(0,delivered.Conversation.PeerReadSequence);
+        clock.Now=clock.Now.AddSeconds(20);
+        await At(clock,s=>s.ReadAsync(teacherAccount,year,id,1,default)); var firstRead=clock.Now;
+        clock.Now=clock.Now.AddHours(1);
+        await At(clock,s=>s.ReadAsync(teacherAccount,year,id,1,default));
+        await At(clock,s=>s.DeliveredAsync(teacherAccount,year,id,1,default));
+        var receipts=await At(clock,s=>s.MessagesAsync(studentAccount,year,id,null,1,default,0,0,1));
+        Assert.Empty(receipts.Items); Assert.Equal(firstRead,Assert.Single(receipts.Receipts).ReadAt);
+        Assert.Equal(delivered.Items[0].DeliveredAt,receipts.Receipts[0].DeliveredAt);
+        var unchanged=await At(clock,s=>s.MessagesAsync(studentAccount,year,id,null,1,default,1,1,1)); Assert.Empty(unchanged.Receipts);
+        await At(clock,s=>s.SendAsync(studentAccount,year,id,new(Guid.NewGuid(),"Otra consulta"),default));
+        await At(clock,s=>s.DeliveredAsync(teacherAccount,year,id,1,default));
+        Assert.Null((await At(clock,s=>s.MessagesAsync(studentAccount,year,id,null,null,default))).Items[1].DeliveredAt);
+    }
+
+    [Fact]
+    public async Task Presence_uses_foreground_leases_and_late_background_or_active_requests_cannot_reverse_a_newer_state()
+    {
+        var clock=new Clock();var id=await StartChat(studentAccount);var stamp=await Stamp(teacherAccount);var client=Guid.NewGuid();
+        await At(clock,s=>s.ActivityAsync(teacherAccount,stamp,new(client,1,true),default));
+        var active=await At(clock,s=>s.MessagesAsync(studentAccount,year,id,null,null,default));
+        Assert.True(active.Conversation.PeerActiveUntil>active.Conversation.ServerNow);
+        clock.Now=clock.Now.AddSeconds(10);
+        await At(clock,s=>s.ActivityAsync(teacherAccount,stamp,new(client,3,false),default));
+        await At(clock,s=>s.ActivityAsync(teacherAccount,stamp,new(client,2,true),default));
+        var stopped=await At(clock,s=>s.MessagesAsync(studentAccount,year,id,null,null,default));
+        Assert.Null(stopped.Conversation.PeerActiveUntil);Assert.Equal(clock.Now,stopped.Conversation.PeerLastActiveAt);
+        await At(clock,s=>s.ActivityAsync(teacherAccount,stamp,new(client,4,true),default));
+        clock.Now=clock.Now.AddSeconds(46);
+        var expired=await At(clock,s=>s.MessagesAsync(studentAccount,year,id,null,null,default));
+        Assert.True(expired.Conversation.PeerActiveUntil<=expired.Conversation.ServerNow);
+        Assert.Equal(stopped.Conversation.PeerLastActiveAt,expired.Conversation.PeerLastActiveAt);
+        // A background event may reach SQL before the first active event.
+        var reordered=Guid.NewGuid();await At(clock,s=>s.ActivityAsync(teacherAccount,stamp,new(reordered,2,false),default));
+        await At(clock,s=>s.ActivityAsync(teacherAccount,stamp,new(reordered,1,true),default));
+        Assert.True((await At(clock,s=>s.MessagesAsync(studentAccount,year,id,null,null,default))).Conversation.PeerActiveUntil<=clock.Now);
+    }
+
+    [Fact]
+    public async Task One_device_closing_does_not_disconnect_the_other_and_a_stamp_change_invalidates_all_old_leases()
+    {
+        var clock=new Clock();var id=await StartChat(studentAccount);var stamp=await Stamp(teacherAccount);var first=Guid.NewGuid();var other=Guid.NewGuid();
+        await At(clock,s=>s.ActivityAsync(teacherAccount,stamp,new(first,1,true),default));
+        await At(clock,s=>s.ActivityAsync(teacherAccount,stamp,new(other,1,true),default));
+        await At(clock,s=>s.ActivityAsync(teacherAccount,stamp,new(first,2,false),default));
+        Assert.True((await At(clock,s=>s.MessagesAsync(studentAccount,year,id,null,null,default))).Conversation.PeerActiveUntil>clock.Now);
+        await Use<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>(async manager=>await manager.UpdateSecurityStampAsync((await manager.FindByIdAsync(teacherAccount.ToString()))!));
+        Assert.Null((await At(clock,s=>s.MessagesAsync(studentAccount,year,id,null,null,default))).Conversation.PeerActiveUntil);
+        Assert.Equal(401,(await Assert.ThrowsAsync<OperationException>(()=>At(clock,s=>s.ActivityAsync(teacherAccount,stamp,new(other,2,true),default)))).Status);
+    }
+
+    [Fact]
+    public async Task Activity_and_receipts_do_not_disclose_or_modify_another_students_conversation_and_require_csrf()
+    {
+        var clock=new Clock();var id=await StartChat(studentAccount);
+        await At(clock,s=>s.SendAsync(studentAccount,year,id,new(Guid.NewGuid(),"Privado"),default));
+        var other=await Use<IdentityDbContext,Guid>(d=>d.Users.Where(u=>u.UserName=="chat-other").Select(u=>u.Id).SingleAsync());
+        var stamp=await Stamp(other);
+        await At(clock,s=>s.ActivityAsync(other,stamp,new(Guid.NewGuid(),1,true,[new(year,id,1)]),default));
+        Assert.Null((await At(clock,s=>s.MessagesAsync(studentAccount,year,id,null,null,default))).Items[0].DeliveredAt);
+        using var anonymous=App.Browser();
+        Assert.Equal(HttpStatusCode.Unauthorized,(await anonymous.PostAsJsonAsync("/api/v1/chat/activity",new ChatActivity(Guid.NewGuid(),1,true))).StatusCode);
+        using var browser=await SignIn("chat-teacher");
+        var activity=new ChatActivity(Guid.NewGuid(),1,true,[new(year,id,1)]);
+        Assert.Equal(HttpStatusCode.BadRequest,(await browser.PostAsJsonAsync("/api/v1/chat/activity",activity)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent,(await Post(browser,"/api/v1/chat/activity",activity)).StatusCode);
+        Assert.NotNull((await At(clock,s=>s.MessagesAsync(studentAccount,year,id,null,null,default))).Items[0].DeliveredAt);
+        foreach (var invalid in new object[] {
+            new { clientId = Guid.NewGuid(), version = 1, active = true, deliveries = new object?[] { null } },
+            new ChatActivity(Guid.Empty, 1, true), new ChatActivity(Guid.NewGuid(), 0, true),
+            new ChatActivity(Guid.NewGuid(), 1, true, Enumerable.Repeat(new ChatDelivery(year,id,1),101).ToArray()) })
+            Assert.Equal(HttpStatusCode.BadRequest,(await Post(browser,"/api/v1/chat/activity",invalid)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Upgrading_existing_read_messages_preserves_progress_without_making_up_historical_receipt_times()
+    {
+        var id=await StartChat(studentAccount);
+        await Use<ChatService,ChatMessageView>(s=>s.SendAsync(studentAccount,year,id,new(Guid.NewGuid(),"Mensaje anterior"),default));
+        await Use<ChatService>(s=>s.ReadAsync(teacherAccount,year,id,1,default));
+        await Use<SchoolDbContext>(async d=>{
+            Assert.Matches("^SchoolPlatform_Test_[a-f0-9]{32}$",d.Database.GetDbConnection().Database);
+            var migrator=d.GetService<Microsoft.EntityFrameworkCore.Migrations.IMigrator>();
+            await migrator.MigrateAsync("20261106225356_PrivateChat");
+            await migrator.MigrateAsync();
+        });
+        await Use<ChatService>(s=>s.ReadAsync(teacherAccount,year,id,1,default));
+        var upgraded=await Use<ChatService,ChatPage>(s=>s.MessagesAsync(studentAccount,year,id,null,null,default));
+        Assert.Equal(1,upgraded.Conversation.PeerReadSequence);Assert.Equal(1,upgraded.Conversation.PeerDeliveredSequence);
+        Assert.Null(upgraded.Items[0].ReadAt);Assert.Null(upgraded.Items[0].DeliveredAt);
+    }
 
     [Fact]
     public async Task Only_assigned_teachers_students_and_authorized_guardians_can_discover_or_start_pairs()

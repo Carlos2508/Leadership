@@ -17,10 +17,11 @@ import { ChatContact, ChatInbox, ChatMessage, ChatPage, ChatThread, ChatYear } f
 import { PendingChanges } from '../core/pending-changes';
 import { Icon } from '../shared/icon';
 import { Shell } from '../shared/shell';
+import { ChatPresence } from '../shared/chat-presence';
 
 @Component({
   selector: 'app-messages',
-  imports: [Shell, Icon, FormsModule, DatePipe],
+  imports: [Shell, Icon, FormsModule, DatePipe, ChatPresence],
   templateUrl: './messages.html',
 })
 export class Messages implements PendingChanges {
@@ -185,13 +186,20 @@ export class Messages implements PendingChanges {
       if (thread) {
         const after = this.messages().at(-1)?.sequence ?? 0;
         const page = await this.api.get<ChatPage>(
-          this.base() + `/conversations/${thread.id}/messages?after=${after}`,
+          this.base() +
+            `/conversations/${thread.id}/messages?after=${after}&knownRead=${thread.peerReadSequence}&knownDelivered=${thread.peerDeliveredSequence ?? 0}&receiptFrom=${this.messages()[0]?.sequence ?? 1}`,
         );
         if (generation !== this.generation) return;
         this.current.set(page.conversation);
         const existing = new Set(this.messages().map((m) => m.sequence));
         const added = page.items.filter((m) => !existing.has(m.sequence));
-        this.messages.update((rows) => [...rows, ...added]);
+        const receipts = new Map((page.receipts ?? []).map((r) => [r.sequence, r]));
+        this.messages.update((rows) => [
+          ...rows.map((m) =>
+            receipts.has(m.sequence) ? { ...m, ...receipts.get(m.sequence)! } : m,
+          ),
+          ...added,
+        ]);
         if (
           this.pending &&
           this.messages().some((m) => m.mine && m.clientMessageId === this.pending!.clientMessageId)
@@ -409,6 +417,29 @@ export class Messages implements PendingChanges {
       .map((p) => p[0])
       .join('')
       .toUpperCase();
+  }
+  isRead(m: ChatMessage, thread: ChatThread): boolean {
+    return !!m.readAt || m.sequence <= thread.peerReadSequence;
+  }
+  isDelivered(m: ChatMessage, thread: ChatThread): boolean {
+    return this.isRead(m, thread) || !!m.deliveredAt || m.sequence <= thread.peerDeliveredSequence;
+  }
+  receiptText(m: ChatMessage, thread: ChatThread): string {
+    if (this.isRead(m, thread))
+      return m.readAt ? 'Visto a las ' + this.api.time(m.readAt) : 'Visto';
+    return this.isDelivered(m, thread) ? 'Entregado' : 'Enviado';
+  }
+  receiptDetails(m: ChatMessage, thread: ChatThread): string {
+    return (
+      'Enviado: ' +
+      this.api.date(m.sentAt) +
+      (m.deliveredAt ? '\nEntregado: ' + this.api.date(m.deliveredAt) : '') +
+      (m.readAt
+        ? '\nVisto: ' + this.api.date(m.readAt)
+        : this.isRead(m, thread)
+          ? '\nVisto · hora no registrada para este mensaje anterior'
+          : '')
+    );
   }
   private base(): string {
     return `/api/v1/years/${this.year}/chat`;

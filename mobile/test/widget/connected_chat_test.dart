@@ -230,6 +230,39 @@ void main() {
     },
   );
 
+  testWidgets('opening messages removes the unread notice so it never covers the composer', (
+    tester,
+  ) async {
+    await prepare(
+      tester,
+      Builder(
+        builder: (context) => Scaffold(
+          appBar: AppBar(actions: const [ChatButton()]),
+          body: TextButton(
+            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Tienes un mensaje sin leer'),
+                action: SnackBarAction(label: 'Ver', onPressed: () {}),
+              ),
+            ),
+            child: const Text('Avisar'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Avisar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tienes un mensaje sin leer'), findsOneWidget);
+    await tester.tap(find.byType(ChatButton));
+    await tester.pumpAndSettle();
+    expect(find.text('Tienes un mensaje sin leer'), findsNothing);
+    expect(find.byType(ChatHomePage), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    // The inbox polls every 10 s while it is watched; stop it before the test ends.
+    container.dispose();
+    await tester.pump();
+  });
+
   testWidgets('back keeps the draft when leaving is cancelled', (tester) async {
     await prepare(
       tester,

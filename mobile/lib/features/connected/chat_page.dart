@@ -112,8 +112,11 @@ class ChatButton extends ConsumerWidget {
     final count = (summary?['unread'] as num?)?.toInt() ?? 0;
     return IconButton(
       tooltip: count > 0 ? 'Mensajes: $count sin leer' : 'Mensajes',
-      onPressed: () =>
-          Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ChatHomePage())),
+      onPressed: () {
+        // The unread notice belongs to the home screen; never leave it over the chat.
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ChatHomePage()));
+      },
       color: Colors.white,
       icon: Badge(
         isLabelVisible: count > 0,
@@ -389,7 +392,7 @@ class _ChatHomePageState extends ConsumerState<ChatHomePage> {
                               children: [
                                 Text(
                                   DateFormat('dd/MM')
-                                      .format(DateTime.parse(t['updatedAt'] as String)),
+                                      .format(DateTime.parse(t['updatedAt'] as String).toLocal()),
                                   style: Theme.of(context).textTheme.labelSmall,
                                 ),
                                 const SizedBox(height: 6),

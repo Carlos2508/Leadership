@@ -2,6 +2,10 @@
 
 Actualizado: 6 de noviembre de 2026, America/Guatemala.
 
+## Revisión completa de flujos (rama qa/revision-flujos)
+
+- Sin errores de lógica en 42 casos límite (dinero, notas, inscripción, permisos, portería y chat). Se corrigieron cuatro fallas visuales del chat.
+
 ## Prueba de uso real (integrada en main)
 
 - Colegio ficticio de tamaño real usado por seis roles. Se corrigieron lentitud con volumen, homónimos en búsquedas, cierre de caja, exportación de solvencia, vista de notas y saldo total para familias y menú del docente con muchos cursos. Ocho mejoras quedan recomendadas en `QA_USO_REAL_2026-11-06.md`.

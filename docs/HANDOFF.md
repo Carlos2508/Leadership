@@ -1,5 +1,12 @@
 # Handoff para la siguiente sesión
 
+## Revisión completa de flujos — 6 de noviembre de 2026 (noche), leer primero
+
+- Solicitud: volver a probar todos los flujos buscando fallas visuales y de lógica. Rama `qa/revision-flujos` desde `main` `f84af4d`, worktree `.local/worktrees/qa-uso-real`; el otro agente trabaja en `feat/chat-presence-receipts` en la carpeta principal (no tocada). Informe `QA_REVISION_2026-11-06.md`.
+- Resultados: desde cero 49/49 (escritorio + app) y 47/47 (teléfono); 172 pantallas de 8 roles con colegio de tamaño real sin errores ni desbordes; 42/42 comprobaciones de lógica por API (`.local/qa/uso-real/logica.mjs`); Playwright 85 + 3 omisiones previstas; .NET 136 y Flutter 91 sobre el mismo código del merge.
+- Correcciones (solo `_polish.scss`, para no chocar con el trabajo del chat): botones `outline` del chat sin estilo, diálogo «Con quién conversar» con encabezado roto, flecha del selector de ciclo del chat y ancho del diálogo en teléfono.
+- Nota: una copia nueva necesita `dart run tool/sync_institution.dart` antes de compilar el app.
+
 ## Prueba de uso real (integrada en main) — 6 de noviembre de 2026, leer primero
 
 - Solicitud: probar como si el colegio usara la plataforma, en otra rama porque otro agente trabaja en la carpeta principal (`feat/private-chat-biometric-unlock`). Rama **`qa/uso-real`**, worktree `.local/worktrees/qa-uso-real`, base `main` `ce563a7`. No se tocó `main` ni la carpeta del otro agente. Informe: `QA_USO_REAL_2026-11-06.md` (H1–H15).

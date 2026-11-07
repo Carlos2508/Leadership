@@ -4,7 +4,7 @@ Actualizado: 6 de noviembre de 2026, America/Guatemala.
 
 ## Revisión completa de flujos (rama qa/revision-flujos)
 
-- Sin errores de lógica en 42 casos límite (dinero, notas, inscripción, permisos, portería y chat). Se corrigieron cuatro fallas visuales del chat.
+- Sin errores de lógica en 42 casos límite (dinero, notas, inscripción, permisos, portería y chat). Se corrigieron cuatro fallas visuales del chat, el orden de los carnets por grado y el aviso de nota inválida (ahora nombra al estudiante); la libreta del app tiene etiquetas accesibles.
 
 ## Prueba de uso real (integrada en main)
 

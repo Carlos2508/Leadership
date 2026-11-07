@@ -5,6 +5,7 @@
 - Solicitud: volver a probar todos los flujos buscando fallas visuales y de lógica. Rama `qa/revision-flujos` desde `main` `f84af4d`, worktree `.local/worktrees/qa-uso-real`; el otro agente trabaja en `feat/chat-presence-receipts` en la carpeta principal (no tocada). Informe `QA_REVISION_2026-11-06.md`.
 - Resultados: desde cero 49/49 (escritorio + app) y 47/47 (teléfono); 172 pantallas de 8 roles con colegio de tamaño real sin errores ni desbordes; 42/42 comprobaciones de lógica por API (`.local/qa/uso-real/logica.mjs`); Playwright 85 + 3 omisiones previstas; .NET 136 y Flutter 91 sobre el mismo código del merge.
 - Correcciones (solo `_polish.scss`, para no chocar con el trabajo del chat): botones `outline` del chat sin estilo, diálogo «Con quién conversar» con encabezado roto, flecha del selector de ciclo del chat y ancho del diálogo en teléfono.
+- Segunda pasada: PDF (7 válidos, el de otra familia 404), página de ingreso (mensaje genérico) y app conectado de teléfono manejado por su árbol de accesibilidad (`.local/qa/uso-real/app-flow.mjs`, 8/8). Corregido: orden de carnets por grado (`CardService.BatchAsync` ordenaba antes de `Distinct`; prueba `CardBatchOrderSqlTests`), aviso de nota inválida con nombre del estudiante (app y web) y etiquetas accesibles «Nota de …»/«Estado de …» en la libreta del app.
 - Nota: una copia nueva necesita `dart run tool/sync_institution.dart` antes de compilar el app.
 
 ## Prueba de uso real (integrada en main) — 6 de noviembre de 2026, leer primero

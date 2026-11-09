@@ -2,6 +2,13 @@
 
 Actualizado: 8 de noviembre de 2026, America/Guatemala.
 
+## Simplificación operativa sin cambiar políticas — incremento vigente
+
+- El propietario autorizó mejorar el flujo conservando el modelo nuevo y el rendimiento. Nueva familia reúne encargados, hijos, vínculos e inscripción por ciclo/fecha en un recorrido web adaptable a teléfono; reutiliza fichas existentes, sin otorgar facultades por parentesco ni crear cuentas/cargos. ADR-019 y guía `SIMPLIFICAR_TRABAJO_ESCOLAR.md`.
+- Guardado atómico con bloqueo de matrícula/cupos compartido y comprobante por intento; una respuesta perdida se reintenta sin duplicar, un fallo en un hijo revierte el conjunto. Conserva los cuatro permisos requeridos, MFA por operación, CSRF y auditoría. Nueva migración aditiva `20261109043528_FamilyRegistrationReceipts`, aplicada solo a fixtures propios.
+- Carnets accesibles directamente desde Inscripciones; pendientes de notas por curso/docente con enlace a libreta y período, consultados bajo demanda y con la misma pertenencia fechada de publicación. Listas de cursos pasan de una consulta de conteo por curso a una agrupada; prueba con interceptor confirma consultas constantes de uno a nueve cursos.
+- SQL Server: 160 pruebas correctas, diez nuevas. Flutter: 101 correctas, análisis limpio. Angular/Release y snapshot correctos. 95 E2E web + 2 E2E de migración MariaDB/SQL correctos; dos omisiones ordinarias resueltas en fixture aparte, rendimiento móvil medido en escritorio. QA y evidencia en `QA_SIMPLIFICACION_FLUJOS_2026-11-08.md`. Incremento integrado en main por autorización vigente, conservando las otras ramas. No se incorpora asistencia diaria por grupo, recibos conjuntos ni reglas de cobro pendientes. No se aplicó el esquema ni se importaron personas a la base escolar.
+
 ## Inventario y bodega del colegio — incremento vigente
 
 - El propietario pidió terminar `feat/school-store-inventory`, aclaró uso de bodega escolar y autorizó merge/push a main. Catálogo general de artículos, categoría/ubicación, stock mínimo, carga inicial, entradas, salidas, conteos físicos, historial y exportación CSV en web; operación conectada en el app. Guía `INVENTARIO_BODEGA.md`, ADR-018.

@@ -6,6 +6,16 @@
       <p>{{ description }}</p>
     </div>
     @if (session.can('people.manage')) {
+      @if (
+        directory !== 'staff' &&
+        session.can('people.read') &&
+        session.can('academic.read') &&
+        session.can('enrollment.manage')
+      ) {
+        <a class="button outline" routerLink="/workspace/new-family"
+          ><app-icon name="people" />Nueva familia</a
+        >
+      }
       <button class="button" (click)="openCreate()" [disabled]="busy()">
         <app-icon name="people" />{{ createLabel }}
       </button>
@@ -139,22 +149,22 @@
                       }
                     </td>
                   } @else {
-                  <td data-label="Perfiles">
-                    <span class="role-list">
-                      @if (person.studentCode) {
-                        <span class="pill blue">Estudiante</span>
-                      }
-                      @if (person.isGuardian) {
-                        <span class="pill purple">Encargado</span>
-                      }
-                      @if (person.isStaff) {
-                        <span class="pill gold">Personal</span>
-                      }
-                      @if (!person.studentCode && !person.isGuardian && !person.isStaff) {
-                        <span class="muted-copy">Sin perfil</span>
-                      }
-                    </span>
-                  </td>
+                    <td data-label="Perfiles">
+                      <span class="role-list">
+                        @if (person.studentCode) {
+                          <span class="pill blue">Estudiante</span>
+                        }
+                        @if (person.isGuardian) {
+                          <span class="pill purple">Encargado</span>
+                        }
+                        @if (person.isStaff) {
+                          <span class="pill gold">Personal</span>
+                        }
+                        @if (!person.studentCode && !person.isGuardian && !person.isStaff) {
+                          <span class="muted-copy">Sin perfil</span>
+                        }
+                      </span>
+                    </td>
                   }
                   <td data-label="Cuenta">
                     @if (person.account) {

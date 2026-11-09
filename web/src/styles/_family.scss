@@ -1,0 +1,167 @@
+.family-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 20px 0;
+  span {
+    padding: 10px 14px;
+    border-radius: 10px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .current {
+    background: color-mix(in srgb, var(--accent) 20%, white);
+    color: var(--ink);
+    font-weight: 650;
+  }
+}
+.course-completion-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  > li {
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  > li > span:first-child {
+    flex: 1 1 220px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  strong,
+  small {
+    display: block;
+  }
+  small {
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .row-actions {
+    flex-wrap: wrap;
+  }
+}
+.family-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.family-panel {
+  padding: 24px;
+  margin: 0 0 18px;
+  > header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  h2 {
+    margin: 0 0 12px;
+    font-size: 19px;
+  }
+  header h2 {
+    margin: 0;
+  }
+  h3 {
+    font-size: 15px;
+    margin: 20px 0 10px;
+  }
+}
+.family-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.family-faculties {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.family-link {
+  border-top: 1px solid var(--border);
+  padding: 16px 0;
+  small {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  > .checkbox-field + .checkbox-field {
+    margin-top: 10px;
+  }
+}
+.family-search {
+  margin: 0 0 20px;
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+    margin-bottom: 14px;
+    color: var(--ink);
+  }
+}
+.family-candidate {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin: 5px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  text-align: left;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.family-existing {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  background: var(--surface);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+}
+.family-review {
+  border-top: 1px solid var(--border);
+  padding: 8px 0 16px;
+  p {
+    color: var(--muted);
+  }
+  small {
+    display: block;
+    color: var(--muted);
+    margin: 6px 0;
+  }
+  li {
+    margin: 10px 0;
+  }
+  .pill {
+    margin: 3px 5px 3px 0;
+  }
+}
+.family-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+@media (max-width: 650px) {
+  .family-fields,
+  .family-faculties {
+    grid-template-columns: 1fr;
+  }
+  .family-panel {
+    padding: 18px;
+  }
+  .family-steps span {
+    padding: 8px;
+    font-size: 11px;
+  }
+}

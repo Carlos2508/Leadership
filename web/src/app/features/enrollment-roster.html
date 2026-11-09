@@ -6,6 +6,14 @@
       <p>Una inscripción por estudiante y ciclo; cada cambio de grado o sección queda fechado.</p>
     </div>
     @if (canEnroll() && open()) {
+      @if (session.can('people.read') && session.can('people.manage')) {
+        <a
+          class="button outline"
+          routerLink="/workspace/new-family"
+          [queryParams]="{ year: yearId }"
+          ><app-icon name="people" />Nueva familia</a
+        >
+      }
       <button class="button" (click)="openEnroll()" [disabled]="busy()">
         <app-icon name="school" />Inscribir estudiante
       </button>
@@ -33,7 +41,12 @@
       <form class="filters" (ngSubmit)="load()">
         <label class="select-field"
           ><span>Ciclo</span
-          ><select name="year" [(ngModel)]="yearId" (ngModelChange)="changeYear()" [disabled]="busy()">
+          ><select
+            name="year"
+            [(ngModel)]="yearId"
+            (ngModelChange)="changeYear()"
+            [disabled]="busy()"
+          >
             @for (item of years(); track item.id) {
               <option [value]="item.id">{{ item.label }} · {{ yearLabels[item.status] }}</option>
             }
@@ -46,7 +59,8 @@
               <option [value]="grade.id">{{ grade.name }}</option>
             }
           </select></label
-        >@if (gradeId && sectionsFor(gradeId).length) {
+        >
+        @if (gradeId && sectionsFor(gradeId).length) {
           <label class="select-field"
             ><span>Sección</span
             ><select name="section" [(ngModel)]="sectionId" (ngModelChange)="load()">
@@ -56,7 +70,8 @@
               }
             </select></label
           >
-        }<label class="select-field"
+        }
+        <label class="select-field"
           ><span>Estado</span
           ><select name="status" [(ngModel)]="status" (ngModelChange)="load()">
             <option value="Active">Inscritos</option>
@@ -78,18 +93,22 @@
           Limpiar filtros
         </button>
       </form>
-      @if (gradeId && yearId && detail() && !loading() && !error() && session.can('people.manage')) {
+      @if (yearId && detail() && !loading() && !error() && session.can('people.manage')) {
         <div class="card-title-row">
-          <p class="muted-copy">Carnets del grado o sección seleccionados, con ubicación vigente en el ciclo.</p>
-          <a class="button outline compact-button" [href]="'/api/v1/years/' + yearId + '/cards.pdf?gradeId=' + gradeId + (sectionId ? '&sectionId=' + sectionId : '') + '&layout=sheet'" target="_blank" rel="noopener">Carnets en carta</a>
-          <a class="button outline compact-button" [href]="'/api/v1/years/' + yearId + '/cards.pdf?gradeId=' + gradeId + (sectionId ? '&sectionId=' + sectionId : '') + '&layout=card'" target="_blank" rel="noopener">Carnets en tarjeta</a>
+          <p class="muted-copy">
+            Imprime los carnets de un grado o sección del ciclo seleccionado.
+          </p>
+          <button class="button outline compact-button" (click)="openCards()">
+            Imprimir carnets
+          </button>
         </div>
       }
       @if (detail(); as d) {
         @if (!open()) {
           <p class="year-notice">
             <app-icon name="info" /><span
-              >El {{ d.year.label | cycle: true }} está {{ yearLabels[d.year.status].toLowerCase() }}:
+              >El {{ d.year.label | cycle: true }} está
+              {{ yearLabels[d.year.status].toLowerCase() }}:
               {{
                 d.year.status === 'Draft'
                   ? 'abre las inscripciones en Ciclos y grados para registrar estudiantes.'
@@ -128,7 +147,14 @@
                   <tr>
                     <td>
                       <a class="person-link" [routerLink]="['/workspace/people', row.studentId]"
-                        ><span class="avatar small" aria-hidden="true" [attr.data-tone]="(row.studentName.charCodeAt(0) + row.studentName.length) % 5">{{ row.studentName.slice(0, 1) }}{{ (row.studentName.split(' ')[1] ?? '').slice(0, 1) }}</span
+                        ><span
+                          class="avatar small"
+                          aria-hidden="true"
+                          [attr.data-tone]="
+                            (row.studentName.charCodeAt(0) + row.studentName.length) % 5
+                          "
+                          >{{ row.studentName.slice(0, 1)
+                          }}{{ (row.studentName.split(' ')[1] ?? '').slice(0, 1) }}</span
                         ><span class="person-copy"
                           ><strong>{{ row.studentName }}</strong
                           ><small>{{ row.studentCode }}</small></span
@@ -157,13 +183,20 @@
                     @if (canEnroll() && open()) {
                       <td class="row-actions">
                         @if (row.status === 'Active') {
-                          <button class="button outline compact-button" (click)="openPlacement(row)">
-                            Cambiar ubicación <span class="sr-only">de {{ row.studentName }}</span></button
+                          <button
+                            class="button outline compact-button"
+                            (click)="openPlacement(row)"
+                          >
+                            Cambiar ubicación
+                            <span class="sr-only">de {{ row.studentName }}</span></button
                           ><button class="text-button danger-text" (click)="openWithdraw(row)">
                             Retiro <span class="sr-only">de {{ row.studentName }}</span>
                           </button>
                         } @else if (row.status === 'Withdrawn') {
-                          <button class="button outline compact-button" (click)="openReactivate(row)">
+                          <button
+                            class="button outline compact-button"
+                            (click)="openReactivate(row)"
+                          >
                             Reingreso <span class="sr-only">de {{ row.studentName }}</span>
                           </button>
                         }
@@ -183,14 +216,18 @@
                 search || gradeId || sectionId || status !== 'Active'
                   ? 'Prueba otro nombre o código, o usa «Limpiar filtros» para ver las inscripciones del ciclo.'
                   : canEnroll() && open()
-                  ? 'Usa «Inscribir estudiante» para registrar la primera.'
-                  : 'Prueba con otros filtros o selecciona otro ciclo.'
+                    ? 'Usa «Inscribir estudiante» para registrar la primera.'
+                    : 'Prueba con otros filtros o selecciona otro ciclo.'
               }}
             </p>
           </div>
         }
         <div class="pagination">
-          <button class="button outline" [disabled]="page.page <= 1 || loading()" (click)="load(page.page - 1)">
+          <button
+            class="button outline"
+            [disabled]="page.page <= 1 || loading()"
+            (click)="load(page.page - 1)"
+          >
             Anterior</button
           ><span>{{ page.total }} {{ page.total === 1 ? 'resultado' : 'resultados' }}</span
           ><button
@@ -205,6 +242,56 @@
     </section>
   }
 
+  <dialog #cardsDialog class="account-dialog" aria-labelledby="cards-title">
+    <div class="dialog-heading">
+      <h2 id="cards-title">Imprimir carnets</h2>
+      <button class="icon-button" (click)="cardsDialog.close()" aria-label="Cerrar ventana">
+        <app-icon name="close" />
+      </button>
+    </div>
+    <div class="access-form">
+      <p class="action-explanation">
+        {{ detail()?.year?.label }} · Estudiantes con inscripción y ubicación vigentes. El PDF se
+        abre en otra pestaña.
+      </p>
+      <label class="form-field"
+        ><span>Grado</span
+        ><select name="cardGrade" [(ngModel)]="cardGrade" (ngModelChange)="cardSection = ''">
+          @for (grade of grades(); track grade.id) {
+            <option [value]="grade.id">{{ grade.name }}</option>
+          }
+        </select></label
+      >
+      <label class="form-field"
+        ><span>Sección</span
+        ><select name="cardSection" [(ngModel)]="cardSection">
+          <option value="">Todo el grado</option>
+          @for (section of sectionsFor(cardGrade); track section.id) {
+            <option [value]="section.id">{{ section.name }}</option>
+          }
+        </select></label
+      >
+      <label class="form-field"
+        ><span>Formato</span
+        ><select name="cardLayout" [(ngModel)]="cardLayout">
+          <option value="sheet">Carnets en carta</option>
+          <option value="card">Carnets en tarjeta</option>
+        </select></label
+      >
+      <div class="dialog-actions">
+        <button class="button outline" (click)="cardsDialog.close()">Cerrar</button>
+        <a
+          class="button"
+          [href]="cardUrl()"
+          [class.disabled-link]="!cardUrl()"
+          [attr.aria-disabled]="!cardUrl()"
+          target="_blank"
+          rel="noopener"
+          >Abrir PDF</a
+        >
+      </div>
+    </div>
+  </dialog>
   <dialog
     #enrollmentDialog
     class="account-dialog wide-dialog"
@@ -213,7 +300,12 @@
   >
     <div class="dialog-heading">
       <h2 id="enrollment-dialog-title">{{ title() }}</h2>
-      <button class="icon-button" (click)="closeDialog()" aria-label="Cerrar ventana" [disabled]="busy()">
+      <button
+        class="icon-button"
+        (click)="closeDialog()"
+        aria-label="Cerrar ventana"
+        [disabled]="busy()"
+      >
         <app-icon name="close" />
       </button>
     </div>
@@ -232,7 +324,12 @@
               autocomplete="off"
               (keydown.enter)="$event.preventDefault(); searchCandidates()"
           /></label>
-          <button type="button" class="button outline" (click)="searchCandidates()" [disabled]="searching()">
+          <button
+            type="button"
+            class="button outline"
+            (click)="searchCandidates()"
+            [disabled]="searching()"
+          >
             Buscar
           </button>
         </div>
@@ -241,7 +338,12 @@
             <legend>Selecciona un estudiante</legend>
             @for (candidate of candidates(); track candidate.id) {
               <label class="radio-option"
-                ><input type="radio" name="student" [value]="candidate.id" [(ngModel)]="form.studentId" /><span
+                ><input
+                  type="radio"
+                  name="student"
+                  [value]="candidate.id"
+                  [(ngModel)]="form.studentId"
+                /><span
                   >{{ candidate.displayName }} <small>{{ candidate.studentCode }}</small></span
                 ></label
               >
@@ -262,7 +364,12 @@
         <div class="form-grid">
           <label class="form-field"
             ><span>Grado</span
-            ><select name="formGrade" [(ngModel)]="form.gradeId" (ngModelChange)="form.sectionId = ''; dialogError.set('')" required>
+            ><select
+              name="formGrade"
+              [(ngModel)]="form.gradeId"
+              (ngModelChange)="form.sectionId = ''; dialogError.set('')"
+              required
+            >
               <option value="" disabled>Selecciona un grado</option>
               @for (grade of activeGrades(); track grade.id) {
                 <option [value]="grade.id">{{ grade.name }}</option>
@@ -271,11 +378,26 @@
           >
           <label class="form-field"
             ><span>Sección <small>(opcional)</small></span
-            ><select name="formSection" [(ngModel)]="form.sectionId" (ngModelChange)="dialogError.set('')" [disabled]="!form.gradeId">
+            ><select
+              name="formSection"
+              [(ngModel)]="form.sectionId"
+              (ngModelChange)="dialogError.set('')"
+              [disabled]="!form.gradeId"
+            >
               <option value="">Sin sección</option>
               @for (section of sectionsFor(form.gradeId); track section.id) {
                 <option [value]="section.id">
-                  {{ section.name }}{{ section.capacity ? ' (' + section.current + '/' + section.capacity + (section.current >= section.capacity ? ' · llena' : '') + ')' : '' }}
+                  {{ section.name
+                  }}{{
+                    section.capacity
+                      ? ' (' +
+                        section.current +
+                        '/' +
+                        section.capacity +
+                        (section.current >= section.capacity ? ' · llena' : '') +
+                        ')'
+                      : ''
+                  }}
                 </option>
               }
             </select></label
@@ -284,7 +406,11 @@
       }
       <label class="form-field"
         ><span>{{
-          mode() === 'enroll' ? 'Fecha de ingreso' : mode() === 'withdraw' ? 'Fecha de retiro' : 'Vigente desde'
+          mode() === 'enroll'
+            ? 'Fecha de ingreso'
+            : mode() === 'withdraw'
+              ? 'Fecha de retiro'
+              : 'Vigente desde'
         }}</span
         ><input
           name="formDate"
@@ -293,10 +419,13 @@
           required
           [min]="detail()?.year?.startsOn ?? ''"
           [max]="detail()?.year?.endsOn ?? ''"
-        /><small>Fecha efectiva dentro del ciclo. Se registra aparte de la fecha de captura.</small></label
+        /><small
+          >Fecha efectiva dentro del ciclo. Se registra aparte de la fecha de captura.</small
+        ></label
       >
       <label class="form-field"
-        ><span>{{ mode() === 'enroll' ? 'Observación' : 'Motivo del cambio' }}
+        ><span
+          >{{ mode() === 'enroll' ? 'Observación' : 'Motivo del cambio' }}
           @if (mode() === 'enroll') {
             <small>(opcional)</small>
           }</span
@@ -307,13 +436,14 @@
           [attr.minlength]="mode() === 'enroll' ? null : 8"
           maxlength="500"
           rows="3"
-        ></textarea
-      ></label>
+        ></textarea>
+      </label>
       @if (dialogError()) {
         <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
       }
       <div class="dialog-actions">
-        <button class="button outline" type="button" (click)="closeDialog()" [disabled]="busy()">Cancelar</button
+        <button class="button outline" type="button" (click)="closeDialog()" [disabled]="busy()">
+          Cancelar</button
         ><button class="button" type="submit" [disabled]="busy()">
           {{ busy() ? 'Guardando…' : 'Guardar' }}
         </button>

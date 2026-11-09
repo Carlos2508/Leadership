@@ -37,6 +37,10 @@ export class EnrollmentRoster {
   private request = 0;
   private contextYear = '';
   @ViewChild('enrollmentDialog') private dialog!: ElementRef<HTMLDialogElement>;
+  @ViewChild('cardsDialog') private cardsDialog!: ElementRef<HTMLDialogElement>;
+  cardGrade = '';
+  cardSection = '';
+  cardLayout = 'sheet';
   @ViewChild('noticeRef') private noticeRef?: ElementRef<HTMLElement>;
 
   readonly years = signal<YearSummary[]>([]);
@@ -113,6 +117,7 @@ export class EnrollmentRoster {
     if (this.contextYear !== requested) {
       this.detail.set(null);
       this.dialog?.nativeElement.close();
+      this.cardsDialog?.nativeElement.close();
       this.selected.set(null);
       this.candidates.set([]);
     }
@@ -160,6 +165,20 @@ export class EnrollmentRoster {
 
   async changeYear(): Promise<void> {
     await this.router.navigate([], { queryParams: { year: this.yearId } });
+  }
+
+  openCards(): void {
+    this.cardGrade = this.gradeId || this.grades()[0]?.id || '';
+    this.cardSection = this.sectionId;
+    this.cardLayout = 'sheet';
+    this.cardsDialog.nativeElement.showModal();
+  }
+
+  cardUrl(): string | null {
+    if (!this.cardGrade || !this.detail() || this.loading() || this.error()) return null;
+    const query = new URLSearchParams({ gradeId: this.cardGrade, layout: this.cardLayout });
+    if (this.cardSection) query.set('sectionId', this.cardSection);
+    return `/api/v1/years/${this.detail()!.year.id}/cards.pdf?${query}`;
   }
 
   async load(page = 1): Promise<void> {

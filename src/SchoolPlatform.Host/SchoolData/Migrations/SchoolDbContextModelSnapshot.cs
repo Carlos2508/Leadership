@@ -2063,6 +2063,42 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.ToTable("AccountLinks", "people");
                 });
 
+            modelBuilder.Entity("SchoolPlatform.Host.People.FamilyRegistration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AcademicYearId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RequestHash")
+                        .IsRequired()
+                        .HasColumnType("binary(32)");
+
+                    b.Property<string>("ResultJson")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicYearId");
+
+                    b.HasIndex("ActorId");
+
+                    b.ToTable("FamilyRegistrations", "people", t =>
+                        {
+                            t.HasCheckConstraint("CK_FamilyRegistration_Result", "ISJSON([ResultJson]) = 1");
+                        });
+                });
+
             modelBuilder.Entity("SchoolPlatform.Host.People.GuardianProfile", b =>
                 {
                     b.Property<Guid>("PersonId")
@@ -2996,6 +3032,21 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.People.FamilyRegistration", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.Academic.AcademicYear", null)
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("ActorId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

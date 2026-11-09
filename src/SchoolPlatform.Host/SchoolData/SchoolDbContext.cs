@@ -66,6 +66,7 @@ public sealed partial class SchoolDbContext(DbContextOptions<SchoolDbContext> op
         });
 
         ConfigurePeople(builder);
+        ConfigureFamilies(builder);
         ConfigureRoster(builder);
         ConfigureAcademicModel(builder);
         ConfigureFinanceModel(builder);
@@ -195,6 +196,8 @@ public sealed partial class SchoolDbContext(DbContextOptions<SchoolDbContext> op
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
+        if (ChangeTracker.Entries<FamilyRegistration>().Any(x => x.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("La confirmación de un registro familiar no se modifica ni elimina.");
         if (ChangeTracker.Entries<SchoolPlatform.Host.Inventory.InventoryMovement>().Any(x => x.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("El historial de inventario solo admite nuevos movimientos.");
         if (ChangeTracker.Entries<SecurityAuditEvent>().Any(x => x.State is EntityState.Modified or EntityState.Deleted) ||

@@ -60,6 +60,7 @@ builder.Services.AddScoped<SchoolPlatform.Host.Finance.ChargeService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Finance.PaymentService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Finance.ClearanceService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Inventory.InventoryService>();
+builder.Services.AddScoped<SchoolPlatform.Host.People.FamilyRegistrationService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Grades.GradeService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Common.DashboardService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Grades.GradeReportService>();

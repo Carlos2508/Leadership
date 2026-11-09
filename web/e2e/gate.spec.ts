@@ -11,9 +11,7 @@ async function login(page: Page, username: string, password: string) {
   await page.getByLabel('Usuario', { exact: true }).fill(username);
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(
-    page.getByRole('heading', { name: /^¡Hola,/ }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^¡Hola,/ })).toBeVisible();
 }
 async function post(page: Page, path: string, data: object) {
   const token = (await (await page.request.get('/api/v1/antiforgery')).json()).token;
@@ -240,8 +238,8 @@ test('gate reader, cards, manual marks, report, devices and family access', asyn
 
   await page.goto('/workspace/enrollment?year=' + year);
   await page.getByRole('combobox', { name: 'Grado', exact: true }).selectOption(grade);
-  await expect(page.getByRole('link', { name: 'Carnets en carta', exact: true })).toHaveAttribute(
-    'href',
-    `/api/v1/years/${year}/cards.pdf?gradeId=${grade}&layout=sheet`,
-  );
+  await page.getByRole('button', { name: 'Imprimir carnets', exact: true }).click();
+  await expect(
+    page.getByRole('dialog').getByRole('link', { name: 'Abrir PDF', exact: true }),
+  ).toHaveAttribute('href', `/api/v1/years/${year}/cards.pdf?gradeId=${grade}&layout=sheet`);
 });

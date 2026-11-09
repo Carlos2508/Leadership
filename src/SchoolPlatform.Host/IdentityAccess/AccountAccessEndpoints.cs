@@ -70,7 +70,7 @@ public static class AccountAccessEndpoints
             string[]? types = area switch
             {
                 null or "" or "all" => null,
-                "people" => ["Person", "Relationship", "ImportBatch"],
+                "people" => ["Person", "Relationship", "ImportBatch", "FamilyRegistration"],
                 "academic" => ["AcademicYear", "Grade", "Course", "Enrollment", "Subject", "Assignment"],
                 "finance" => ["Charge", "Payment", "FeeConcept"],
                 "communication" => ["Announcement"],

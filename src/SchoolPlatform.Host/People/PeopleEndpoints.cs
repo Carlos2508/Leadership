@@ -8,6 +8,10 @@ public static class PeopleEndpoints
 {
     public static void MapPeople(this WebApplication app)
     {
+        app.MapGroup("/api/v1/people/families")
+            .RequireAuthorization(Permissions.PeopleRead, Permissions.PeopleManage, Permissions.AcademicRead, Permissions.EnrollmentManage)
+            .AddEndpointFilter<ApiWriteFilter>()
+            .MapPost("", (RegisterFamilyRequest request, ClaimsPrincipal actor, FamilyRegistrationService service, CancellationToken ct) => service.RegisterAsync(Actor(actor), request, ct));
         var read = app.MapGroup("/api/v1/people").RequireAuthorization(Permissions.PeopleRead).AddEndpointFilter<ApiWriteFilter>();
         read.MapGet("/catalog", () => Results.Ok(new { relationshipKinds = RelationshipKinds.All, faculties = Faculties.All }));
         read.MapGet("", (string? search, string? role, string? status, int? page, PeopleService service, CancellationToken ct) =>

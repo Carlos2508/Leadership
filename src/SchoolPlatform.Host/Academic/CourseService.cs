@@ -329,11 +329,17 @@ public sealed partial class CourseService(SchoolDbContext db, SchoolAudit audit,
                               where ids.Contains(a.CourseId) && (a.EndsOn == null || a.EndsOn >= today)
                               join p in db.Persons on a.StaffId equals p.Id
                               select new { a, p.GivenNames, p.FamilyNames, p.PreferredName }).ToArrayAsync(ct);
-        var counts = new Dictionary<Guid, int>();
-        foreach (var course in courses)
-            counts[course.Course.Id] = await db.Placements.CountAsync(p => p.GradeLevelId == course.Course.GradeLevelId &&
-                (course.Course.SectionId == null || p.SectionId == course.Course.SectionId) && p.EndsOn == null &&
-                db.Enrollments.Any(e => e.Id == p.EnrollmentId && e.AcademicYearId == course.Course.AcademicYearId && e.Status == EnrollmentStatus.Active), ct);
+        var yearIds = courses.Select(c => c.Course.AcademicYearId).Distinct().ToArray();
+        var gradeIds = courses.Select(c => c.Course.GradeLevelId).Distinct().ToArray();
+        var groupedCounts = await (from p in db.Placements.AsNoTracking()
+                                   join e in db.Enrollments on p.EnrollmentId equals e.Id
+                                   where p.EndsOn == null && e.Status == EnrollmentStatus.Active &&
+                                       yearIds.Contains(e.AcademicYearId) && gradeIds.Contains(p.GradeLevelId)
+                                   group p by new { e.AcademicYearId, p.GradeLevelId, p.SectionId } into g
+                                   select new { g.Key.AcademicYearId, g.Key.GradeLevelId, g.Key.SectionId, Count = g.Count() }).ToArrayAsync(ct);
+        var counts = courses.ToDictionary(c => c.Course.Id, c => groupedCounts.Where(g =>
+            g.AcademicYearId == c.Course.AcademicYearId && g.GradeLevelId == c.Course.GradeLevelId &&
+            (c.Course.SectionId == null || g.SectionId == c.Course.SectionId)).Sum(g => g.Count));
         return courses.OrderBy(x => x.GradeOrder).ThenBy(x => x.Grade).ThenBy(x => x.Section).ThenBy(x => x.Subject)
             .Select(x => new CourseView(x.Course.Id, x.Course.AcademicYearId, x.Year, x.Course.GradeLevelId, x.Grade, x.Course.SectionId, x.Section,
                 x.Course.SubjectId, x.Subject,

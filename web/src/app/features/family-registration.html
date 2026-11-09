@@ -1,0 +1,439 @@
+<app-shell title="Nueva familia">
+  <a class="back-link" routerLink="/workspace/students"
+    ><app-icon name="arrow" />Volver a estudiantes</a
+  >
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">SECRETARÍA</span>
+      <h1>Nueva familia</h1>
+      <p>
+        Encargados, estudiantes e inscripción en un solo recorrido. Puedes reutilizar fichas
+        existentes.
+      </p>
+    </div>
+  </div>
+  @if (loading()) {
+    <p class="card loading-state" role="status">Preparando el registro…</p>
+  } @else if (result(); as saved) {
+    <section class="card family-panel">
+      <app-icon name="check" />
+      <h2>Familia registrada</h2>
+      <p>
+        Se guardaron {{ saved.guardianIds.length }} encargados y
+        {{ saved.students.length }} inscripciones en {{ detail()?.year?.label }}.
+      </p>
+      <p>
+        Los vínculos conservan los permisos que revisaste. Las cuentas de acceso se preparan por
+        separado desde cada ficha.
+      </p>
+      <div class="family-actions">
+        <a
+          class="button"
+          routerLink="/workspace/enrollment"
+          [queryParams]="{ year: saved.academicYearId }"
+          >Ver inscripciones</a
+        >
+      </div>
+      <ul>
+        @for (student of saved.students; track student.personId; let i = $index) {
+          <li>
+            <a [routerLink]="['/workspace/people', student.personId]">{{ name(students[i]) }}</a> ·
+            {{ grade(students[i]) }}
+          </li>
+        }
+      </ul>
+    </section>
+  } @else {
+    <nav class="family-steps" aria-label="Pasos del registro">
+      <span [class.current]="step() === 0">1 · Encargados</span
+      ><span [class.current]="step() === 1">2 · Estudiantes e inscripción</span
+      ><span [class.current]="step() === 2">3 · Revisar y guardar</span>
+    </nav>
+    @if (error()) {
+      <p class="feedback error-feedback" role="alert">{{ error() }}</p>
+    }
+    @if (!years().length) {
+      <section class="card family-panel">
+        <h2>Prepara un ciclo escolar</h2>
+        <p>Debe estar abierto para inscripciones antes de registrar una familia.</p>
+        <a class="button" routerLink="/workspace/academic">Ir a ciclos y grados</a
+        ><button class="button outline" (click)="load()">Reintentar</button>
+      </section>
+    } @else {
+      <form (ngSubmit)="step() === 2 ? save() : next()">
+        <fieldset class="family-fieldset" [disabled]="busy() || !!pending()">
+          @if (step() === 0) {
+            <p class="muted-copy">
+              Selecciona los encargados y los permisos que se propondrán para los hijos. Podrás
+              personalizar cada vínculo en el siguiente paso.
+            </p>
+            @for (guardian of guardians; track guardian; let i = $index) {
+              <section
+                class="card family-panel"
+                [attr.aria-label]="'Encargado ' + (i + 1)"
+                [attr.data-person]="'guardian-' + i"
+              >
+                <header>
+                  <h2>Encargado {{ i + 1 }}</h2>
+                  <button class="text-button" type="button" (click)="removeGuardian(i)">
+                    Quitar encargado {{ i + 1 }}
+                  </button>
+                </header>
+                <ng-container
+                  *ngTemplateOutlet="
+                    personFields;
+                    context: { $implicit: guardian, guardian: true, prefix: 'g' + i }
+                  "
+                />
+                <label class="form-field"
+                  ><span>Parentesco propuesto</span
+                  ><select [name]="'kind' + i" [(ngModel)]="guardian.kind">
+                    @for (kind of catalog()?.relationshipKinds ?? []; track kind) {
+                      <option [value]="kind">{{ relationshipLabels[kind] ?? kind }}</option>
+                    }
+                  </select></label
+                >
+                <p class="muted-copy">
+                  Permisos para los hijos seleccionados. No se conceden por parentesco.
+                </p>
+                <div class="family-faculties">
+                  @for (faculty of catalog()?.faculties ?? []; track faculty.key) {
+                    <label class="checkbox-field"
+                      ><input
+                        type="checkbox"
+                        [checked]="guardian.faculties.includes(faculty.key)"
+                        (change)="toggle(guardian.faculties, faculty.key)"
+                      /><span>{{ facultyLabels[faculty.key] ?? faculty.label }}</span></label
+                    >
+                  }
+                </div>
+              </section>
+            } @empty {
+              <p class="card family-panel">
+                Puedes inscribir estudiantes sin encargado y vincularlo más adelante.
+              </p>
+            }
+            <button
+              class="button outline"
+              type="button"
+              (click)="addGuardian()"
+              [disabled]="guardians.length >= 4"
+            >
+              <app-icon name="plus" />Agregar encargado
+            </button>
+          } @else if (step() === 1) {
+            <section class="card family-panel">
+              <h2>Inscripción</h2>
+              <div class="family-fields">
+                <label class="form-field"
+                  ><span id="family-year-label">Ciclo escolar</span
+                  ><select
+                    name="year"
+                    [(ngModel)]="yearId"
+                    (ngModelChange)="changeYear()"
+                    aria-labelledby="family-year-label"
+                  >
+                    @for (year of years(); track year.id) {
+                      <option [value]="year.id">{{ year.label }}</option>
+                    }
+                  </select></label
+                ><label class="form-field"
+                  ><span>Fecha de inscripción</span
+                  ><input
+                    type="date"
+                    name="date"
+                    [(ngModel)]="enrolledOn"
+                    [min]="detail()?.year?.startsOn ?? ''"
+                    [max]="detail()?.year?.endsOn ?? ''"
+                    required
+                /></label>
+              </div>
+            </section>
+            @for (student of students; track student; let i = $index) {
+              <section
+                class="card family-panel"
+                [attr.aria-label]="'Estudiante ' + (i + 1)"
+                [attr.data-person]="'student-' + i"
+              >
+                <header>
+                  <h2>Estudiante {{ i + 1 }}</h2>
+                  @if (students.length > 1) {
+                    <button class="text-button" type="button" (click)="students.splice(i, 1)">
+                      Quitar estudiante {{ i + 1 }}
+                    </button>
+                  }
+                </header>
+                <ng-container
+                  *ngTemplateOutlet="
+                    personFields;
+                    context: { $implicit: student, guardian: false, prefix: 's' + i }
+                  "
+                />
+                <div class="family-fields">
+                  <label class="form-field"
+                    ><span [id]="'grade-label' + i">Grado</span
+                    ><select
+                      [name]="'grade' + i"
+                      [(ngModel)]="student.gradeId"
+                      (ngModelChange)="student.sectionId = ''"
+                      [attr.aria-labelledby]="'grade-label' + i"
+                      required
+                    >
+                      <option value="">Selecciona</option>
+                      @for (g of grades(); track g.id) {
+                        <option [value]="g.id">{{ g.name }}</option>
+                      }
+                    </select></label
+                  ><label class="form-field"
+                    ><span [id]="'section-label' + i">Sección</span
+                    ><select
+                      [name]="'section' + i"
+                      [(ngModel)]="student.sectionId"
+                      [attr.aria-labelledby]="'section-label' + i"
+                    >
+                      <option value="">Sin sección</option>
+                      @for (section of sections(student); track section.id) {
+                        <option [value]="section.id">{{ section.name }}</option>
+                      }
+                    </select></label
+                  >
+                </div>
+                <h3>Encargados de este estudiante</h3>
+                @for (link of student.links; track link; let j = $index) {
+                  <div class="family-link">
+                    <label class="checkbox-field"
+                      ><input
+                        type="checkbox"
+                        [(ngModel)]="link.selected"
+                        [name]="'linked' + i + '-' + j"
+                      /><span
+                        >{{ name(guardians[j])
+                        }}<small
+                          >{{ relationshipLabels[linkKind(link, j)] }} ·
+                          {{
+                            linkFaculties(link, j).length
+                              ? 'Permisos seleccionados: ' + linkFaculties(link, j).length
+                              : 'Sin permisos de consulta'
+                          }}</small
+                        ></span
+                      ></label
+                    >
+                    @if (link.selected) {
+                      <label class="checkbox-field"
+                        ><input
+                          type="checkbox"
+                          [name]="'custom' + i + '-' + j"
+                          [(ngModel)]="link.custom"
+                        /><span>Personalizar este vínculo</span></label
+                      >
+                      @if (link.custom) {
+                        <label class="form-field"
+                          ><span>Parentesco para este estudiante</span
+                          ><select [name]="'customKind' + i + '-' + j" [(ngModel)]="link.kind">
+                            @for (kind of catalog()?.relationshipKinds ?? []; track kind) {
+                              <option [value]="kind">{{ relationshipLabels[kind] ?? kind }}</option>
+                            }
+                          </select></label
+                        >
+                        <div class="family-faculties">
+                          @for (faculty of catalog()?.faculties ?? []; track faculty.key) {
+                            <label class="checkbox-field"
+                              ><input
+                                type="checkbox"
+                                [checked]="link.faculties.includes(faculty.key)"
+                                (change)="toggle(link.faculties, faculty.key)"
+                              /><span>{{
+                                facultyLabels[faculty.key] ?? faculty.label
+                              }}</span></label
+                            >
+                          }
+                        </div>
+                      }
+                    }
+                  </div>
+                } @empty {
+                  <p class="muted-copy">Sin encargado por ahora.</p>
+                }
+              </section>
+            }
+            <button
+              class="button outline"
+              type="button"
+              (click)="addStudent()"
+              [disabled]="students.length >= 8"
+            >
+              <app-icon name="plus" />Agregar estudiante
+            </button>
+          } @else {
+            <section class="card family-panel">
+              <h2>Revisa antes de guardar</h2>
+              <p>
+                <b>Ciclo {{ detail()?.year?.label }}</b> · Inscripción: {{ enrolledOn }}
+              </p>
+              @for (student of students; track student) {
+                <div class="family-review">
+                  <h3>{{ name(student) }}</h3>
+                  <p>
+                    {{ grade(student) }} ·
+                    {{
+                      student.existingId ? 'Ficha existente' : 'Ficha nueva: ' + student.studentCode
+                    }}
+                  </p>
+                  <ul>
+                    @for (link of student.links; track link; let j = $index) {
+                      @if (link.selected) {
+                        <li>
+                          {{ name(guardians[j]) }} · {{ relationshipLabels[linkKind(link, j)]
+                          }}<small
+                            >{{ linkFaculties(link, j).length ? '' : 'Sin permisos de consulta' }}
+                            @for (f of linkFaculties(link, j); track f) {
+                              <span class="pill">{{ facultyLabels[f] ?? f }}</span>
+                            }
+                          </small>
+                        </li>
+                      }
+                    }
+                  </ul>
+                </div>
+              }
+              <label class="form-field"
+                ><span>Motivo del registro</span
+                ><textarea
+                  name="reason"
+                  [(ngModel)]="reason"
+                  minlength="8"
+                  maxlength="500"
+                  required
+                ></textarea>
+              </label>
+              <p class="muted-copy">
+                Se guardan las fichas, los vínculos y las inscripciones juntos. No se crean
+                contraseñas, cargos o permisos de acceso sin revisión.
+              </p>
+            </section>
+          }
+        </fieldset>
+        <div class="family-actions">
+          @if (step() > 0) {
+            <button
+              class="button outline"
+              type="button"
+              (click)="step.set(step() - 1); error.set('')"
+              [disabled]="busy() || !!pending()"
+            >
+              Anterior
+            </button>
+          }
+          <button class="button" type="submit" [disabled]="busy()">
+            {{
+              busy()
+                ? 'Guardando…'
+                : pending()
+                  ? 'Reintentar registro'
+                  : step() === 2
+                    ? 'Confirmar familia e inscripciones'
+                    : 'Continuar'
+            }}
+          </button>
+        </div>
+      </form>
+    }
+  }
+  <ng-template #personFields let-person let-guardian="guardian" let-prefix="prefix">
+    @if (person.existingId) {
+      <div class="family-existing">
+        <b>{{ person.existingName }}</b
+        ><span class="pill">Ficha existente</span
+        ><button class="text-button" type="button" (click)="clear(person)">
+          Cambiar selección
+        </button>
+      </div>
+    } @else {
+      <details class="family-search">
+        <summary>Buscar una ficha existente</summary>
+        <div class="family-fields">
+          <label class="form-field"
+            ><span>Buscar por nombre o código</span
+            ><input [name]="prefix + 'search'" [(ngModel)]="person.search" maxlength="100" /></label
+          ><button
+            class="button outline"
+            type="button"
+            (click)="search(person, guardian)"
+            [disabled]="person.searching"
+          >
+            Buscar ficha
+          </button>
+        </div>
+        @if (person.searchError) {
+          <p class="feedback error-feedback" role="alert">{{ person.searchError }}</p>
+        }
+        @for (candidate of person.candidates; track candidate.id) {
+          <button
+            class="family-candidate"
+            type="button"
+            (click)="select(person, candidate, guardian)"
+          >
+            {{ candidate.displayName }} {{ candidate.studentCode ?? '' }}
+            {{ candidate.placement ?? '' }}
+          </button>
+        }
+      </details>
+      <div class="family-fields">
+        <label class="form-field"
+          ><span>Nombres</span
+          ><input
+            [name]="prefix + 'given'"
+            [(ngModel)]="person.givenNames"
+            required
+            maxlength="100" /></label
+        ><label class="form-field"
+          ><span>Apellidos</span
+          ><input
+            [name]="prefix + 'family'"
+            [(ngModel)]="person.familyNames"
+            required
+            maxlength="100"
+        /></label>
+      </div>
+      @if (!guardian) {
+        <div class="family-fields">
+          <label class="form-field"
+            ><span>Código del estudiante</span
+            ><input
+              [name]="prefix + 'code'"
+              [(ngModel)]="person.studentCode"
+              required
+              maxlength="30" /></label
+          ><label class="form-field"
+            ><span>Nacimiento (opcional)</span
+            ><input type="date" [name]="prefix + 'birth'" [(ngModel)]="person.birthDate"
+          /></label>
+        </div>
+      }
+      <div class="family-fields">
+        <label class="form-field"
+          ><span>Teléfono (opcional)</span
+          ><input
+            type="tel"
+            [name]="prefix + 'phone'"
+            [(ngModel)]="person.phone"
+            maxlength="40" /></label
+        ><label class="form-field"
+          ><span>Correo (opcional)</span
+          ><input type="email" [name]="prefix + 'email'" [(ngModel)]="person.email" maxlength="254"
+        /></label>
+      </div>
+      @if (duplicate()) {
+        <label class="checkbox-field"
+          ><input
+            type="checkbox"
+            [name]="prefix + 'duplicate'"
+            [(ngModel)]="person.confirmDuplicate"
+          /><span
+            >Revisé el directorio y confirmé que es una persona distinta con el mismo nombre.</span
+          ></label
+        >
+      }
+    }
+  </ng-template>
+</app-shell>

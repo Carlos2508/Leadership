@@ -74,6 +74,26 @@ public sealed class GradeSqlTests : SqlTestBase
     private Task Publish() => Use<GradeService>(x => x.PublishAsync(Owner, year, new(period, cutoff, "Entrega del primer período"), default));
 
     [Fact]
+    public async Task Pending_courses_match_publication_and_sheet_membership_without_treating_zero_or_explicit_pending_as_absent()
+    {
+        var before = await Use<GradeService, CourseCompletion[]>(s => s.CourseCompletionAsync(year, period, default));
+        var row = Assert.Single(before);
+        Assert.Equal(course, row.CourseId); Assert.Equal((1, 0, 1), (row.Expected, row.Recorded, row.Missing));
+        Assert.Contains("Rita Docente", row.Teachers);
+        var publication = Assert.Single(await Use<GradeService, PublicationView[]>(s => s.PublicationsAsync(year, default)));
+        Assert.Equal((publication.Expected, publication.Recorded), (before.Sum(c => c.Expected), before.Sum(c => c.Recorded)));
+        await Capture(teacherUser, 0);
+        Assert.Equal(0, Assert.Single(await Use<GradeService, CourseCompletion[]>(s => s.CourseCompletionAsync(year, period, default))).Missing);
+        await Capture(teacherUser, null, ScoreStatus.Missing, await Version());
+        Assert.Equal(1, Assert.Single(await Use<GradeService, CourseCompletion[]>(s => s.CourseCompletionAsync(year, period, default))).Recorded);
+        Assert.Equal(404, (await Assert.ThrowsAsync<OperationException>(() => Use<GradeService, CourseCompletion[]>(s => s.CourseCompletionAsync(Guid.NewGuid(), period, default)))).Status);
+        using var teacher = await SignIn("synthetic-teacher");
+        Assert.Equal(HttpStatusCode.Forbidden, (await teacher.GetAsync($"/api/v1/years/{year}/periods/{period}/course-completion")).StatusCode);
+        using var owner = await SignIn(OwnerName);
+        Assert.Equal(HttpStatusCode.OK, (await owner.GetAsync($"/api/v1/years/{year}/periods/{period}/course-completion")).StatusCode);
+    }
+
+    [Fact]
     public async Task Only_the_assigned_teacher_captures_and_every_change_keeps_a_revision()
     {
         var sheet = await Use<GradeService, GradeSheet?>(x => x.SheetAsync(teacherUser, course, null, default));

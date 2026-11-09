@@ -83,6 +83,17 @@ export const routes: Routes = [
     loadComponent: () => import('./features/people-directory').then((x) => x.PeopleDirectory),
   },
   {
+    path: 'workspace/new-family',
+    canActivate: [
+      permissionGuard('people.read'),
+      permissionGuard('people.manage'),
+      permissionGuard('academic.read'),
+      permissionGuard('enrollment.manage'),
+    ],
+    canDeactivate: [pendingChangesGuard],
+    loadComponent: () => import('./features/family-registration').then((x) => x.FamilyRegistration),
+  },
+  {
     path: 'workspace/teachers',
     canActivate: [permissionGuard('people.read')],
     data: { directory: 'staff' },

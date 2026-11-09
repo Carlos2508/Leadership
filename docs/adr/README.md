@@ -1,5 +1,7 @@
 # Registro de decisiones
 
+ADR-019 registra alta familiar atómica, atajos de carnets y pendientes por curso, conservando autorizaciones y consultas acotadas.
+
 ADR-011 registra el dashboard operativo por ciclo, permisos y recurso. ADR-012 registra roles de acceso configurables en SQL, independientes de los perfiles escolares.
 
 ADR-010 registra el rediseño web y la navegación por Estudiantes, Padres y Docentes, conservando el modelo de personas y los permisos existentes. Complementa `docs/DESIGN.md`.

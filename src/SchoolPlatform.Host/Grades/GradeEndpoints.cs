@@ -20,6 +20,7 @@ public static class GradeEndpoints
 
         var read = app.MapGroup("/api/v1").RequireAuthorization(Permissions.AcademicRead).AddEndpointFilter<ApiWriteFilter>();
         read.MapGet("/years/{yearId:guid}/publications", (Guid yearId, GradeService service, CancellationToken ct) => service.PublicationsAsync(yearId, ct));
+        read.MapGet("/years/{yearId:guid}/periods/{periodId:guid}/course-completion", (Guid yearId, Guid periodId, GradeService service, CancellationToken ct) => service.CourseCompletionAsync(yearId, periodId, ct));
         read.MapGet("/years/{yearId:guid}/clearance-cutoffs", (Guid yearId, GradeService service, CancellationToken ct) => service.CutoffsAsync(yearId, ct));
         app.MapGroup("/api/v1").RequireAuthorization(Permissions.AcademicManage).AddEndpointFilter<ApiWriteFilter>()
             .MapPost("/years/{yearId:guid}/publications", async (Guid yearId, PublishRequest request, ClaimsPrincipal user, GradeService service, CancellationToken ct) =>

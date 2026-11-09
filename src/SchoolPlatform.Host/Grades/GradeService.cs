@@ -18,6 +18,10 @@ public sealed record GradeSheet(CourseView Course, SheetPeriod Period, SheetPeri
 public sealed record PublicationView(Guid PeriodId, int Sequence, string Name, DateOnly StartsOn, DateOnly EndsOn, bool Published,
     DateTimeOffset? PublishedAt, string? Cutoff, int Expected, int Recorded);
 public sealed record PublishRequest(Guid PeriodId, Guid CutoffId, string Note);
+public sealed record CourseCompletion(Guid CourseId, string Subject, string Grade, string? Section, string[] Teachers, int Expected, int Recorded)
+{
+    public int Missing => Expected - Recorded;
+}
 public sealed record MyGrade(string Subject, decimal? Score, string Status);
 public sealed record MyGradesPeriod(Guid PeriodId, int Sequence, string Name, string Status, MyGrade[] Grades, PendingItem[] Pending);
 public sealed record MyGrades(Guid StudentId, string? Year, MyGradesPeriod[] Periods);
@@ -157,6 +161,20 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
         await db.ClearanceCutoffs.AsNoTracking().Where(x => x.AcademicYearId == yearId).OrderBy(x => x.ThroughSequence)
             .Select(x => (object)new { x.Id, x.Name, x.ThroughSequence }).ToArrayAsync(ct);
 
+    public async Task<CourseCompletion[]> CourseCompletionAsync(Guid yearId, Guid periodId, CancellationToken ct)
+    {
+        var period = (await Periods(yearId, ct)).SingleOrDefault(x => x.Id == periodId)
+            ?? throw OperationException.NotFound("No encontramos ese período en el ciclo seleccionado.");
+        var yearCourses = await courses.CoursesAsync(yearId, null, ct);
+        var counts = await CourseCountsAsync(yearId, yearCourses, [period], ct);
+        return yearCourses.Select(c =>
+        {
+            var (expected, recorded) = counts[(periodId, c.Id)];
+            return new CourseCompletion(c.Id, c.Subject, c.Grade, c.Section,
+                c.Teachers.Select(t => t.Name).Distinct().ToArray(), expected, recorded);
+        }).OrderByDescending(c => c.Missing).ThenBy(c => c.Grade).ThenBy(c => c.Section).ThenBy(c => c.Subject).ToArray();
+    }
+
     public async Task PublishAsync(Guid actor, Guid yearId, PublishRequest request, CancellationToken ct)
     {
         await audit.RequireAsync(actor, ct, Permissions.AcademicManage);
@@ -253,6 +271,14 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
     private async Task<Dictionary<Guid, (int Expected, int Recorded)>> CompletenessAsync(Guid yearId, CourseView[] yearCourses,
         IReadOnlyCollection<SheetPeriod> periods, CancellationToken ct)
     {
+        var counts = await CourseCountsAsync(yearId, yearCourses, periods, ct);
+        return periods.ToDictionary(p => p.Id, p =>
+            (yearCourses.Sum(c => counts[(p.Id, c.Id)].Expected), yearCourses.Sum(c => counts[(p.Id, c.Id)].Recorded)));
+    }
+
+    private async Task<Dictionary<(Guid Period, Guid Course), (int Expected, int Recorded)>> CourseCountsAsync(Guid yearId, CourseView[] yearCourses,
+        IReadOnlyCollection<SheetPeriod> periods, CancellationToken ct)
+    {
         var placements = await (from p in db.Placements.AsNoTracking()
                                 join e in db.Enrollments on p.EnrollmentId equals e.Id
                                 where e.AcademicYearId == yearId && e.Status != EnrollmentStatus.Cancelled
@@ -264,21 +290,17 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
                 .Where(x => periodIds.Contains(x.PeriodId) && db.Courses.Any(c => c.Id == x.CourseId && c.AcademicYearId == yearId))
                 .Select(x => new { x.CourseId, x.PeriodId, x.StudentId }).ToArrayAsync(ct))
             .Select(x => (x.CourseId, x.PeriodId, x.StudentId)).ToHashSet();
-        var result = new Dictionary<Guid, (int Expected, int Recorded)>();
+        var result = new Dictionary<(Guid, Guid), (int Expected, int Recorded)>();
         foreach (var period in periods)
         {
-            var expected = 0;
-            var recorded = 0;
             foreach (var course in yearCourses)
             {
                 var ids = placements
                     .Where(p => p.GradeLevelId == course.GradeLevelId && (course.SectionId == null || p.SectionId == course.SectionId) &&
                                 p.StartsOn <= period.EndsOn && (p.EndsOn == null || (p.EndsOn > period.StartsOn && p.EndsOn > p.StartsOn)))
                     .Select(p => p.StudentId).Distinct().ToArray();
-                expected += ids.Length;
-                recorded += ids.Count(id => scored.Contains((course.Id, period.Id, id)));
+                result[(period.Id, course.Id)] = (ids.Length, ids.Count(id => scored.Contains((course.Id, period.Id, id))));
             }
-            result[period.Id] = (expected, recorded);
         }
         return result;
     }

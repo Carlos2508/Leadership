@@ -1,0 +1,78 @@
+.time-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.time-toolbar {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin: 24px 0 16px;
+}
+.time-toolbar > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.time-toolbar strong {
+  font-size: 18px;
+}
+.time-toolbar small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.time-onboarding {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 64px 24px;
+  margin: 24px 0;
+  text-align: center;
+}
+.time-empty-icon {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--accent) 15%, white);
+  color: var(--ink);
+  margin-bottom: 24px;
+}
+.time-empty-icon app-icon {
+  width: 32px;
+  height: 32px;
+}
+.time-onboarding h2 {
+  font-size: 25px;
+  margin: 10px 0 12px;
+  letter-spacing: -0.035em;
+}
+.time-onboarding p {
+  max-width: 540px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 0 0 24px;
+}
+.time-loading {
+  padding: 48px;
+  text-align: center;
+  color: var(--muted);
+}
+@media (max-width: 700px) {
+  .time-toolbar {
+    align-items: start;
+  }
+  .time-toolbar .time-actions {
+    width: 100%;
+  }
+  .time-onboarding {
+    padding: 38px 22px;
+  }
+  .time-onboarding h2 {
+    font-size: 22px;
+  }
+}

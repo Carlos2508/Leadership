@@ -49,6 +49,20 @@ import { ChatInbox } from '../core/chat';
             ariaCurrentWhenActive="page"
             ><app-icon name="home" />Inicio</a
           >
+          @if (
+            !preview() &&
+            (session.can('academic.read') ||
+              session.studentId() ||
+              session.myCourses().length ||
+              session.myStudents().length)
+          ) {
+            <a
+              routerLink="/workspace/timetables"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+              ><app-icon name="calendar" />Horarios</a
+            >
+          }
           @if (!preview() && session.studentId(); as studentId) {
             <a
               routerLink="/workspace"

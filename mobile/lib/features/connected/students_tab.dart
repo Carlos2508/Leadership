@@ -9,6 +9,7 @@ import '../../shared/page_layout.dart';
 import 'connected_session.dart';
 import 'connected_shell.dart';
 import 'school_api.dart';
+import 'timetable_page.dart';
 
 /// Linked students (family) or the student's own record. Sections follow the faculties the school granted.
 class StudentsTab extends ConsumerWidget {
@@ -147,6 +148,16 @@ class _StudentSectionsState extends State<StudentSections> {
           selected: _section,
           onSelected: (v) => setState(() => _section = v),
         ),
+        if (s.canAcademic)
+          Padding(
+            padding: const EdgeInsets.only(top: Spacing.md),
+            child: OutlinedButton.icon(
+              onPressed: () => Navigator.of(context)
+                  .push(MaterialPageRoute<void>(builder: (_) => TimetablePage(studentId: s.id))),
+              icon: const Icon(Icons.calendar_month_outlined),
+              label: const Text('Consultar horario'),
+            ),
+          ),
         const SizedBox(height: Spacing.lg),
         switch (_section) {
           _Section.grades => _Grades(student: s),

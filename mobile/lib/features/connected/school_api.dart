@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -75,6 +76,20 @@ class SchoolApi {
   }
 
   Future<dynamic> get(String path) async => _decode(await _send('GET', path));
+
+  /// Private PDFs use the same cookie and revocation handling as the JSON APIs.
+  Future<Uint8List> pdf(String path) async {
+    final response = await _send('GET', path);
+    if (response.statusCode != 200) {
+      _decode(response);
+    }
+    if (!response.headers['content-type'].toString().contains('application/pdf') ||
+        response.bodyBytes.length < 4 ||
+        ascii.decode(response.bodyBytes.take(4).toList()) != '%PDF') {
+      throw const ApiFailure('El colegio no devolvió un documento válido. Intenta de nuevo.');
+    }
+    return response.bodyBytes;
+  }
 
   Future<dynamic> post(String path, [Object? body]) async {
     _token ??= await _antiforgery();

@@ -11,6 +11,7 @@ import '../../shared/page_layout.dart';
 import 'connected_session.dart';
 import 'connected_shell.dart';
 import 'school_api.dart';
+import 'timetable_page.dart';
 
 /// Courses assigned to the signed-in teacher. Gradebook and attendance use the same endpoints as the web.
 class TeachingTab extends ConsumerWidget {
@@ -33,6 +34,14 @@ class TeachingTab extends ConsumerWidget {
         await ref.read(connectedControllerProvider.notifier).refresh();
       },
       children: [
+        OutlinedButton.icon(
+          onPressed: () =>
+              Navigator.of(context)
+                  .push(MaterialPageRoute<void>(builder: (_) => const TimetablePage())),
+          icon: const Icon(Icons.calendar_month_outlined),
+          label: const Text('Mi horario semanal'),
+        ),
+        const SizedBox(height: Spacing.md),
         const PageIntro(
           eyebrow: 'Docencia',
           title: 'Mis cursos',

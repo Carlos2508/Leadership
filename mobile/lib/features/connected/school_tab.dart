@@ -16,6 +16,7 @@ import 'connected_shell.dart';
 import 'inventory_page.dart';
 import 'school_api.dart';
 import 'students_tab.dart';
+import 'timetable_page.dart';
 
 /// Staff tools available from the phone: student directory (people.read) and cashier (finance.read / collect).
 class SchoolTab extends ConsumerStatefulWidget {
@@ -45,6 +46,21 @@ class _SchoolTabState extends ConsumerState<SchoolTab> {
     return ConnectedTabPage(
       onRefresh: () async => ref.invalidate(apiGetProvider(path)),
       children: [
+        if (session.can('academic.read')) ...[
+          AppCard(
+            onTap: () =>
+                Navigator.of(context)
+                    .push(MaterialPageRoute<void>(builder: (_) => const TimetablePage())),
+            child: const ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.calendar_month_outlined),
+              title: Text('Horarios'),
+              subtitle: Text('Grupos, jornada semanal e impresión'),
+              trailing: Icon(Icons.chevron_right),
+            ),
+          ),
+          const SizedBox(height: Spacing.lg),
+        ],
         PageIntro(
           eyebrow: 'Colegio',
           title: session.can('finance.read') ? 'Estudiantes y caja' : 'Colegio',

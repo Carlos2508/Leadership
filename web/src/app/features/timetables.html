@@ -1,0 +1,211 @@
+<app-shell title="Horarios">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">ORGANIZACIÓN ACADÉMICA</span>
+      <h1>La semana, en orden</h1>
+      <p>Clases, docentes y espacios. Un horario claro para cada grupo.</p>
+    </div>
+    <div class="time-actions">
+      @if (published()?.slots?.length) {
+        <button class="button outline" (click)="openPrint()">
+          <app-icon name="clipboard" />Imprimir horario
+        </button>
+      }
+      @if (
+        canManage &&
+        gradeId &&
+        viewer === 'group' &&
+        !loading() &&
+        !error() &&
+        detail()?.year?.status !== 'Closed'
+      ) {
+        <a class="button" routerLink="/workspace/timetables/edit" [queryParams]="editParams()"
+          ><app-icon name="plus" />Preparar horario</a
+        >
+      }
+    </div>
+  </div>
+  <fieldset class="card time-filters" [disabled]="loading()">
+    <legend class="sr-only">Filtros del horario</legend>
+    <label class="select-field"
+      ><span>Ciclo escolar</span
+      ><select
+        aria-label="Ciclo escolar"
+        [(ngModel)]="yearId"
+        (ngModelChange)="gradeId = ''; sectionId = ''; on = ''; change()"
+      >
+        @for (y of years(); track y.id) {
+          <option [value]="y.id">{{ y.label }}</option>
+        }
+      </select></label
+    >
+    <label class="select-field"
+      ><span>Ver horario de</span
+      ><select aria-label="Ver horario de" [(ngModel)]="viewer" (ngModelChange)="change()">
+        @if (manager) {
+          <option value="group">Grado y sección</option>
+          <option value="staff">Un docente</option>
+        }
+        @if (session.myCourses().length) {
+          <option value="teacher">Mi semana docente</option>
+        }
+        @if (session.studentId()) {
+          <option [value]="'student:' + session.studentId()">Mi horario</option>
+        }
+        @for (s of session.myStudents(); track s.id) {
+          <option [value]="'student:' + s.id">{{ s.displayName }}</option>
+        }
+      </select></label
+    >
+    @if (manager && viewer === 'group') {
+      <label class="select-field"
+        ><span>Grado</span
+        ><select
+          aria-label="Grado"
+          [(ngModel)]="gradeId"
+          (ngModelChange)="sectionId = ''; change()"
+        >
+          @for (g of grades(); track g.id) {
+            <option [value]="g.id">{{ g.name }}</option>
+          }
+        </select></label
+      >
+      <label class="select-field"
+        ><span>Sección</span
+        ><select aria-label="Sección" [(ngModel)]="sectionId" (ngModelChange)="change()">
+          <option value="">Todo el grado</option>
+          @for (s of sections(); track s.id) {
+            <option [value]="s.id">{{ s.name }}</option>
+          }
+        </select></label
+      >
+    }
+    @if (manager && viewer === 'staff') {
+      <label class="select-field"
+        ><span>Docente</span
+        ><select aria-label="Docente" [(ngModel)]="staffId" (ngModelChange)="change()">
+          @for (s of staff(); track s.id) {
+            <option [value]="s.id">{{ s.name }}</option>
+          }
+        </select></label
+      >
+    }
+    <label class="select-field"
+      ><span>Vigente al</span
+      ><input type="date" aria-label="Vigente al" [(ngModel)]="on" (ngModelChange)="change()"
+    /></label>
+  </fieldset>
+  @if (error()) {
+    <p class="feedback error-feedback" role="alert">
+      {{ error() }} <button class="text-button" (click)="load()">Reintentar</button>
+    </p>
+  }
+  @if (loading()) {
+    <section class="card time-loading" role="status">Consultando el horario publicado…</section>
+  } @else if (!error()) {
+    @if (cells().length) {
+      <div class="time-toolbar">
+        <div>
+          <span class="eyebrow">HORARIO PUBLICADO</span><strong>{{ published()?.year }}</strong>
+        </div>
+        <span class="pill mint">{{ cells().length }} bloques en la semana</span>
+      </div>
+      @for (board of boards(); track board.title) {
+        @if (boards().length > 1) {
+          <h2 class="time-board-caption">{{ board.title }}</h2>
+        }
+        <app-timetable-board [days]="days()" [periods]="periods()" [cells]="board.cells" />
+      }
+    } @else {
+      <section class="card time-onboarding">
+        <div class="time-empty-icon"><app-icon name="calendar" /></div>
+        <h2>Aún no hay un horario publicado</h2>
+        <p>
+          {{
+            canManage
+              ? 'Prepara la jornada, asigna las materias y publica la semana para que todos puedan consultarla.'
+              : 'Cuando el colegio publique el horario de este grupo, aparecerá aquí.'
+          }}
+        </p>
+        @if (canManage && gradeId && viewer === 'group' && detail()?.year?.status !== 'Closed') {
+          <a class="button" routerLink="/workspace/timetables/edit" [queryParams]="editParams()"
+            >Preparar primer horario</a
+          >
+        }
+      </section>
+    }
+    @if (manager && viewer === 'group' && visibleGroups().length) {
+      <section class="time-group-section">
+        <div class="time-toolbar">
+          <div>
+            <span class="eyebrow">ORGANIZACIÓN DEL GRADO</span><strong>Horarios preparados</strong>
+          </div>
+        </div>
+        <div class="time-group-grid">
+          @for (s of visibleGroups(); track s.planId) {
+            <article class="card time-group-card">
+              <div class="time-group-symbol"><app-icon name="calendar" /></div>
+              <div>
+                <h2>{{ s.grade }}</h2>
+                <p>{{ s.section || 'Todo el grado' }}</p>
+                <span class="pill" [class.mint]="s.publishedId">{{
+                  s.publishedId ? 'Tiene versión publicada' : 'Sin publicar'
+                }}</span>
+                @if (s.draftId) {
+                  <span class="pill gold">Borrador</span>
+                }
+              </div>
+              <div class="time-actions">
+                <button class="button outline compact-button" (click)="selectGroup(s)">
+                  Consultar
+                </button>
+                @if (canManage && detail()?.year?.status !== 'Closed') {
+                  <a
+                    class="button outline compact-button"
+                    routerLink="/workspace/timetables/edit"
+                    [queryParams]="editParams(s)"
+                    >{{ s.draftId ? 'Continuar borrador' : 'Nueva versión' }}</a
+                  >
+                }
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    }
+  }
+  <dialog #printDialog class="account-dialog" aria-labelledby="time-print-title">
+    <div class="dialog-heading">
+      <h2 id="time-print-title">Imprimir horarios</h2>
+      <button class="icon-button" (click)="printDialog.close()" aria-label="Cerrar ventana">
+        <app-icon name="close" />
+      </button>
+    </div>
+    <div class="access-form">
+      <p class="action-explanation">
+        Versión publicada vigente al {{ on }}. El PDF se abre en otra pestaña, con texto nítido y
+        formato horizontal.
+      </p>
+      <label class="form-field"
+        ><span>Papel</span
+        ><select [(ngModel)]="paper">
+          <option value="letter">Carta horizontal</option>
+          <option value="a4">A4 horizontal</option>
+        </select></label
+      >
+      @if (manager) {
+        <label class="form-field"
+          ><span>Qué imprimir</span
+          ><select [(ngModel)]="printScope">
+            <option value="selection">La selección actual</option>
+            <option value="all">Todos los grupos del ciclo</option>
+          </select></label
+        >
+      }
+      <div class="dialog-actions">
+        <button class="button outline" (click)="printDialog.close()">Cerrar</button
+        ><a class="button" [href]="printUrl()" target="_blank" rel="noopener">Abrir PDF</a>
+      </div>
+    </div>
+  </dialog>
+</app-shell>

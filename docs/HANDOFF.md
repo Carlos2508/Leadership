@@ -1,5 +1,13 @@
 # Handoff para la siguiente sesión
 
+## Horarios de cursos — 9 de noviembre de 2026, leer primero
+
+- Solicitud: completar los horarios que quedaron a medias en `codex/course-timetables` (base `main` `b945bcb`) y luego integrar en `main` los carnets de `feat/carnet-personal` y hacer push. Leer ADR-020.
+- El backend, la web, el app y las pruebas ya existían sin commit. Faltaba cerrar: la E2E de móvil (el tablero oculta los otros días, así que la prueba debe usar `:visible`), el paquete web inicial excedido por estilos globales (ahora `_timetable.scss`, `_timetable-list.scss`, `_timetable-editor.scss` y `_timetable-board.scss` se cargan con las pantallas de horarios, sin encapsulación), el plural «1 clase» del tablero, un aviso de `flutter analyze` y la documentación.
+- Rutas: `/api/v1/years/{year}/timetables` (lista, catálogo, revisiones, publicados y PDF con `academic.read`; guardar, publicar, aulas y estructuras con `academic.manage`) y `/api/v1/me/timetables` (docente vinculado, estudiante o familia con `AcademicRecords`). Migración `CourseTimetables`, aplicada solo a fixtures.
+- Flutter: usar `.tools/flutter-3.47.9/flutter/bin/flutter.bat`; el SDK global es anterior.
+
+
 ## Simplificación de flujos — 8 de noviembre de 2026, leer primero
 
 - Solicitud vigente: mejorar los recorridos que aporten facilidad sin copiar limitaciones del legado ni sacrificar rendimiento. Trabajo desde main `714bfc7`, separado de la rama remota `feat/mejoras-criticas-guia` (no integrada ni asumida como aprobada). Leer ADR-019 y `SIMPLIFICAR_TRABAJO_ESCOLAR.md`.

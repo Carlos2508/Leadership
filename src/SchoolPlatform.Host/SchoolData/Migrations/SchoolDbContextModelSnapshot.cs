@@ -2394,6 +2394,237 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SchoolPlatform.Host.Timetables.TimetableEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AssignmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CourseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Day")
+                        .HasColumnType("int");
+
+                    b.Property<int>("End")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<Guid>("PeriodId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RevisionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Room")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<Guid?>("RoomId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("StaffId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Start")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Teacher")
+                        .IsRequired()
+                        .HasMaxLength(220)
+                        .HasColumnType("nvarchar(220)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignmentId");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("RoomId");
+
+                    b.HasIndex("StaffId");
+
+                    b.HasIndex("Day", "Start", "End");
+
+                    b.HasIndex("RevisionId", "PeriodId", "Day")
+                        .IsUnique();
+
+                    b.ToTable("Entries", "timetable", t =>
+                        {
+                            t.HasCheckConstraint("CK_TimetableEntry_Kind", "([Kind] = 'Lesson' AND [CourseId] IS NOT NULL) OR ([Kind] = 'Break' AND [CourseId] IS NULL AND [AssignmentId] IS NULL AND [StaffId] IS NULL AND [RoomId] IS NULL)");
+
+                            t.HasCheckConstraint("CK_TimetableEntry_Time", "[Day] BETWEEN 1 AND 7 AND [Start] >= 0 AND [End] <= 1440 AND [Start] < [End]");
+                        });
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Timetables.TimetableOperation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Hash")
+                        .IsRequired()
+                        .HasColumnType("binary(32)");
+
+                    b.Property<string>("ResultJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorId");
+
+                    b.ToTable("Operations", "timetable", t =>
+                        {
+                            t.HasCheckConstraint("CK_TimetableOperation_Json", "ISJSON([ResultJson]) = 1");
+                        });
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Timetables.TimetablePlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AcademicYearId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("GradeLevelId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SectionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GradeLevelId");
+
+                    b.HasIndex("SectionId");
+
+                    b.HasIndex("AcademicYearId", "GradeLevelId", "SectionId")
+                        .IsUnique();
+
+                    b.ToTable("Plans", "timetable");
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Timetables.TimetableRevision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateOnly>("StartsOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(12)");
+
+                    b.Property<string>("StructureJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateOnly>("UntilExclusive")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanId")
+                        .IsUnique()
+                        .HasFilter("[State] = 'Draft'");
+
+                    b.HasIndex("UpdatedBy");
+
+                    b.HasIndex("PlanId", "StartsOn");
+
+                    b.ToTable("Revisions", "timetable", t =>
+                        {
+                            t.HasCheckConstraint("CK_TimetableRevision_Dates", "[UntilExclusive] >= [StartsOn] AND ISJSON([StructureJson]) = 1");
+
+                            t.HasCheckConstraint("CK_TimetableRevision_State", "[State] IN ('Draft','Published') AND ([State] = 'Draft' AND [PublishedAt] IS NULL OR [State] = 'Published' AND [PublishedAt] IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Timetables.TimetableRoom", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Rooms", "timetable");
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Timetables.TimetableTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("StructureJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Templates", "timetable", t =>
+                        {
+                            t.HasCheckConstraint("CK_TimetableTemplate_Json", "ISJSON([StructureJson]) = 1");
+                        });
+                });
+
             modelBuilder.Entity("SchoolPlatform.Host.Academic.AcademicPeriod", b =>
                 {
                     b.HasOne("SchoolPlatform.Host.Academic.AcademicYear", null)
@@ -3129,6 +3360,79 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.HasOne("SchoolPlatform.Host.People.Person", null)
                         .WithOne("Student")
                         .HasForeignKey("SchoolPlatform.Host.People.StudentProfile", "PersonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Timetables.TimetableEntry", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.Academic.TeachingAssignment", null)
+                        .WithMany()
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SchoolPlatform.Host.Academic.Course", null)
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SchoolPlatform.Host.Timetables.TimetableRevision", null)
+                        .WithMany()
+                        .HasForeignKey("RevisionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.Timetables.TimetableRoom", null)
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SchoolPlatform.Host.People.StaffProfile", null)
+                        .WithMany()
+                        .HasForeignKey("StaffId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Timetables.TimetableOperation", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("ActorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Timetables.TimetablePlan", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.Academic.AcademicYear", null)
+                        .WithMany()
+                        .HasForeignKey("AcademicYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.Academic.GradeLevel", null)
+                        .WithMany()
+                        .HasForeignKey("GradeLevelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.Academic.Section", null)
+                        .WithMany()
+                        .HasForeignKey("SectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Timetables.TimetableRevision", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.Timetables.TimetablePlan", null)
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedBy")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

@@ -1,6 +1,11 @@
 # Progreso
 
-Actualizado: 8 de noviembre de 2026, America/Guatemala.
+Actualizado: 9 de noviembre de 2026, America/Guatemala.
+
+## Horarios semanales por grado y sección — incremento vigente
+
+- Preparar el horario de cada grupo con la estructura de la semana (días, períodos, recreos), aulas y docentes asignados; guardar el borrador; publicar con vigencia por fechas y versiones que conservan el historial. Al publicar se rechazan cruces de grupo, docente o aula y los docentes sin asignación vigente. Hay reintentos seguros, estructuras reutilizables, copiar un día o copiar desde otro horario, e impresión en carta o A4. ADR-020.
+- Consulta: administración con `academic.read`; docentes ven su horario y estudiantes o familias con `AcademicRecords` ven el del grupo, en web y app. Ciclo y fecha siempre explícitos.
 
 ## Simplificación operativa sin cambiar políticas — incremento vigente
 

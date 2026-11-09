@@ -1,0 +1,227 @@
+.time-board {
+  display: grid;
+  grid-template-columns: 92px repeat(var(--time-days), minmax(105px, 1fr));
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: white;
+  overflow: auto;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--deep) 3%, transparent);
+}
+.time-board-corner,
+.time-board-day {
+  background: color-mix(in srgb, var(--deep) 92%, white);
+  color: white;
+  padding: 18px 12px;
+  font-size: 13px;
+  font-weight: 650;
+}
+.time-board-day {
+  border-left: 1px solid #ffffff12;
+}
+.time-board-day small {
+  display: block;
+  margin-top: 5px;
+  font-weight: 400;
+  font-size: 11px;
+  opacity: 0.7;
+}
+.time-board-corner {
+  letter-spacing: 0.07em;
+  font-size: 10px;
+  align-content: center;
+}
+.time-board-hour {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  padding: 18px 12px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.time-board-hour strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+.time-board-hour small {
+  font-size: 10px;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.time-board-space {
+  border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 7px;
+  display: flex;
+  min-height: 125px;
+}
+.time-block {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  text-align: left;
+  width: 100%;
+  margin: 0;
+  padding: 14px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 33%, var(--border));
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 8%, white);
+  color: var(--ink);
+  font: inherit;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+button.time-block {
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    box-shadow 0.12s;
+}
+button.time-block:hover {
+  background: color-mix(in srgb, var(--accent) 17%, white);
+  box-shadow: 0 2px 8px #00000009;
+}
+.time-block strong {
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 650;
+}
+.time-block > span:not(.time-block-kind) {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.time-block > small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: auto;
+}
+.time-block > small app-icon {
+  width: 13px;
+  height: 13px;
+}
+.time-block-kind {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  opacity: 0.65;
+}
+.time-block.time-break {
+  background: #f6f5f2;
+  border-color: var(--border);
+  border-left-color: color-mix(in srgb, var(--deep) 25%, white);
+}
+.time-block.time-warning {
+  border-color: #d19446;
+  background: #fff4e3;
+}
+.time-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed color-mix(in srgb, var(--muted) 25%, transparent);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 10px;
+  width: 100%;
+  min-height: 105px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.time-empty:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 7%, white);
+  border-color: var(--accent);
+}
+.time-free {
+  align-self: center;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  width: 100%;
+  padding: 10px;
+}
+.time-day-tabs,
+.time-agenda {
+  display: none;
+}
+@media (max-width: 1050px) and (min-width: 701px) {
+  .time-board {
+    grid-template-columns: 72px repeat(var(--time-days), minmax(95px, 1fr));
+  }
+  .time-board-hour {
+    padding: 14px 8px;
+  }
+  .time-block {
+    padding: 10px 8px;
+  }
+  .time-board-space {
+    padding: 5px;
+  }
+}
+@media (max-width: 700px) {
+  .time-board {
+    display: none;
+  }
+  .time-day-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin: 18px 0;
+    padding-bottom: 7px;
+  }
+  .time-day-tabs button {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    border: 1px solid var(--border);
+    padding: 11px 14px;
+    border-radius: 12px;
+    background: white;
+    color: var(--muted);
+    font: inherit;
+    font-size: 13px;
+  }
+  .time-day-tabs button[aria-pressed='true'] {
+    background: var(--deep);
+    color: white;
+    border-color: var(--deep);
+  }
+  .time-day-tabs span {
+    background: #88888819;
+    min-width: 20px;
+    border-radius: 5px;
+    font-size: 11px;
+  }
+  .time-agenda {
+    display: block;
+  }
+  .time-agenda-row {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .time-agenda-row .time-board-hour {
+    border: 0;
+    padding: 13px 0;
+    font-size: 11px;
+  }
+  .time-agenda-row .time-block {
+    min-height: 112px;
+    padding: 16px;
+  }
+  .time-agenda-row .time-block strong {
+    font-size: 15px;
+  }
+}

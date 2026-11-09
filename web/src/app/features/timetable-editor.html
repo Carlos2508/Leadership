@@ -1,0 +1,429 @@
+<app-shell title="Preparar horario">
+  <a
+    class="back-link"
+    routerLink="/workspace/timetables"
+    [queryParams]="{ year: yearId, grade: gradeId, section: sectionId || null }"
+    ><app-icon name="arrow" />Volver a horarios</a
+  >
+  <div class="page-heading time-editor-heading">
+    <div>
+      <span class="eyebrow">PLANIFICACIÓN ACADÉMICA</span>
+      <h1>{{ group || 'Preparar horario' }}</h1>
+      <p>{{ year?.label }} · Organiza la semana; publica cuando esté lista.</p>
+    </div>
+    @if (!loading() && year) {
+      <div class="time-actions">
+        <span class="pill" [class.gold]="touched()">{{
+          touched() ? 'Cambios sin guardar' : saved() ? 'Borrador guardado' : 'Nuevo borrador'
+        }}</span>
+        @if (pending()) {
+          <button class="button" (click)="retry()" [disabled]="busy()">
+            {{ busy() ? 'Confirmando…' : 'Reintentar operación' }}
+          </button>
+        } @else {
+          <button
+            class="button outline"
+            (click)="save()"
+            [disabled]="busy() || !structure().periods.length"
+          >
+            {{ busy() ? 'Guardando…' : 'Guardar borrador' }}
+          </button>
+        }
+        <button
+          class="button"
+          (click)="publish()"
+          [disabled]="busy() || !!pending() || touched() || !saved() || !!issues().length"
+        >
+          <app-icon name="megaphone" />Publicar
+        </button>
+      </div>
+    }
+  </div>
+  @if (error()) {
+    <p class="feedback error-feedback" role="alert">
+      {{ error() }}
+    </p>
+  }
+  @if (loading()) {
+    <section class="card time-loading" role="status">
+      Preparando tu espacio de planificación…
+    </section>
+  } @else if (year) {
+    <fieldset class="time-fieldset" [disabled]="busy() || !!pending()">
+      <section class="time-validity card">
+        <div>
+          <span class="time-kicker">VIGENCIA DEL HORARIO</span>
+          <p>El publicado actual se mantiene mientras editas.</p>
+        </div>
+        <label class="form-field"
+          ><span>Desde</span
+          ><input
+            type="date"
+            [(ngModel)]="startsOn"
+            (ngModelChange)="mark()"
+            [min]="year.startsOn"
+            [max]="year.endsOn"
+        /></label>
+        <label class="form-field"
+          ><span>Hasta</span
+          ><input
+            type="date"
+            [(ngModel)]="through"
+            (ngModelChange)="mark()"
+            [min]="startsOn"
+            [max]="year.endsOn"
+        /></label>
+      </section>
+      <div class="time-toolbar">
+        <div>
+          <strong>Semana de clases</strong
+          ><small
+            >{{ structure().periods.length }} períodos · {{ cells().length }} bloques
+            preparados</small
+          >
+        </div>
+        <div class="time-actions">
+          <button class="button outline compact-button" (click)="openStructure()">
+            <app-icon name="clock" />Configurar estructura</button
+          ><button class="button outline compact-button" (click)="openCopy()">
+            <app-icon name="clipboard" />Copiar de otro horario
+          </button>
+        </div>
+      </div>
+      @if (issues().length) {
+        <section class="time-issues" aria-label="Detalles por revisar">
+          <app-icon name="info" />
+          <div>
+            <strong>{{ issues().length }} detalles antes de publicar</strong>
+            <ul>
+              @for (issue of issues(); track $index) {
+                <li>{{ names[issue.day] }} · {{ issue.message }}</li>
+              }
+            </ul>
+          </div>
+        </section>
+      }
+      @if (structure().periods.length) {
+        <app-timetable-board
+          [days]="structure().days"
+          [periods]="structure().periods"
+          [cells]="board()"
+          [editing]="true"
+          (selectCell)="openCell($event)"
+        />
+        <div class="time-copy-day card">
+          <app-icon name="refresh" /><strong>Repetir un día</strong
+          ><label class="select-field"
+            ><span>Copiar desde</span
+            ><select [(ngModel)]="copyDayFrom">
+              @for (d of structure().days; track d) {
+                <option [ngValue]="d">{{ names[d] }}</option>
+              }
+            </select></label
+          ><label class="select-field"
+            ><span>Hacia</span
+            ><select [(ngModel)]="copyDayTo">
+              @for (d of structure().days; track d) {
+                <option [ngValue]="d">{{ names[d] }}</option>
+              }
+            </select></label
+          ><button
+            class="button outline compact-button"
+            (click)="copyDay()"
+            [disabled]="copyDayFrom === copyDayTo"
+          >
+            Copiar día
+          </button>
+        </div>
+        <p class="muted-copy">
+          Los espacios vacíos quedan sin clase programada. Puedes guardar el borrador con detalles
+          pendientes; al publicar se comprueban docentes, aulas y cruces.
+        </p>
+      } @else {
+        <section class="card time-onboarding">
+          <div class="time-empty-icon"><app-icon name="calendar" /></div>
+          <span class="eyebrow">COMENCEMOS POR LAS HORAS</span>
+          <h2>Una estructura para toda la semana</h2>
+          <p>
+            Agrega los días y períodos de tu jornada. Después podrás asignar las materias con un
+            clic y reutilizar la estructura en otros grupos.
+          </p>
+          <button class="button" (click)="openStructure()">
+            <app-icon name="plus" />Preparar estructura
+          </button>
+        </section>
+      }
+    </fieldset>
+  }
+  <dialog #cellDialog class="account-dialog" aria-labelledby="time-cell-title">
+    <div class="dialog-heading">
+      <div>
+        <span class="eyebrow"
+          >{{ names[active?.day || 1] }} · {{ clock(active?.period?.start || 0) }}–{{
+            clock(active?.period?.end || 0)
+          }}</span
+        >
+        <h2 id="time-cell-title">Preparar bloque</h2>
+      </div>
+      <button class="icon-button" (click)="cellDialog.close()" aria-label="Cerrar ventana">
+        <app-icon name="close" />
+      </button>
+    </div>
+    <form class="access-form" (ngSubmit)="putCell()">
+      <div class="segmented" aria-label="Tipo de bloque">
+        <button
+          type="button"
+          [class.active]="cellForm.kind === 'Lesson'"
+          [attr.aria-pressed]="cellForm.kind === 'Lesson'"
+          (click)="cellForm.kind = 'Lesson'"
+        >
+          Clase</button
+        ><button
+          type="button"
+          [class.active]="cellForm.kind === 'Break'"
+          [attr.aria-pressed]="cellForm.kind === 'Break'"
+          (click)="cellForm.kind = 'Break'"
+        >
+          Recreo / descanso
+        </button>
+      </div>
+      @if (cellForm.kind === 'Lesson') {
+        <label class="form-field"
+          ><span id="time-course-label">Materia</span
+          ><select
+            name="course"
+            aria-labelledby="time-course-label"
+            [(ngModel)]="cellForm.courseId"
+            (ngModelChange)="pickCourse()"
+            required
+          >
+            <option value="">Selecciona una materia del grupo</option>
+            @for (c of courses(); track c.id) {
+              <option [value]="c.id">{{ c.subject }}</option>
+            }
+          </select></label
+        >
+        <label class="form-field"
+          ><span id="time-teacher-label">Docente</span
+          ><select
+            name="teacher"
+            aria-labelledby="time-teacher-label"
+            [(ngModel)]="cellForm.assignmentId"
+          >
+            <option value="">Seleccionar después</option>
+            @for (a of assignments(); track a.id) {
+              <option [value]="a.id">{{ a.name }}</option>
+            }</select
+          ><small
+            >Solo docentes asignados a esta materia. La asignación debe cubrir la vigencia.</small
+          ></label
+        >
+        <label class="form-field"
+          ><span id="time-room-label">Aula (opcional)</span
+          ><select name="room" aria-labelledby="time-room-label" [(ngModel)]="cellForm.roomId">
+            <option value="">Sin aula indicada</option>
+            @for (r of catalog().rooms; track r.id) {
+              <option [value]="r.id">{{ r.name }}</option>
+            }
+          </select></label
+        >
+        <details class="time-room-add">
+          <summary>Registrar un aula</summary>
+          <div class="time-inline">
+            <label class="form-field"
+              ><span>Nombre del aula</span
+              ><input name="roomName" [(ngModel)]="roomName" maxlength="80" /></label
+            ><button type="button" class="button outline compact-button" (click)="addRoom()">
+              Agregar aula
+            </button>
+          </div>
+        </details>
+      } @else {
+        <p class="action-explanation">
+          Se mostrará «{{ active?.period?.name }}» como descanso, sin docente ni aula. Puedes
+          cambiar el nombre del período en la estructura.
+        </p>
+      }
+      <fieldset class="time-day-picker">
+        <legend>Aplicar también en estos días</legend>
+        @for (d of structure().days; track d) {
+          <label
+            ><input
+              type="checkbox"
+              [checked]="cellForm.days.includes(d)"
+              (change)="toggleDay(d)"
+            /><span>{{ names[d] }}</span></label
+          >
+        }
+      </fieldset>
+      @if (dialogError()) {
+        <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
+      }
+      <div class="dialog-actions">
+        <button class="button outline danger-text" type="button" (click)="removeCell()">
+          Quitar bloque</button
+        ><button class="button" type="submit">Aplicar bloque</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog
+    #structureDialog
+    class="account-dialog wide-dialog"
+    aria-labelledby="time-structure-title"
+  >
+    <div class="dialog-heading">
+      <div>
+        <span class="eyebrow">DÍAS Y PERÍODOS</span>
+        <h2 id="time-structure-title">Estructura de la jornada</h2>
+      </div>
+      <button class="icon-button" (click)="structureDialog.close()" aria-label="Cerrar ventana">
+        <app-icon name="close" />
+      </button>
+    </div>
+    <div class="access-form">
+      @if (catalog().templates.length) {
+        <label class="form-field"
+          ><span id="time-template-label">Usar estructura guardada</span
+          ><select
+            aria-labelledby="time-template-label"
+            [(ngModel)]="templateId"
+            (ngModelChange)="chooseTemplate()"
+          >
+            <option value="">Preparar manualmente</option>
+            @for (t of catalog().templates; track t.id) {
+              <option [value]="t.id">{{ t.name }}</option>
+            }
+          </select></label
+        >
+      }
+      <fieldset class="time-day-picker">
+        <legend>Días de clases</legend>
+        @for (d of [1, 2, 3, 4, 5, 6, 7]; track d) {
+          <label
+            ><input
+              type="checkbox"
+              [checked]="working.days.includes(d)"
+              (change)="toggleWorkingDay(d)"
+            /><span>{{ names[d] }}</span></label
+          >
+        }
+      </fieldset>
+      <ul class="time-periods">
+        @for (p of working.periods; track p.id; let i = $index) {
+          <li>
+            <span class="time-period-number">{{ i + 1 }}</span
+            ><strong>{{ p.name }}</strong
+            ><span>{{ clock(p.start) }} – {{ clock(p.end) }}</span
+            ><button
+              class="icon-button"
+              (click)="working.periods.splice(i, 1)"
+              [attr.aria-label]="'Quitar período ' + p.name"
+            >
+              <app-icon name="close" />
+            </button>
+          </li>
+        }
+      </ul>
+      <form class="time-new-period" (ngSubmit)="addPeriod()">
+        <label class="form-field"
+          ><span>Nombre del período</span
+          ><input
+            name="periodName"
+            [(ngModel)]="periodForm.name"
+            maxlength="50"
+            placeholder="Ej. Primer período o Recreo"
+            required /></label
+        ><label class="form-field"
+          ><span>Inicio</span
+          ><input name="periodStart" type="time" [(ngModel)]="periodForm.start" required /></label
+        ><label class="form-field"
+          ><span>Fin</span
+          ><input name="periodEnd" type="time" [(ngModel)]="periodForm.end" required /></label
+        ><button
+          class="button outline compact-button"
+          type="submit"
+          [disabled]="working.periods.length >= 32"
+        >
+          <app-icon name="plus" />Agregar período
+        </button>
+      </form>
+      <details class="time-room-add">
+        <summary>Guardar estructura para otros grupos</summary>
+        <div class="time-inline">
+          <label class="form-field"
+            ><span>Nombre de la estructura</span
+            ><input
+              [(ngModel)]="templateName"
+              maxlength="80"
+              placeholder="Ej. Jornada matutina" /></label
+          ><button
+            class="button outline compact-button"
+            (click)="saveTemplate()"
+            [disabled]="!templateName || !working.periods.length"
+          >
+            Guardar estructura
+          </button>
+        </div>
+      </details>
+      @if (dialogError()) {
+        <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
+      }
+      <div class="dialog-actions">
+        <button class="button outline" (click)="structureDialog.close()">Cancelar</button
+        ><button class="button" (click)="applyStructure()">Aplicar estructura</button>
+      </div>
+    </div>
+  </dialog>
+  <dialog #copyDialog class="account-dialog" aria-labelledby="time-copy-title">
+    <div class="dialog-heading">
+      <h2 id="time-copy-title">Reutilizar un horario</h2>
+      <button class="icon-button" (click)="copyDialog.close()" aria-label="Cerrar ventana">
+        <app-icon name="close" />
+      </button>
+    </div>
+    <div class="access-form">
+      <p class="action-explanation">
+        Se adaptan las materias al grupo de destino. Los docentes se proponen desde sus asignaciones
+        actuales; los bloques sin materia equivalente se omiten para revisión.
+      </p>
+      <label class="form-field"
+        ><span>Ciclo de origen</span
+        ><select [(ngModel)]="copyYear" (ngModelChange)="loadCopy()">
+          @for (y of copyYears; track y.id) {
+            <option [value]="y.id">{{ y.label }}</option>
+          }
+        </select></label
+      >
+      <label class="form-field"
+        ><span>Horario de origen</span
+        ><select [(ngModel)]="copySource">
+          <option value="">Selecciona un horario</option>
+          @for (s of copyItems; track s.planId) {
+            @if (s.draftId || s.publishedId) {
+              <option [value]="s.draftId || s.publishedId">
+                {{ s.grade }} · {{ s.section || 'Todo el grado'
+                }}{{ s.draftId ? ' · Borrador' : '' }}
+              </option>
+            }
+          }
+        </select></label
+      >
+      <label class="form-field"
+        ><span>Qué copiar</span
+        ><select [(ngModel)]="copyMode">
+          <option value="structure">Solo días y períodos</option>
+          <option value="all">Estructura y clases</option>
+        </select></label
+      >
+      @if (dialogError()) {
+        <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
+      }
+      <div class="dialog-actions">
+        <button class="button outline" (click)="copyDialog.close()">Cancelar</button
+        ><button class="button" (click)="applyCopy()" [disabled]="!copySource">
+          Preparar copia
+        </button>
+      </div>
+    </div>
+  </dialog>
+</app-shell>

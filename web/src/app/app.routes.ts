@@ -9,6 +9,17 @@ const previewGuard = () =>
   inject(InstitutionService).current.previewEnabled || inject(Router).createUrlTree(['/']);
 export const routes: Routes = [
   {
+    path: 'workspace/timetables/edit',
+    canActivate: [permissionGuard('academic.read'), permissionGuard('academic.manage')],
+    canDeactivate: [pendingChangesGuard],
+    loadComponent: () => import('./features/timetable-editor').then((x) => x.TimetableEditor),
+  },
+  {
+    path: 'workspace/timetables',
+    canActivate: [sessionGuard],
+    loadComponent: () => import('./features/timetables').then((x) => x.Timetables),
+  },
+  {
     path: 'workspace/messages',
     canActivate: [sessionGuard],
     canDeactivate: [pendingChangesGuard],

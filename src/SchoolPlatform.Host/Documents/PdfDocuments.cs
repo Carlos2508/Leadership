@@ -33,7 +33,7 @@ public sealed class BrandAssets(IWebHostEnvironment environment)
 /// platform's own (docs/DESIGN.md). Grades documents show period results only: no annual averages or rounding, which
 /// remain pending institutional policy; pass/fail colors appear only if the school configures Documents:PassingScore.
 /// </summary>
-public sealed class PdfDocuments(IOptions<InstitutionOptions> options, BrandAssets assets, TimeProvider time)
+public sealed partial class PdfDocuments(IOptions<InstitutionOptions> options, BrandAssets assets, TimeProvider time)
 {
     private InstitutionOptions School => options.Value;
     private CultureInfo Culture => CultureInfo.GetCultureInfo(School.Locale.Culture);

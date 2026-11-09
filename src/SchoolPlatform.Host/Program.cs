@@ -85,6 +85,7 @@ builder.Services.AddOptions<SchoolPlatform.Host.Learning.StorageOptions>().BindC
 builder.Services.AddScoped<SchoolPlatform.Host.Attendance.AttendanceService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Communication.CommunicationService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Chat.ChatService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Timetables.TimetableService>();
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
 {
     options.Password.RequiredLength = 12;
@@ -264,6 +265,7 @@ SchoolPlatform.Host.Academic.AcademicEndpoints.MapAcademic(app);
 SchoolPlatform.Host.Academic.AcademicEndpoints.MapCourses(app);
 SchoolPlatform.Host.Finance.FinanceEndpoints.MapFinance(app);
 SchoolPlatform.Host.Inventory.InventoryEndpoints.MapInventory(app);
+SchoolPlatform.Host.Timetables.TimetableEndpoints.MapTimetables(app);
 SchoolPlatform.Host.Grades.GradeEndpoints.MapGrades(app);
 SchoolPlatform.Host.Learning.LearningEndpoints.MapLearning(app);
 SchoolPlatform.Host.Attendance.AttendanceEndpoints.MapAttendance(app);

@@ -229,6 +229,8 @@ public sealed partial class CourseService(SchoolDbContext db, SchoolAudit audit,
 
     public async Task EndAssignmentAsync(Guid actor, Guid courseId, Guid assignmentId, EndAssignmentRequest request, CancellationToken ct)
     {
+        await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        await SchoolPlatform.Host.Timetables.TimetableService.LockAsync(db, ct);
         await audit.RequireAsync(actor, ct, Permissions.AcademicManage);
         var reason = Reasons.Require(request.Reason);
         var assignment = await db.TeachingAssignments.SingleOrDefaultAsync(x => x.Id == assignmentId && x.CourseId == courseId, ct)
@@ -236,10 +238,16 @@ public sealed partial class CourseService(SchoolDbContext db, SchoolAudit audit,
         if (assignment.EndsOn is not null) throw new OperationException(409, "assignment-ended", "La asignación ya finalizó.");
         var ends = request.EndsOn ?? Today();
         if (ends < assignment.StartsOn) throw OperationException.Invalid("La fecha final no puede ser anterior al inicio.");
+        var after = ends.AddDays(1) > Today() ? ends.AddDays(1) : Today();
+        if (await (from e in db.TimetableEntries join r in db.TimetableRevisions on e.RevisionId equals r.Id
+                   where e.AssignmentId == assignmentId && r.State == "Published" && r.UntilExclusive > after && r.StartsOn < r.UntilExclusive
+                   select e.Id).AnyAsync(ct))
+            throw new OperationException(409, "teacher-has-timetable", "Hay clases publicadas después de esa fecha. Publica primero la nueva versión del horario con otro docente o sin esos bloques.");
         assignment.EndsOn = ends;
         assignment.EndReason = reason;
         audit.Record("TeacherUnassigned", actor, "Course", courseId, reason);
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
     }
 
     /// <summary>Staff with academic.read see every course; a teacher only courses whose assignment has not ended.</summary>

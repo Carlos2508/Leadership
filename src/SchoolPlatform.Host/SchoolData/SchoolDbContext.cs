@@ -67,6 +67,7 @@ public sealed partial class SchoolDbContext(DbContextOptions<SchoolDbContext> op
 
         ConfigurePeople(builder);
         ConfigureFamilies(builder);
+        ConfigureTimetables(builder);
         ConfigureRoster(builder);
         ConfigureAcademicModel(builder);
         ConfigureFinanceModel(builder);

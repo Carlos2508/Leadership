@@ -1,0 +1,215 @@
+.time-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.time-validity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  align-items: center;
+  padding: 22px 24px;
+  margin: 0 0 26px;
+}
+.time-validity > div {
+  flex: 1 1 240px;
+}
+.time-validity label {
+  flex: 0 1 170px;
+  margin: 0;
+}
+.time-validity p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.time-kicker {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  color: var(--muted);
+}
+.time-copy-day {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding: 20px 24px;
+  margin: 20px 0;
+}
+.time-copy-day > strong {
+  margin-right: auto;
+  font-size: 13px;
+}
+.time-copy-day label {
+  min-width: 145px;
+}
+.time-issues {
+  display: flex;
+  gap: 14px;
+  border: 1px solid #ecd4ad;
+  background: #fff8eb;
+  border-radius: 14px;
+  padding: 20px;
+  margin: 20px 0;
+  color: #6f451a;
+}
+.time-issues ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.time-day-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  border: 0;
+  margin: 8px 0 20px;
+  padding: 0;
+}
+.time-day-picker legend {
+  padding: 0;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.time-day-picker label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 9px 11px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.time-day-picker label:has(input:checked) {
+  background: color-mix(in srgb, var(--accent) 15%, white);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+.time-room-add {
+  margin: 14px 0;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.time-room-add summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.time-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  padding-top: 14px;
+}
+.time-inline label {
+  flex: 1 1 180px;
+  margin: 0;
+}
+.time-periods {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 14px;
+}
+.time-periods li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.time-periods strong {
+  flex: 1;
+  min-width: 100px;
+}
+.time-period-number {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  background: var(--surface);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.time-new-period {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr;
+  gap: 12px;
+  padding: 18px;
+  background: var(--surface);
+  border-radius: 12px;
+}
+.time-new-period label {
+  margin: 0;
+}
+.time-new-period button {
+  grid-column: 1/-1;
+  justify-self: end;
+}
+@media (max-width: 700px) {
+  .time-validity {
+    padding: 20px;
+    gap: 16px;
+  }
+  .time-validity label {
+    flex: 1 1 120px;
+  }
+  .time-copy-day {
+    padding: 18px;
+    gap: 12px;
+  }
+  .time-copy-day label {
+    flex: 1 1 120px;
+    min-width: 0;
+  }
+  .time-copy-day > strong {
+    flex: 1;
+  }
+  .time-new-period {
+    grid-template-columns: 1fr 1fr;
+    padding: 14px;
+  }
+  .time-new-period label:first-child {
+    grid-column: 1/-1;
+  }
+  .time-periods li {
+    gap: 8px;
+  }
+  .time-periods li > span:not(.time-period-number) {
+    font-size: 12px;
+  }
+  .time-day-picker {
+    gap: 8px;
+  }
+  .time-day-picker label {
+    padding: 9px;
+  }
+  .time-editor-heading > .time-actions {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 25;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 12px 18px max(12px, env(safe-area-inset-bottom));
+    background: #fffefa;
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 18px #00000008;
+  }
+  .time-editor-heading > .time-actions > .pill {
+    margin-right: auto;
+    font-size: 10px;
+  }
+  .time-editor-heading ~ .time-fieldset {
+    padding-bottom: 90px;
+  }
+}

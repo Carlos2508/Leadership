@@ -2,6 +2,12 @@
 
 Actualizado: 8 de noviembre de 2026, America/Guatemala.
 
+## Carnet para todo el personal y rediseño — rama `feat/carnet-personal`
+
+- El propietario pidió carnet para todas las personas del colegio, excepto encargados, y un diseño más profesional basado en su propuesta. Ahora reciben carnet los estudiantes y el personal (docentes y demás puestos): tabla `people.StaffCards`, reemplazo con motivo y auditoría, impresión individual y de todo el personal con ciclo explícito. El carnet de personal no marca asistencia en portería. ADR-021.
+- Carnet CR80 rediseñado (frente y reverso) para ambos tipos; el personal se distingue por el pie de color de acento. Textos institucionales solo desde `config/institution.json` (`StaffCardNotice` opcional y vacío).
+- Pendiente: integrar en `main` cuando el propietario lo indique, imprimir y probar con lectores reales, y que el colegio redacte el aviso del carnet de personal si lo desea.
+
 ## Inventario y bodega del colegio — incremento vigente
 
 - El propietario pidió terminar `feat/school-store-inventory`, aclaró uso de bodega escolar y autorizó merge/push a main. Catálogo general de artículos, categoría/ubicación, stock mínimo, carga inicial, entradas, salidas, conteos físicos, historial y exportación CSV en web; operación conectada en el app. Guía `INVENTARIO_BODEGA.md`, ADR-018.

@@ -24,7 +24,8 @@
         "Debe presentarse cuando administración o seguridad lo solicite.",
         "En caso de extravío, reportar inmediatamente para reposición."
       ],
-      "CardNotice": "Este carnet acredita al estudiante inscrito durante el ciclo escolar indicado." },
+      "CardNotice": "Este carnet acredita al estudiante inscrito durante el ciclo escolar indicado.",
+      "StaffCardNotice": "" },
     "Assets": {
       "MainLogo": "/branding/reference-crest.png",
       "LoginLogo": "/branding/reference-crest.png",

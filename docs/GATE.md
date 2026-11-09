@@ -8,7 +8,8 @@ Implementación y decisiones: ADR-009. No confundir con asistencia por curso (`A
 - Resultado de lectura: tarjeta de color por resultado (entrada/salida/repetida/no reconocida), foto o iniciales, hora destacada y un tono corto (uno agudo al registrar, dos graves si no se registró). El sonido es opcional del navegador.
 - `/workspace/gate/report`: fecha institucional (carga al cambiarla), filtros por estado con conteos, exportación CSV de las filas visibles, filtro local por nombre/código/grupo, historial de cada estudiante y anulación con motivo. «Sin marcas» no declara una ausencia académica. El reporte no se actualiza automáticamente; «Consultar» lee el estado confirmado.
 - `/workspace/gate/devices`: registrar teléfono, mostrar QR una sola vez y revocar con motivo. Al cerrar el QR no se puede recuperar su secreto: se registra otro dispositivo y se revoca el anterior si hace falta.
-- `/workspace/people/{id}`: foto privada y, para estudiantes, PDF de carnet en tarjeta/carta; reemplazo con motivo separado de imprimir. En `/workspace/enrollment?year=…`, seleccionar grado/sección habilita impresión masiva (hasta 400 carnets por PDF).
+- `/workspace/people/{id}`: foto privada y, para estudiantes y personal (no encargados), PDF de carnet en tarjeta/carta para el ciclo elegido; reemplazo con motivo separado de imprimir. En `/workspace/enrollment?year=…`, seleccionar grado/sección habilita impresión masiva de estudiantes; en `/workspace/teachers`, «Carnets del personal» imprime a todo el personal activo (hasta 400 carnets por PDF). ADR-021.
+- El carnet de personal no marca asistencia: la portería lo reconoce y responde «Carnet de personal…» sin registrar marca.
 - `/workspace/my/students/{id}`: entradas y salidas de los últimos 45 días, por facultad `AcademicRecords` o titular.
 
 ## Configuración del servidor

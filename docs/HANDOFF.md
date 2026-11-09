@@ -1,5 +1,15 @@
 # Handoff para la siguiente sesión
 
+## Carnet para todo el personal y rediseño — 8 de noviembre de 2026, leer primero
+
+- Solicitud: que todas las personas tengan carnet, no solo estudiantes, excepto los encargados, con un rediseño profesional a partir del PDF del propietario (frente y reverso CR80). Hecho en la rama **`feat/carnet-personal`** (worktree `.claude/worktrees/carnet-personal`, base `origin/main` `714bfc7`) porque otro integrante trabaja en `main`. La carpeta principal (`feat/simplify-school-workflows`, con cambios sin commit de registro familiar) no se tocó. Leer ADR-021.
+- Backend: `StaffCard` en `Gate/GateModel.cs`, tabla `people.StaffCards` y migración aditiva `StaffCards`. `CardService` tiene `KindAsync`, `PersonCardAsync`, `ReissuePersonAsync`, `PrintPersonAsync` (ciclo explícito), `PrintStaffAsync`, `StaffBatchAsync` y `YearsAsync`. Rutas: `GET /api/v1/people/{id}/card`, `GET /api/v1/cards/years`, `POST /api/v1/people/{id}/card/reissue`, `GET /api/v1/people/{id}/card.pdf?yearId=&layout=` y `GET /api/v1/staff/cards.pdf?yearId=&layout=`. La portería reconoce el carnet de personal y no marca asistencia. Auditoría en el área de portería: `StaffCard*`.
+- PDF: `PdfDocuments.CardFront/CardBack` rehechos. `CardData` ahora lleva tipo, nombres y apellidos por separado, código y detalle. Nuevo `Documents.StaffCardNotice` opcional, vacío hasta que el colegio redacte el texto.
+- Web: `person-card.ts` consulta el carnet de la persona (404 = sin carnet), con selector de ciclo. `staff-cards.ts` está en «Docentes y personal» para impresión masiva, con estilos en `_people.scss`.
+- Validación: 151/151 .NET/SQL, con la prueba nueva `Staff_get_cards_for_an_explicit_cycle_and_guardians_get_none` y `DocumentDesignTests` con carnet de personal. Playwright `gate`/`directories`/`people` 6/6 en escritorio y móvil con Axe; `gate.spec.ts` comprueba el carnet de personal. Build Angular correcto. Evidencia (PNG/PDF con datos ficticios) en `.local/qa/evidencia/carnet-personal-2026-11-08/`. No se ejecutaron Flutter ni la suite E2E completa (el app no usa rutas de carnet). Integrado en `main` con los horarios por solicitud del propietario.
+- QuestPDF: dentro de un `Column`, `ExtendVertical` en un elemento que no es el último empuja lo que sigue a otra página. Por eso los cuerpos del carnet tienen alto fijo. Los colores con alfa se escriben `#AARRGGBB`.
+- Al integrar: la carpeta principal tiene una migración sin commit (`FamilyRegistrationReceipts`); quien integre después debe regenerar `SchoolDbContextModelSnapshot` y revisar el orden de migraciones. No se aplicó ninguna migración a la base escolar.
+
 ## Inventario y bodega — 8 de noviembre de 2026, leer primero
 
 - Solicitud: terminar la rama pendiente `feat/school-store-inventory` y hacer merge/push a main. El propietario aclaró que es para bodega del colegio. Implementación `6442cf4`; `origin/main` `5fdc9fb` integrado sin conflictos en `7faaffa`. Se conserva el trabajo de revisión de flujos/carnets/libreta/app de main. Leer `adr/ADR-018-INVENTARIO-BODEGA.md` e `INVENTARIO_BODEGA.md`.

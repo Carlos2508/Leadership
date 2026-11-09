@@ -261,7 +261,9 @@ public sealed class GateSqlTests : SqlTestBase
         {
             Assert.Equal(2, document.NumberOfPages);
             var text = string.Join('\n', document.GetPages().Select(x => x.Text));
-            Assert.Contains("Lara Portería G-1", text);
+            // Given and family names print on two lines.
+            Assert.Contains("Lara", text);
+            Assert.Contains("Portería G-1", text);
             Assert.Contains(card, text);
         }
         var batch = await staff.GetAsync($"/api/v1/years/{year}/cards.pdf?gradeId={grade}");
@@ -273,7 +275,7 @@ public sealed class GateSqlTests : SqlTestBase
         using (var document = UglyToad.PdfPig.PdfDocument.Open(await batch.Content.ReadAsByteArrayAsync()))
         {
             var text = string.Join('\n', document.GetPages().Select(x => x.Text));
-            Assert.Contains("Mario Portería G-2", text);
+            Assert.Contains("Portería G-2", text);
             Assert.DoesNotContain("Nico", text);
         }
         Assert.Equal(2, await Use<SchoolDbContext, int>(db => db.StudentCards.CountAsync()));
@@ -283,6 +285,71 @@ public sealed class GateSqlTests : SqlTestBase
         var row = new ZXing.Common.BitArray(modules.Length);
         for (var i = 0; i < modules.Length; i++) if (modules[i]) row[i] = true;
         Assert.Equal(card, new ZXing.OneD.Code128Reader().decodeRow(0, row, null).Text);
+    }
+
+    [Fact]
+    public async Task Staff_get_cards_for_an_explicit_cycle_and_guardians_get_none()
+    {
+        var teacher = (await Use<PeopleService, CreatedPerson>(x => x.CreateAsync(Owner,
+            new("Teresa", "Docente Portería", null, null, [], null, false, true, "Docente de Ciencias"), default))).Id;
+        var guardian = await Use<SchoolDbContext, Guid>(db => db.Guardians.Select(x => x.PersonId).SingleAsync());
+        await Account("synthetic-gate", "gatekeeper");
+        using var staff = await SignIn(OwnerName);
+        using var gate = await SignIn("synthetic-gate");
+
+        // Who gets a card: students and staff; guardians none.
+        var info = await staff.GetFromJsonAsync<JsonElement>($"/api/v1/people/{teacher}/card");
+        Assert.Equal("staff", info.GetProperty("kind").GetString());
+        Assert.Equal(JsonValueKind.Null, info.GetProperty("token").ValueKind);
+        Assert.Contains(info.GetProperty("years").EnumerateArray(), x => x.GetProperty("id").GetGuid() == year);
+        Assert.Equal("student", (await staff.GetFromJsonAsync<JsonElement>($"/api/v1/people/{student}/card")).GetProperty("kind").GetString());
+        Assert.Equal(HttpStatusCode.NotFound, (await staff.GetAsync($"/api/v1/people/{guardian}/card")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await staff.GetAsync($"/api/v1/people/{guardian}/card.pdf?yearId={year}")).StatusCode);
+
+        // Printing names the cycle; the gate operator cannot print.
+        Assert.Equal(HttpStatusCode.BadRequest, (await staff.GetAsync($"/api/v1/people/{teacher}/card.pdf")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await gate.GetAsync($"/api/v1/people/{teacher}/card.pdf?yearId={year}")).StatusCode);
+        var single = await staff.GetAsync($"/api/v1/people/{teacher}/card.pdf?yearId={year}&layout=card");
+        Assert.Equal("application/pdf", single.Content.Headers.ContentType?.MediaType);
+        var token = await Use<SchoolDbContext, string>(db => db.StaffCards.Where(x => x.StaffId == teacher && x.RevokedAt == null).Select(x => x.Token).SingleAsync());
+        using (var document = UglyToad.PdfPig.PdfDocument.Open(await single.Content.ReadAsByteArrayAsync()))
+        {
+            Assert.Equal(2, document.NumberOfPages);
+            var text = string.Join('\n', document.GetPages().Select(x => x.Text));
+            Assert.Contains("Teresa", text);
+            Assert.Contains("Docente de Ciencias", text);
+            Assert.Contains(token, text);
+        }
+        Assert.Equal(token, await Use<SchoolDbContext, string>(db => db.StaffCards.Select(x => x.Token).SingleAsync()));
+
+        // A staff card is recognized at the gate but never marks attendance.
+        var scan = await Scan(token);
+        Assert.Equal("Unknown", scan.Outcome);
+        Assert.Contains("personal", scan.Message);
+        Assert.Equal(0, await Use<SchoolDbContext, int>(db => db.GateEvents.CountAsync()));
+
+        // Reissue revokes the previous staff card, with audit.
+        var reissued = await Post(staff, $"/api/v1/people/{teacher}/card/reissue", new { reason = "Extravío reportado por la docente." });
+        Assert.Equal(HttpStatusCode.OK, reissued.StatusCode);
+        var fresh = (await reissued.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString();
+        Assert.NotEqual(token, fresh);
+        var cards = await Use<SchoolDbContext, StaffCard[]>(db => db.StaffCards.ToArrayAsync());
+        Assert.Equal(fresh, Assert.Single(cards, x => x.RevokedAt == null).Token);
+        Assert.Contains(await Use<SchoolDbContext, string[]>(db => db.AuditEvents.Select(x => x.Action).ToArrayAsync()), x => x == "StaffCardReissued");
+
+        // Whole staff sheet: staff only, never students or guardians.
+        var batch = await staff.GetAsync($"/api/v1/staff/cards.pdf?yearId={year}");
+        using (var document = UglyToad.PdfPig.PdfDocument.Open(await batch.Content.ReadAsByteArrayAsync()))
+        {
+            var text = string.Join('\n', document.GetPages().Select(x => x.Text));
+            Assert.Contains("Teresa", text);
+            Assert.DoesNotContain("Paula", text);
+            Assert.DoesNotContain("Lara", text);
+        }
+
+        // Student cards through the same endpoint require a placement in the chosen cycle.
+        Assert.Equal(HttpStatusCode.OK, (await staff.GetAsync($"/api/v1/people/{student}/card.pdf?yearId={year}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await staff.GetAsync($"/api/v1/people/{withdrawn}/card.pdf?yearId={year}")).StatusCode);
     }
 
     [Fact]

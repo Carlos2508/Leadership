@@ -13,7 +13,7 @@
       "WhatsApp": "", "OfficeHours": [], "MapQuery": "",
       "Social": { "Facebook": "", "Instagram": "", "YouTube": "", "TikTok": "" }
     },
-    "Documents": { "TaxId": "", "ReceiptFooter": "", "ReportCardFooter": "", "CardRules": [], "CardNotice": "" },
+    "Documents": { "TaxId": "", "ReceiptFooter": "", "ReportCardFooter": "", "CardRules": [], "CardNotice": "", "StaffCardNotice": "" },
     "Assets": {
       "MainLogo": "/branding/main.png",
       "LoginLogo": "/branding/main.png",

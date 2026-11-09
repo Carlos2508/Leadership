@@ -1274,6 +1274,58 @@ kbd {
   margin: 0;
 }
 
+/* Staff directory: print the cards of the whole staff for a cycle. */
+.staff-cards {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  margin-bottom: 18px;
+  padding: 20px 24px;
+}
+.staff-cards h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+.staff-cards p {
+  margin: 0;
+}
+.staff-cards-actions {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.staff-cards-actions label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 650;
+}
+.staff-cards-actions select {
+  min-width: 150px;
+  min-height: 44px;
+  font-size: 14px;
+}
+.staff-cards-actions .button {
+  min-height: 44px;
+}
+@media (max-width: 599px) {
+  .staff-cards {
+    padding: 18px;
+  }
+  .staff-cards-actions,
+  .staff-cards-actions .select-field,
+  .staff-cards-actions select {
+    width: 100%;
+  }
+  .staff-cards-actions .button {
+    flex: 1 1 140px;
+  }
+}
+
 /* Home: "today at school" figures (filled per permission). */
 .kpi-grid {
   display: grid;

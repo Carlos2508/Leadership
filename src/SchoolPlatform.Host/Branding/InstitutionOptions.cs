@@ -95,10 +95,12 @@ public sealed class DocumentOptions
     public string TaxId { get; set; } = "";
     public string ReceiptFooter { get; set; } = "";
     public string ReportCardFooter { get; set; } = "";
-    /// <summary>Back of the student ID card: short institutional rules (optional, from this installation's config).</summary>
+    /// <summary>Back of every ID card (students and staff): short institutional rules (optional, from this installation's config).</summary>
     public string[] CardRules { get; set; } = [];
     /// <summary>Back of the student ID card: e.g. what to do if found (optional).</summary>
     public string CardNotice { get; set; } = "";
+    /// <summary>Back of the staff ID card (optional); the student notice is never reused for staff.</summary>
+    public string StaffCardNotice { get; set; } = "";
     /// <summary>
     /// Minimum passing score approved by the school (optional). Only when set do report cards color results as passed or
     /// to reinforce; empty means no pass/fail judgement is printed.

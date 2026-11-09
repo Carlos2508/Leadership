@@ -37,6 +37,9 @@
       >Todos</a
     >
   </nav>
+  @if (directory === 'staff' && session.can('people.manage')) {
+    <app-staff-cards />
+  }
   @if (error()) {
     <div class="feedback error-feedback" role="alert">
       {{ error() }} <button class="text-button" (click)="load()">Reintentar</button>

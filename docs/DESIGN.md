@@ -96,6 +96,9 @@ Contenido:
 - **Recibo:** número con 6 dígitos, estado («PAGO CONFIRMADO» o «ANULADO» con marca de agua), detalle por concepto y estudiante, total destacado y **cantidad en letras** (quetzales, dólares y otras monedas comunes), contacto, línea de firma (con el usuario emisor solo en la copia interna) y la nota «Comprobante interno de pago. No es una factura fiscal».
 - **Boletín:** horizontal, materias × períodos publicados con el último disponible resaltado; «Pendiente», «Exonerado» y «Retenido» se escriben, no se colorean como nota. **Sin promedios ni redondeos**. Los colores aprobado/por reforzar aparecen **solo** si el colegio configura `Institution:Documents:PassingScore` (vacío por defecto).
 - **Libreta del curso:** lista con situación y nota del período y línea de firma docente.
-- **Carnet CR80:** frente con banda grafito, foto o iniciales con marco de acento, código del estudiante, QR y banda inferior con el lema y la vigencia; reverso con aviso, normas, teléfono de emergencia, dirección y código de barras dentro de un recuadro.
+- **Carnet CR80 (estudiante y personal, ADR-021):**
+  - Frente: cabecera grafito con escudo, antetítulo/`ShortName`/sede y «CARNÉ año»; filete de acento; cuerpo papel claro con aros tenues; foto o iniciales en marco blanco con marcas de esquina de acento; «IDENTIFICACIÓN ESTUDIANTIL/DE PERSONAL»; nombres y apellidos en dos líneas que se reducen para caber; grado y sección o puesto; chip grafito con código o ID; QR en recuadro blanco.
+  - Pie: grafito con el lema (estudiante) o de acento con «PERSONAL DEL COLEGIO» (personal), y la vigencia.
+  - Reverso: cabecera con nombre y etiqueta del tipo; condiciones numeradas; aviso de cada tipo; banda grafito con contacto de emergencia, dirección y Code 128 en un recuadro blanco.
 
 Pruebas: `DocumentDesignTests` genera documentos con datos sintéticos (cantidad en letras, copias familiar/interna, boletín con y sin nota mínima, retenido, libreta y carnets). Con `SCHOOLPLATFORM_PDF_DUMP=<carpeta>` guarda copias para revisión visual.

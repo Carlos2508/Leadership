@@ -16,6 +16,23 @@ public sealed class StudentCard
     public string? RevokeReason { get; set; }
 }
 
+/// <summary>
+/// Printed staff ID card (teachers and other personnel; guardians get none). Same token rules as <see cref="StudentCard"/>:
+/// random, revoked by reissuing, one active card per staff member. It identifies the person; the gate does not mark
+/// staff attendance with it.
+/// </summary>
+public sealed class StaffCard
+{
+    public Guid Id { get; set; }
+    public Guid StaffId { get; set; }
+    public string Token { get; set; } = "";
+    public DateTimeOffset IssuedAt { get; set; }
+    public Guid IssuedBy { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+    public Guid? RevokedBy { get; set; }
+    public string? RevokeReason { get; set; }
+}
+
 /// <summary>Photo of a person for the ID card and the gate screen, stored privately outside the web root.</summary>
 public sealed class PersonPhoto
 {

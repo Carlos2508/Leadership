@@ -50,7 +50,11 @@ public sealed class GateService(SchoolDbContext db, SchoolAudit audit, TimeProvi
         var code = NormalizeCode(request.Code);
         if (code.Length is < 8 or > 16) return new("Unknown", null, null, "Código no reconocido. Usa la búsqueda manual.", null, null, null);
         var card = await db.StudentCards.AsNoTracking().SingleOrDefaultAsync(x => x.Token == code, ct);
-        if (card is null) return new("Unknown", null, null, "Carnet no reconocido. Usa la búsqueda manual.", null, null, null);
+        if (card is null)
+            // Staff cards identify personnel; the gate marks student attendance only (no new outcome for existing clients).
+            return new("Unknown", null, null, await db.StaffCards.AnyAsync(x => x.Token == code, ct)
+                ? "Carnet de personal. La portería registra solo la asistencia de estudiantes."
+                : "Carnet no reconocido. Usa la búsqueda manual.", null, null, null);
         var student = (await StudentsAsync([card.StudentId], ct)).GetValueOrDefault(card.StudentId);
         if (card.RevokedAt is not null)
             return new("Revoked", null, null, "Este carnet fue reemplazado por uno nuevo. Retenlo y usa la búsqueda manual.", student, null, null);

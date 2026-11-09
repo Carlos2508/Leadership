@@ -282,10 +282,14 @@ class _GradebookViewState extends ConsumerState<GradebookView> {
   Future<void> _save(Map<String, dynamic> data) async {
     final changed = _rows.where((r) => r.changed).toList();
     if (changed.isEmpty) return;
-    if (changed.any((r) => r.invalid)) {
+    final wrong = changed.where((r) => r.invalid).toList();
+    if (wrong.isNotEmpty) {
+      // Name the students: on a phone the marked boxes are usually out of sight.
+      final who =
+          wrong.take(3).map((r) => r.name).join(', ') +
+          (wrong.length > 3 ? ' y ${wrong.length - 3} más' : '');
       setState(
-        () => _error =
-            'Revisa las notas marcadas: deben estar entre 0 y 100, con hasta dos decimales.',
+        () => _error = 'Revisa la nota de $who: debe estar entre 0 y 100, con hasta dos decimales.',
       );
       return;
     }
@@ -403,46 +407,52 @@ class _GradebookViewState extends ConsumerState<GradebookView> {
                       Row(
                         children: [
                           Expanded(
-                            child: DropdownButton<String>(
-                              value: r.status,
-                              isExpanded: true,
-                              underline: const SizedBox.shrink(),
-                              onChanged: !canEdit || _busy
-                                  ? null
-                                  : (v) => setState(() => r.status = v ?? ''),
-                              items: const [
-                                DropdownMenuItem(value: '', child: Text('Sin registrar')),
-                                DropdownMenuItem(value: 'Scored', child: Text('Con nota')),
-                                DropdownMenuItem(
-                                  value: 'Missing',
-                                  child: Text('Pendiente de entregar'),
-                                ),
-                                DropdownMenuItem(value: 'Excused', child: Text('Exonerado')),
-                              ],
+                            child: Semantics(
+                              label: 'Estado de ${r.name}',
+                              child: DropdownButton<String>(
+                                value: r.status,
+                                isExpanded: true,
+                                underline: const SizedBox.shrink(),
+                                onChanged: !canEdit || _busy
+                                    ? null
+                                    : (v) => setState(() => r.status = v ?? ''),
+                                items: const [
+                                  DropdownMenuItem(value: '', child: Text('Sin registrar')),
+                                  DropdownMenuItem(value: 'Scored', child: Text('Con nota')),
+                                  DropdownMenuItem(
+                                    value: 'Missing',
+                                    child: Text('Pendiente de entregar'),
+                                  ),
+                                  DropdownMenuItem(value: 'Excused', child: Text('Exonerado')),
+                                ],
+                              ),
                             ),
                           ),
                           const SizedBox(width: Spacing.md),
                           SizedBox(
                             width: 84,
-                            child: TextField(
-                              controller: r.score,
-                              enabled:
-                                  canEdit && !_busy && (r.status == 'Scored' || r.status == ''),
-                              textAlign: TextAlign.center,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                              ],
-                              onChanged: (_) => setState(() {
-                                if (r.status == '') r.status = 'Scored';
-                              }),
-                              decoration: InputDecoration(
-                                isDense: true,
-                                hintText: '—',
-                                errorText: r.invalid && r.changed ? '' : null,
-                                errorStyle: const TextStyle(height: 0, fontSize: 0),
+                            child: Semantics(
+                              label: 'Nota de ${r.name}',
+                              child: TextField(
+                                controller: r.score,
+                                enabled:
+                                    canEdit && !_busy && (r.status == 'Scored' || r.status == ''),
+                                textAlign: TextAlign.center,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                                ],
+                                onChanged: (_) => setState(() {
+                                  if (r.status == '') r.status = 'Scored';
+                                }),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  hintText: '—',
+                                  errorText: r.invalid && r.changed ? '' : null,
+                                  errorStyle: const TextStyle(height: 0, fontSize: 0),
+                                ),
+                                style: theme.textTheme.titleMedium,
                               ),
-                              style: theme.textTheme.titleMedium,
                             ),
                           ),
                         ],

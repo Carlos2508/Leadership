@@ -399,8 +399,11 @@ export class CourseGrades implements OnDestroy {
     }
     clearTimeout(this.timer);
     const pending = this.rows().filter((x) => this.changed(x) || (x.draftStatus === 'Scored' && this.invalid(x)));
-    if (!auto && pending.some((x) => !this.ready(x))) {
-      this.error.set('Revisa las notas marcadas: cada estudiante «Con nota» necesita un valor entre 0 y 100.');
+    const wrong = pending.filter((x) => !this.ready(x));
+    if (!auto && wrong.length) {
+      // Name the students: on a long list the marked boxes may be out of sight.
+      const who = wrong.slice(0, 3).map((x) => x.name).join(', ') + (wrong.length > 3 ? ` y ${wrong.length - 3} más` : '');
+      this.error.set(`Revisa la nota de ${who}: cada estudiante «Con nota» necesita un valor entre 0 y 100.`);
       return;
     }
     const changed = pending.filter((x) => this.ready(x));

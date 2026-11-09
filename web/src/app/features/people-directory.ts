@@ -8,9 +8,10 @@ import { InstitutionService } from '../core/institution';
 import { PersonSummary } from '../core/people-api';
 import { Shell } from '../shared/shell';
 import { Icon } from '../shared/icon';
+import { StaffCards } from './staff-cards';
 
 @Component({
-  imports: [Shell, Icon, FormsModule, RouterLink],
+  imports: [Shell, Icon, FormsModule, RouterLink, StaffCards],
   templateUrl: './people-directory.html',
 })
 export class PeopleDirectory {

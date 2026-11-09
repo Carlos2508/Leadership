@@ -124,8 +124,31 @@ test('gate reader, cards, manual marks, report, devices and family access', asyn
   await page.getByRole('button', { name: 'Confirmar reemplazo' }).click();
   await expect(page.getByText('Carnet reemplazado. Descarga la nueva impresión.')).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('person-card.png'), fullPage: true });
+  await expect(page.getByRole('link', { name: 'Carnet en tarjeta', exact: true })).toHaveAttribute(
+    'href',
+    new RegExp(`/api/v1/people/${student}/card\\.pdf\\?yearId=[0-9a-f-]+&layout=card`),
+  );
   const token = (await (await page.request.get(`/api/v1/students/${student}/card`)).json()).card
     .token;
+
+  // Staff get their own card (printed for an explicit cycle); it is never marked at the gate.
+  const teacher = (
+    await post(page, '/api/v1/people', {
+      givenNames: 'Tomás',
+      familyNames: 'Personal ' + s,
+      contacts: [],
+      isGuardian: false,
+      staffPosition: 'Docente de Ciencias',
+      confirmDuplicate: true,
+    })
+  ).id;
+  await page.goto('/workspace/people/' + teacher);
+  await expect(page.getByRole('heading', { name: 'Carnet y fotografía' })).toBeVisible();
+  await expect(page.getByText(/Carnet de personal/)).toBeVisible();
+  const staffCard = await page.request.get(`/api/v1/people/${teacher}/card.pdf?yearId=${year}&layout=card`);
+  expect(staffCard.status()).toBe(200);
+  expect(staffCard.headers()['content-type']).toContain('application/pdf');
+  await accessible(page);
 
   await page.goto('/workspace/gate');
   await page.getByLabel('Código del carnet').fill(oldToken);

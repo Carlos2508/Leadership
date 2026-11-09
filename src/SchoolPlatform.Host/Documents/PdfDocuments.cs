@@ -16,7 +16,15 @@ public sealed record ReportSection(string Period, ReportLine[] Lines, string? Wi
 public sealed record StudentReport(string StudentName, string StudentCode, string Placement, string Year, ReportSection[] Sections);
 public sealed record SheetLine(string StudentName, string StudentCode, decimal? Score, string? Status);
 public sealed record CourseSheetDocument(string Subject, string Placement, string Year, string Period, bool Published, SheetLine[] Lines);
-public sealed record CardData(string StudentName, string StudentCode, string Placement, string Year, string Token, byte[]? Photo);
+public enum CardKind { Student, Staff }
+/// <summary>
+/// One printed ID card. Students: Code is the student code and Detail the grade/section. Staff: Code is empty and
+/// Detail the position. Year is the validity cycle label.
+/// </summary>
+public sealed record CardData(CardKind Kind, string GivenNames, string FamilyNames, string Code, string Detail, string Year, string Token, byte[]? Photo)
+{
+    public string Name => $"{GivenNames} {FamilyNames}".Trim();
+}
 
 /// <summary>Brand images of this installation (paths validated at startup), read once.</summary>
 public sealed class BrandAssets(IWebHostEnvironment environment)
@@ -427,117 +435,249 @@ public sealed partial class PdfDocuments(IOptions<InstitutionOptions> options, B
                     col.Item().ShowEntire().Row(row =>
                     {
                         row.Spacing(6, Unit.Millimetre);
-                        row.ConstantItem(85.6f, Unit.Millimetre).Height(53.98f, Unit.Millimetre).Border(0.3f).BorderColor("#CCCCCC")
-                            .Element(x => CardFront(x, card, logo));
-                        row.ConstantItem(85.6f, Unit.Millimetre).Height(53.98f, Unit.Millimetre).Border(0.3f).BorderColor("#CCCCCC")
-                            .Element(x => CardBack(x, card));
+                        // The cut line is drawn over the card so it does not take space from the CR80 layout.
+                        row.ConstantItem(85.6f, Unit.Millimetre).Height(53.98f, Unit.Millimetre).Layers(l =>
+                        {
+                            l.PrimaryLayer().Element(x => CardFront(x, card, logo));
+                            l.Layer().Border(0.3f).BorderColor("#CCCCCC");
+                        });
+                        row.ConstantItem(85.6f, Unit.Millimetre).Height(53.98f, Unit.Millimetre).Layers(l =>
+                        {
+                            l.PrimaryLayer().Element(x => CardBack(x, card));
+                            l.Layer().Border(0.3f).BorderColor("#CCCCCC");
+                        });
                     });
             });
         })).GeneratePdf();
     }
 
+    // Card geometry (mm). Front: header 14, accent rule, body, footer band 4.4. Back: header 13, body, contact band 17.
+    private const string CardPaper = "#F7F5EF";
+    private const string CardFrame = "#E2DED3";
+
+    /// <summary>
+    /// Institution name for the card header: the words before the short name as a small eyebrow, the short name large,
+    /// and the campus (or the words after the short name) below. Without a short name inside the display name, the
+    /// display name is used as is.
+    /// </summary>
+    private (string Before, string Main, string After) CardName()
+    {
+        var display = School.DisplayName.Trim();
+        var shortName = School.ShortName.Trim();
+        var at = shortName.Length > 0 ? display.IndexOf(shortName, StringComparison.OrdinalIgnoreCase) : -1;
+        if (at < 0) return ("", display, School.CampusLabel);
+        var after = display[(at + shortName.Length)..].Trim();
+        return (display[..at].Trim(), display.Substring(at, shortName.Length), School.CampusLabel.Length > 0 ? School.CampusLabel : after);
+    }
+
     private void CardFront(IContainer container, CardData card, (byte[]? Bytes, string? Type) logo)
     {
-        container.Background("#FFFFFF").Layers(layers =>
+        var staff = card.Kind == CardKind.Staff;
+        var (before, main, after) = CardName();
+        var year = YearOf(card.Year);
+        container.Background(CardPaper).Column(col =>
         {
-            layers.Layer().AlignRight().AlignBottom().Width(34, Unit.Millimetre).Height(34, Unit.Millimetre).Svg(Arc(Accent, 0.12));
-            layers.PrimaryLayer().Column(col =>
+            // Header: crest, institution name and the card year.
+            col.Item().Height(14, Unit.Millimetre).Background(Graphite).PaddingLeft(3.6f, Unit.Millimetre).PaddingRight(4, Unit.Millimetre).Row(row =>
             {
-                col.Item().Height(14, Unit.Millimetre).Background(Graphite).PaddingHorizontal(3, Unit.Millimetre).Row(row =>
+                if (logo.Bytes is not null)
+                    row.ConstantItem(11, Unit.Millimetre).AlignMiddle().Element(x => LogoBadge(x, logo.Bytes, logo.Type, 11, Unit.Millimetre));
+                row.RelativeItem().PaddingLeft(3, Unit.Millimetre).AlignMiddle().Column(c =>
                 {
-                    row.ConstantItem(10, Unit.Millimetre).AlignMiddle().Element(x => LogoBadge(x, logo.Bytes, logo.Type, 10, Unit.Millimetre));
-                    row.RelativeItem().PaddingLeft(2.2f, Unit.Millimetre).AlignMiddle().Column(c =>
-                    {
-                        c.Item().Text(School.DisplayName).FontSize(7.6f).ExtraBold().FontColor("#FFFFFF").ClampLines(1);
-                        c.Item().Text(School.CampusLabel).FontSize(5.2f).SemiBold().FontColor(Accent).ClampLines(1);
-                    });
-                    row.AutoItem().AlignMiddle().AlignRight().Column(c =>
-                    {
-                        c.Item().AlignRight().Text("CARNET").FontSize(5).Bold().LetterSpacing(0.2f).FontColor(Accent);
-                        c.Item().AlignRight().Text(YearOnly(card.Year)).FontSize(8).ExtraBold().FontColor("#FFFFFF");
-                    });
+                    if (before.Length > 0) c.Item().Text(before.ToUpper(Culture)).FontSize(5.4f).Bold().LetterSpacing(0.22f).FontColor(Accent).ClampLines(1);
+                    c.Item().Height(5.6f, Unit.Millimetre).AlignMiddle().ScaleToFit()
+                        .Text(main.ToUpper(Culture)).FontSize(14).Black().LetterSpacing(0.04f).FontColor("#FFFFFF");
+                    if (after.Length > 0) c.Item().Text(after.ToUpper(Culture)).FontSize(5.4f).Bold().LetterSpacing(0.22f).FontColor(Accent).ClampLines(1);
                 });
-                col.Item().Height(0.9f, Unit.Millimetre).Background(Accent);
-                col.Item().PaddingHorizontal(3.2f, Unit.Millimetre).PaddingTop(2.6f, Unit.Millimetre).Row(row =>
+                if (year.Length > 0)
                 {
-                    row.ConstantItem(20, Unit.Millimetre).Height(25, Unit.Millimetre).Border(0.9f).BorderColor(Accent).CornerRadius(3)
-                        .Padding(0.6f).Background(Warm).Element(x =>
-                        {
-                            if (card.Photo is { } photo) x.CornerRadius(2).Image(photo).FitArea();
-                            else x.AlignCenter().AlignMiddle().Text(Initials(card.StudentName)).FontSize(17).ExtraBold().FontColor(AccentDeep);
-                        });
-                    row.RelativeItem().PaddingLeft(3, Unit.Millimetre).Column(c =>
+                    row.ConstantItem(5, Unit.Millimetre).AlignCenter().AlignMiddle().Width(0.3f, Unit.Millimetre).Height(8, Unit.Millimetre).Background("#40FFFFFF");
+                    row.ConstantItem(15, Unit.Millimetre).AlignMiddle().Column(c =>
                     {
-                        c.Item().Text(School.Terms.StudentPlural.TrimEnd('s').ToUpper(Culture)).FontSize(5).Bold().LetterSpacing(0.2f).FontColor(AccentDeep);
-                        c.Item().PaddingTop(0.6f, Unit.Millimetre).Text(card.StudentName).FontSize(9.4f).ExtraBold().FontColor(Ink).LineHeight(1.05f).ClampLines(2);
-                        c.Item().PaddingTop(1, Unit.Millimetre).Text(card.Placement.Length > 0 ? card.Placement : "—").FontSize(6.3f).SemiBold().FontColor(Muted).ClampLines(2);
-                        c.Item().PaddingTop(1.6f, Unit.Millimetre).AlignLeft().Background(Graphite).CornerRadius(2.5f)
-                            .PaddingHorizontal(2, Unit.Millimetre).PaddingVertical(0.7f, Unit.Millimetre)
-                            .Text(t =>
-                            {
-                                t.Span("CÓDIGO ").FontSize(5).Bold().FontColor(Accent);
-                                t.Span(card.StudentCode).FontSize(6.8f).ExtraBold().FontColor("#FFFFFF");
-                            });
+                        c.Item().AlignRight().Text("CARNÉ").FontSize(5.4f).Bold().LetterSpacing(0.22f).FontColor(Accent);
+                        c.Item().Height(5.6f, Unit.Millimetre).AlignRight().AlignMiddle().ScaleToFit().Text(year).FontSize(14).Black().FontColor("#FFFFFF");
                     });
-                    row.ConstantItem(16.5f, Unit.Millimetre).Column(c =>
-                    {
-                        c.Item().Height(16.5f, Unit.Millimetre).Background("#FFFFFF").Svg(Barcodes.QrSvg(card.Token));
-                        c.Item().AlignCenter().Text("ESCANEAR").FontSize(4.2f).Bold().LetterSpacing(0.2f).FontColor(Muted);
-                    });
-                });
-                col.Item().ExtendVertical().AlignBottom().Height(5.2f, Unit.Millimetre).Background(Graphite).PaddingHorizontal(3.2f, Unit.Millimetre).Row(row =>
-                {
-                    row.RelativeItem().AlignMiddle().Text(School.Tagline).FontSize(5.4f).SemiBold().FontColor("#FFFFFF").ClampLines(1);
-                    row.AutoItem().AlignMiddle().Text($"VÁLIDO {Cycle(card.Year).ToUpper(Culture)}").FontSize(4.8f).Bold().LetterSpacing(0.15f).FontColor(Accent);
-                });
+                }
             });
+            col.Item().Height(0.9f, Unit.Millimetre).Background(Accent);
+
+            // Body: photo, identity and QR over a paper tone with faint rings (CR80 height minus header, rule and footer).
+            col.Item().Height(53.98f - 14 - 0.9f - 4.4f, Unit.Millimetre).Layers(layers =>
+            {
+                layers.Layer().AlignRight().AlignTop().Width(42, Unit.Millimetre).Height(30, Unit.Millimetre).Svg(Rings(Accent));
+                layers.PrimaryLayer().PaddingLeft(4.4f, Unit.Millimetre).PaddingRight(4, Unit.Millimetre).PaddingTop(2.6f, Unit.Millimetre)
+                    .PaddingBottom(1.8f, Unit.Millimetre).Row(row =>
+                    {
+                        row.ConstantItem(23, Unit.Millimetre).Element(x => PhotoFrame(x, card));
+                        row.RelativeItem().PaddingLeft(3.6f, Unit.Millimetre).Column(c =>
+                        {
+                            c.Item().Text(staff ? "IDENTIFICACIÓN DE PERSONAL" : "IDENTIFICACIÓN ESTUDIANTIL")
+                                .FontSize(5.4f).ExtraBold().LetterSpacing(0.12f).FontColor(AccentDeep);
+                            c.Item().PaddingTop(0.8f, Unit.Millimetre).Height(4.7f, Unit.Millimetre).AlignBottom().ScaleToFit()
+                                .Text(card.GivenNames).FontSize(13).ExtraBold().FontColor(Ink).LineHeight(1);
+                            c.Item().Height(4.7f, Unit.Millimetre).AlignTop().ScaleToFit()
+                                .Text(card.FamilyNames).FontSize(13).ExtraBold().FontColor(Ink).LineHeight(1);
+                            c.Item().ExtendVertical().Row(bottom =>
+                            {
+                                bottom.RelativeItem().PaddingRight(2.4f, Unit.Millimetre).AlignBottom().Column(info =>
+                                {
+                                    info.Item().Height(0.25f, Unit.Millimetre).Background(CardFrame);
+                                    info.Item().PaddingTop(1.4f, Unit.Millimetre).Text(staff ? "PUESTO" : "GRADO Y SECCIÓN")
+                                        .FontSize(4.8f).Bold().LetterSpacing(0.14f).FontColor(Muted);
+                                    // Long grades or positions shrink to two lines instead of being cut.
+                                    info.Item().PaddingTop(0.3f, Unit.Millimetre).MaxHeight(6.4f, Unit.Millimetre).ScaleToFit()
+                                        .Text(card.Detail.Length > 0 ? card.Detail : "—").FontSize(7.4f).SemiBold().FontColor(Ink).LineHeight(1.05f);
+                                    info.Item().PaddingTop(1.8f, Unit.Millimetre).AlignLeft().Background(Graphite).CornerRadius(1.6f, Unit.Millimetre)
+                                        .PaddingHorizontal(2.4f, Unit.Millimetre).PaddingVertical(1, Unit.Millimetre).Text(t =>
+                                        {
+                                            t.Span(staff ? "ID  " : "CÓD.  ").FontSize(5.4f).Bold().LetterSpacing(0.08f).FontColor(Accent);
+                                            t.Span(staff ? Grouped(card.Token) : card.Code).FontSize(staff ? 6.6f : 8.6f).ExtraBold()
+                                                .LetterSpacing(staff ? 0.04f : 0.02f).FontColor("#FFFFFF");
+                                        });
+                                });
+                                bottom.ConstantItem(15, Unit.Millimetre).AlignBottom().Column(qr =>
+                                {
+                                    qr.Item().Width(15, Unit.Millimetre).Height(15, Unit.Millimetre).Background("#FFFFFF").Border(0.4f).BorderColor(CardFrame)
+                                        .CornerRadius(1.6f, Unit.Millimetre).Padding(0.35f, Unit.Millimetre).Svg(Barcodes.QrSvg(card.Token)).FitArea();
+                                    qr.Item().PaddingTop(0.4f, Unit.Millimetre).AlignCenter().Text("ESCANEAR").FontSize(4.2f).Bold().LetterSpacing(0.2f).FontColor(Muted);
+                                });
+                            });
+                        });
+                    });
+            });
+
+            // Footer: tagline and validity. Staff cards use the accent band so they read apart at a glance.
+            col.Item().Height(4.4f, Unit.Millimetre).Background(staff ? Accent : Graphite).Row(row =>
+            {
+                row.ConstantItem(1.6f, Unit.Millimetre).Background(staff ? Graphite : Accent);
+                row.RelativeItem().PaddingLeft(2.8f, Unit.Millimetre).AlignMiddle()
+                    .Text(staff ? "PERSONAL DEL COLEGIO" : School.Tagline.ToUpper(Culture)).FontSize(5.4f).ExtraBold().LetterSpacing(0.06f)
+                    .FontColor(staff ? Graphite : "#FFFFFF").ClampLines(1);
+                if (year.Length > 0)
+                    row.ConstantItem(26, Unit.Millimetre).PaddingRight(4, Unit.Millimetre).AlignRight().AlignMiddle().ScaleToFit()
+                        .Text($"VÁLIDO {year}").FontSize(5.2f).ExtraBold().LetterSpacing(0.14f).FontColor(staff ? Graphite : Accent);
+            });
+        });
+    }
+
+    /// <summary>Photo (or initials) inside a white frame with accent corner marks.</summary>
+    private void PhotoFrame(IContainer container, CardData card)
+    {
+        container.Height(28.4f, Unit.Millimetre).Layers(layers =>
+        {
+            layers.PrimaryLayer().Background("#FFFFFF").Border(0.4f).BorderColor(CardFrame).CornerRadius(1.8f, Unit.Millimetre)
+                .Padding(0.9f, Unit.Millimetre).Element(inner =>
+                {
+                    var area = inner.Background("#ECE9E1").CornerRadius(1.2f, Unit.Millimetre);
+                    if (card.Photo is { } photo) area.AlignCenter().AlignMiddle().Image(photo).FitArea();
+                    else area.AlignCenter().AlignMiddle().Text(Initials(card.Name)).FontSize(22).Black().FontColor(AccentDeep);
+                });
+            layers.Layer().Svg(Corners(Accent, 23, 28.4f));
         });
     }
 
     private void CardBack(IContainer container, CardData card)
     {
-        var emergency = School.Contact.Phone;
-        container.Background("#FFFFFF").Column(col =>
+        var staff = card.Kind == CardKind.Staff;
+        var (before, main, after) = CardName();
+        var title = Join(" ", before, main);
+        var year = YearOf(card.Year);
+        var notice = staff ? School.Documents.StaffCardNotice : School.Documents.CardNotice;
+        var phone = School.Contact.Phone;
+        container.Background(CardPaper).Column(col =>
         {
-            col.Item().Height(9, Unit.Millimetre).Background(Graphite).PaddingHorizontal(3.5f, Unit.Millimetre).Row(row =>
+            col.Item().Height(13, Unit.Millimetre).Background(Graphite).PaddingLeft(3.6f, Unit.Millimetre).PaddingRight(4, Unit.Millimetre).Row(row =>
             {
-                row.RelativeItem().AlignMiddle().Text("VALIDACIÓN INSTITUCIONAL").FontSize(5.6f).Bold().LetterSpacing(0.16f).FontColor(Accent);
-                row.AutoItem().AlignMiddle().Text(School.ShortName).FontSize(6.5f).ExtraBold().FontColor("#FFFFFF");
-            });
-            col.Item().Height(0.7f, Unit.Millimetre).Background(Accent);
-            col.Item().PaddingHorizontal(3.5f, Unit.Millimetre).PaddingTop(2, Unit.Millimetre).Column(c =>
-            {
-                c.Spacing(0.9f, Unit.Millimetre);
-                if (School.Documents.CardNotice.Length > 0)
-                    c.Item().Text(School.Documents.CardNotice).FontSize(5.6f).SemiBold().FontColor(Ink).ClampLines(2);
-                foreach (var rule in School.Documents.CardRules.Take(3))
-                    c.Item().Row(r =>
-                    {
-                        r.ConstantItem(2.6f, Unit.Millimetre).PaddingTop(0.9f, Unit.Millimetre).Width(1.2f, Unit.Millimetre).Height(1.2f, Unit.Millimetre)
-                            .CornerRadius(1).Background(Accent);
-                        r.RelativeItem().Text(rule).FontSize(5.3f).FontColor(Muted).ClampLines(2);
-                    });
-            });
-            col.Item().ExtendVertical().AlignBottom().PaddingHorizontal(3.5f, Unit.Millimetre).PaddingBottom(2.4f, Unit.Millimetre).Row(row =>
-            {
-                row.RelativeItem().AlignBottom().Column(c =>
+                var logo = Logo(School.Assets.CardLogo);
+                if (logo.Bytes is not null)
+                    row.ConstantItem(10, Unit.Millimetre).AlignMiddle().Element(x => LogoBadge(x, logo.Bytes, logo.Type, 10, Unit.Millimetre));
+                row.RelativeItem().PaddingLeft(3, Unit.Millimetre).AlignMiddle().Column(c =>
                 {
-                    if (emergency.Length > 0)
+                    c.Item().Height(4.4f, Unit.Millimetre).AlignMiddle().AlignLeft().ScaleToFit()
+                        .Text(title.ToUpper(Culture)).FontSize(10.5f).Black().LetterSpacing(0.02f).FontColor("#FFFFFF");
+                    c.Item().PaddingTop(0.5f, Unit.Millimetre).Text(Join("  ·  ", after.ToUpper(Culture), year.Length > 0 ? $"IDENTIFICACIÓN {year}" : "IDENTIFICACIÓN"))
+                        .FontSize(5.2f).Bold().LetterSpacing(0.14f).FontColor(Accent).ClampLines(1);
+                });
+                row.AutoItem().AlignMiddle().PaddingLeft(2, Unit.Millimetre).Border(0.4f).BorderColor("#55FFFFFF").CornerRadius(1.2f, Unit.Millimetre)
+                    .PaddingHorizontal(1.6f, Unit.Millimetre).PaddingVertical(0.6f, Unit.Millimetre)
+                    .Text(staff ? "PERSONAL" : "ESTUDIANTE").FontSize(4.6f).Bold().LetterSpacing(0.18f).FontColor("#C9CDD1");
+            });
+            col.Item().Height(0.9f, Unit.Millimetre).Background(Accent);
+
+            col.Item().Height(53.98f - 13 - 0.9f - 0.9f - 16.5f, Unit.Millimetre).Layers(layers =>
+            {
+                layers.Layer().AlignRight().AlignTop().Width(36, Unit.Millimetre).Height(18, Unit.Millimetre).Svg(Rings(Accent));
+                layers.PrimaryLayer().PaddingHorizontal(4.6f, Unit.Millimetre).PaddingTop(1.8f, Unit.Millimetre).PaddingBottom(1.2f, Unit.Millimetre).Column(c =>
+                {
+                    c.Item().Text("CONDICIONES DE USO").FontSize(6.4f).Black().LetterSpacing(0.08f).FontColor(Ink);
+                    c.Item().PaddingTop(0.6f, Unit.Millimetre).PaddingBottom(0.9f, Unit.Millimetre).Height(0.25f, Unit.Millimetre).Background(CardFrame);
+                    var number = 0;
+                    foreach (var rule in School.Documents.CardRules.Take(3))
                     {
-                        c.Item().Text("EMERGENCIA").FontSize(4.6f).Bold().LetterSpacing(0.18f).FontColor(AccentDeep);
-                        c.Item().Text(emergency).FontSize(7.4f).ExtraBold().FontColor(Ink);
+                        var label = $"{++number:00}";
+                        c.Item().PaddingBottom(0.5f, Unit.Millimetre).Row(r =>
+                        {
+                            r.ConstantItem(3.2f, Unit.Millimetre).AlignMiddle().Width(2.5f, Unit.Millimetre).Height(2.5f, Unit.Millimetre)
+                                .CornerRadius(1.25f, Unit.Millimetre).Background(Accent).AlignCenter().AlignMiddle()
+                                .Text(label).FontSize(3.6f).Black().FontColor(Graphite);
+                            r.RelativeItem().PaddingLeft(0.8f, Unit.Millimetre).AlignMiddle().Text(rule).FontSize(5.6f).FontColor(Ink).ClampLines(1);
+                        });
                     }
-                    if (School.Contact.Address.Length > 0)
-                        c.Item().PaddingTop(0.8f, Unit.Millimetre).Text(School.Contact.Address).FontSize(4.8f).FontColor(Muted).ClampLines(2);
-                });
-                row.ConstantItem(45, Unit.Millimetre).AlignBottom().Border(0.4f).BorderColor(Line).CornerRadius(2).Padding(1.2f, Unit.Millimetre).Column(c =>
-                {
-                    c.Item().Height(8.5f, Unit.Millimetre).AlignCenter().Svg(Barcodes.Code128Svg(card.Token)).FitArea();
-                    c.Item().AlignCenter().Text(card.Token).FontSize(5.4f).SemiBold().LetterSpacing(0.25f).FontColor(Ink);
+                    if (notice.Length > 0)
+                        c.Item().ExtendVertical().AlignBottom().Text(notice).FontSize(4.6f).Italic().FontColor(Muted).LineHeight(1.05f).ClampLines(2);
                 });
             });
+
+            col.Item().Height(0.9f, Unit.Millimetre).Background(Accent);
+            col.Item().Height(16.5f, Unit.Millimetre).Background(Graphite).PaddingLeft(4.6f, Unit.Millimetre).PaddingRight(4, Unit.Millimetre)
+                .PaddingVertical(1.5f, Unit.Millimetre).Row(row =>
+                {
+                    row.RelativeItem().AlignMiddle().PaddingRight(2.4f, Unit.Millimetre).Column(c =>
+                    {
+                        if (phone.Length > 0)
+                        {
+                            c.Item().Text("CONTACTO DE EMERGENCIA").FontSize(4.8f).Bold().LetterSpacing(0.14f).FontColor(Accent);
+                            c.Item().Height(5.4f, Unit.Millimetre).AlignMiddle().AlignLeft().ScaleToFit().Text(phone).FontSize(14).Black().FontColor("#FFFFFF");
+                        }
+                        if (School.Contact.Address.Length > 0)
+                            c.Item().PaddingTop(0.4f, Unit.Millimetre).Text(School.Contact.Address).FontSize(4.9f).FontColor("#C9CDD1").LineHeight(1.1f).ClampLines(2);
+                    });
+                    row.ConstantItem(36, Unit.Millimetre).AlignMiddle().Background("#FFFFFF").CornerRadius(1.6f, Unit.Millimetre)
+                        .PaddingHorizontal(1.8f, Unit.Millimetre).PaddingVertical(0.9f, Unit.Millimetre).Column(c =>
+                        {
+                            c.Item().Height(7.2f, Unit.Millimetre).AlignCenter().Svg(Barcodes.Code128Svg(card.Token)).FitArea();
+                            c.Item().PaddingTop(0.4f, Unit.Millimetre).AlignCenter().Text(card.Token).FontSize(5.4f).Bold().LetterSpacing(0.12f).FontColor(Ink);
+                        });
+                });
         });
     }
+
+    /// <summary>Four accent corner marks over a photo frame of the given size (mm).</summary>
+    private static string Corners(string color, float width, float height)
+    {
+        const float arm = 3.2f, inset = 0.25f, stroke = 0.55f;
+        var w = width; var h = height;
+        return string.Create(CultureInfo.InvariantCulture,
+            $"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {w} {h}'><g fill='none' stroke='{color}' stroke-width='{stroke}' stroke-linecap='square'>" +
+            $"<path d='M{inset} {inset + arm} V{inset} H{inset + arm}'/>" +
+            $"<path d='M{w - inset - arm} {inset} H{w - inset} V{inset + arm}'/>" +
+            $"<path d='M{inset} {h - inset - arm} V{h - inset} H{inset + arm}'/>" +
+            $"<path d='M{w - inset - arm} {h - inset} H{w - inset} V{h - inset - arm}'/></g></svg>");
+    }
+
+    /// <summary>Faint concentric rings anchored at the top-right corner (card bodies).</summary>
+    private static string Rings(string color) => string.Create(CultureInfo.InvariantCulture,
+        $"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 460 360' preserveAspectRatio='xMaxYMin slice'><g fill='none' stroke='{color}'>" +
+        $"<circle cx='470' cy='-40' r='250' stroke-width='9' stroke-opacity='0.07'/>" +
+        $"<circle cx='470' cy='-40' r='300' stroke-width='3' stroke-opacity='0.12'/>" +
+        $"<circle cx='470' cy='-40' r='340' stroke-width='3' stroke-opacity='0.08'/></g></svg>");
+
+    /// <summary>"2027" from labels such as "2027", "Ciclo 2027" or "Ciclo escolar 2027"; the label itself when it has no year.</summary>
+    private static string YearOf(string label) =>
+        System.Text.RegularExpressions.Regex.Match(label, @"\b(19|20)\d{2}\b") is { Success: true } m ? m.Value : label.Trim();
+
+    private static string Grouped(string token) =>
+        string.Join(" ", Enumerable.Range(0, (token.Length + 3) / 4).Select(i => token.Substring(i * 4, Math.Min(4, token.Length - i * 4))));
 
     // ===================================================================== shared pieces
 
@@ -684,7 +824,6 @@ public sealed partial class PdfDocuments(IOptions<InstitutionOptions> options, B
 
     private static string Cycle(string year) => year.StartsWith("Ciclo", StringComparison.OrdinalIgnoreCase) ? year : $"Ciclo {year}";
 
-    private static string YearOnly(string year) => year.Split(' ', '·').FirstOrDefault(x => x.Length > 0) ?? year;
 
     private static string Method(string method) => method switch
     {

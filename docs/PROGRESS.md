@@ -14,6 +14,12 @@ Actualizado: 9 de noviembre de 2026, America/Guatemala.
 - Carnets accesibles directamente desde Inscripciones; pendientes de notas por curso/docente con enlace a libreta y período, consultados bajo demanda y con la misma pertenencia fechada de publicación. Listas de cursos pasan de una consulta de conteo por curso a una agrupada; prueba con interceptor confirma consultas constantes de uno a nueve cursos.
 - SQL Server: 160 pruebas correctas, diez nuevas. Flutter: 101 correctas, análisis limpio. Angular/Release y snapshot correctos. 95 E2E web + 2 E2E de migración MariaDB/SQL correctos; dos omisiones ordinarias resueltas en fixture aparte, rendimiento móvil medido en escritorio. QA y evidencia en `QA_SIMPLIFICACION_FLUJOS_2026-11-08.md`. Incremento integrado en main por autorización vigente, conservando las otras ramas. No se incorpora asistencia diaria por grupo, recibos conjuntos ni reglas de cobro pendientes. No se aplicó el esquema ni se importaron personas a la base escolar.
 
+## Carnet para todo el personal y rediseño — integrado en main
+
+- El propietario pidió carnet para todas las personas del colegio, excepto encargados, y un diseño más profesional basado en su propuesta. Ahora reciben carnet los estudiantes y el personal (docentes y demás puestos): tabla `people.StaffCards`, reemplazo con motivo y auditoría, impresión individual y de todo el personal con ciclo explícito. El carnet de personal no marca asistencia en portería. ADR-021.
+- Carnet CR80 rediseñado (frente y reverso) para ambos tipos; el personal se distingue por el pie de color de acento. Textos institucionales solo desde `config/institution.json` (`StaffCardNotice` opcional y vacío).
+- Integrado en `main` junto con los horarios por solicitud del propietario. Pendiente: imprimir y probar con lectores reales, y que el colegio redacte el aviso del carnet de personal si lo desea.
+
 ## Inventario y bodega del colegio — incremento vigente
 
 - El propietario pidió terminar `feat/school-store-inventory`, aclaró uso de bodega escolar y autorizó merge/push a main. Catálogo general de artículos, categoría/ubicación, stock mínimo, carga inicial, entradas, salidas, conteos físicos, historial y exportación CSV en web; operación conectada en el app. Guía `INVENTARIO_BODEGA.md`, ADR-018.

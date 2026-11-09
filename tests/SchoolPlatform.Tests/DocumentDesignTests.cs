@@ -100,11 +100,19 @@ public sealed class DocumentDesignTests
 
         var cards = new[]
         {
-            new CardData("Ana Sofía Ficticia López", "QA-001", "Primero básico · Sección A", "2026", "Q0RFWRQMHPRP", null),
-            new CardData("Bruno Ficticio", "QA-002", "Segundo básico", "2026", "C48ZGYKPB9E1", null)
+            new CardData(CardKind.Student, "Ana Sofía", "Ficticia López", "QA-001", "Primero básico · Sección A", "Ciclo 2027", "Q0RFWRQMHPRP", null),
+            new CardData(CardKind.Student, "María de los Ángeles", "Ficticia Hernández de la Cruz", "QA-002", "Segundo básico", "2027", "C48ZGYKPB9E1", null),
+            new CardData(CardKind.Staff, "Carlos Andrés", "Docente Ficticio", "", "Docente de Matemática", "2027", "H7KMQ2TRVX4P", null)
         };
         var card = Text(await WithDocuments(x => x.Cards(cards[..1], "card")), "carnet.pdf");
         Assert.Contains("Q0RFWRQMHPRP", card);
+        Assert.Contains("IDENTIFICACIÓN ESTUDIANTIL", card);
+        Assert.Contains("VÁLIDO 2027", card);
+        var staff = Text(await WithDocuments(x => x.Cards(cards[2..], "card")), "carnet-personal.pdf");
+        Assert.Contains("IDENTIFICACIÓN DE PERSONAL", staff);
+        Assert.Contains("Docente de Matemática", staff);
+        Assert.Contains("H7KMQ2TRVX4P", staff);
+        Assert.DoesNotContain("acredita al estudiante", staff);
         Assert.Contains("QA-001", Text(await WithDocuments(x => x.Cards(cards, "sheet")), "carnets-hoja.pdf"));
     }
 }

@@ -1336,6 +1336,54 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SchoolPlatform.Host.Gate.StaffCard", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("IssuedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RevokeReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("RevokedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("StaffId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IssuedBy");
+
+                    b.HasIndex("RevokedBy");
+
+                    b.HasIndex("StaffId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_StaffCards_ActivePerStaff")
+                        .HasFilter("[RevokedAt] IS NULL");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("StaffCards", "people");
+                });
+
             modelBuilder.Entity("SchoolPlatform.Host.Gate.StudentCard", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3029,6 +3077,26 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
                         .WithMany()
                         .HasForeignKey("UploadedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Gate.StaffCard", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("IssuedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("RevokedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SchoolPlatform.Host.People.StaffProfile", null)
+                        .WithMany()
+                        .HasForeignKey("StaffId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

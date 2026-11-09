@@ -7,6 +7,7 @@ namespace SchoolPlatform.Host.SchoolData;
 public sealed partial class SchoolDbContext
 {
     public DbSet<StudentCard> StudentCards => Set<StudentCard>();
+    public DbSet<StaffCard> StaffCards => Set<StaffCard>();
     public DbSet<PersonPhoto> PersonPhotos => Set<PersonPhoto>();
     public DbSet<GateEvent> GateEvents => Set<GateEvent>();
     public DbSet<GateDevice> GateDevices => Set<GateDevice>();
@@ -22,6 +23,18 @@ public sealed partial class SchoolDbContext
             entity.HasIndex(x => x.Token).IsUnique();
             entity.HasIndex(x => x.StudentId).IsUnique().HasFilter("[RevokedAt] IS NULL").HasDatabaseName("UX_StudentCards_ActivePerStudent");
             entity.HasOne<StudentProfile>().WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<AccountRef>().WithMany().HasForeignKey(x => x.IssuedBy).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<AccountRef>().WithMany().HasForeignKey(x => x.RevokedBy).OnDelete(DeleteBehavior.Restrict);
+        });
+        builder.Entity<StaffCard>(entity =>
+        {
+            entity.ToTable("StaffCards", "people");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Token).HasMaxLength(16).IsUnicode(false);
+            entity.Property(x => x.RevokeReason).HasMaxLength(500);
+            entity.HasIndex(x => x.Token).IsUnique();
+            entity.HasIndex(x => x.StaffId).IsUnique().HasFilter("[RevokedAt] IS NULL").HasDatabaseName("UX_StaffCards_ActivePerStaff");
+            entity.HasOne<StaffProfile>().WithMany().HasForeignKey(x => x.StaffId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<AccountRef>().WithMany().HasForeignKey(x => x.IssuedBy).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<AccountRef>().WithMany().HasForeignKey(x => x.RevokedBy).OnDelete(DeleteBehavior.Restrict);
         });

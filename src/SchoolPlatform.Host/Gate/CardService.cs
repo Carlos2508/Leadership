@@ -12,14 +12,17 @@ using SchoolPlatform.Host.SchoolData;
 namespace SchoolPlatform.Host.Gate;
 
 public sealed record CardView(Guid StudentId, string Token, DateTimeOffset IssuedAt);
+public sealed record CardYear(Guid Id, string Label);
+/// <summary>Kind is "student" or "staff"; Token is null until the first card is printed.</summary>
+public sealed record PersonCardView(string Kind, string? Token, DateTimeOffset? IssuedAt, CardYear[] Years);
 public sealed record ReissueRequest(string Reason);
 public sealed record CardBatchRequest(Guid YearId, Guid GradeId, Guid? SectionId);
 public sealed record PhotoFile(string Path, string ContentType);
 
 /// <summary>
-/// Student ID cards and photos. Issuing (or printing, which issues missing cards) requires people.manage; a reissue
-/// revokes the previous card, so a lost card stops working at the gate. Photos: JPEG/PNG verified by signature,
-/// stored privately with a random key.
+/// ID cards (students and staff; guardians get none) and photos. Issuing (or printing, which issues missing cards)
+/// requires people.manage; a reissue revokes the previous card, so a lost card stops working. Printing names its cycle
+/// explicitly. Photos: JPEG/PNG verified by signature, stored privately with a random key.
 /// </summary>
 public sealed class CardService(SchoolDbContext db, SchoolAudit audit, TimeProvider time, GateService gate, CourseService courses,
     IOptions<StorageOptions> storage, IOptions<GateOptions> gateOptions, IWebHostEnvironment environment)
@@ -69,11 +72,13 @@ public sealed class CardService(SchoolDbContext db, SchoolAudit audit, TimeProvi
     {
         await audit.RequireAsync(actor, ct, Permissions.PeopleManage);
         if (studentIds.Count is 0 or > 400) throw OperationException.Invalid("Imprime entre 1 y 400 carnets por documento.");
-        var students = await gate.StudentsAsync(studentIds, ct, asOf);
-        if (students.Count != studentIds.Distinct().Count()) throw OperationException.NotFound("No encontramos uno de los estudiantes.");
-        var cards = await db.StudentCards.Where(x => studentIds.Contains(x.StudentId) && x.RevokedAt == null).ToDictionaryAsync(x => x.StudentId, ct);
+        var ids = studentIds.Distinct().ToArray();
+        var students = await gate.StudentsAsync(ids, ct, asOf);
+        if (students.Count != ids.Length) throw OperationException.NotFound("No encontramos uno de los estudiantes.");
+        var names = await NamesAsync(ids, ct);
+        var cards = await db.StudentCards.Where(x => ids.Contains(x.StudentId) && x.RevokedAt == null).ToDictionaryAsync(x => x.StudentId, ct);
         var issued = 0;
-        foreach (var id in studentIds.Where(x => !cards.ContainsKey(x)).Distinct())
+        foreach (var id in ids.Where(x => !cards.ContainsKey(x)))
         {
             var card = new StudentCard { Id = Guid.NewGuid(), StudentId = id, Token = NewToken(), IssuedAt = time.GetUtcNow(), IssuedBy = actor };
             db.StudentCards.Add(card);
@@ -82,27 +87,22 @@ public sealed class CardService(SchoolDbContext db, SchoolAudit audit, TimeProvi
         }
         if (issued > 0)
         {
-            audit.Record("StudentCardsIssued", actor, "Person", studentIds[0], "", $"{issued}");
+            audit.Record("StudentCardsIssued", actor, "Person", ids[0], "", $"{issued}");
             await db.SaveChangesAsync(ct);
         }
-        var photos = await db.PersonPhotos.AsNoTracking().Where(x => studentIds.Contains(x.PersonId)).ToDictionaryAsync(x => x.PersonId, ct);
-        var result = new List<CardData>();
-        foreach (var id in studentIds.Distinct())
+        var photos = await PhotosAsync(ids, ct);
+        return ids.Select(id =>
         {
             var s = students[id];
-            byte[]? photo = null;
-            if (photos.TryGetValue(id, out var file) && File.Exists(PathFor(file.StorageKey))) photo = await File.ReadAllBytesAsync(PathFor(file.StorageKey), ct);
-            result.Add(new(s.Name, s.Code, s.Placement, s.Year, cards[id].Token, photo));
-        }
-        return result.ToArray();
+            return new CardData(CardKind.Student, names[id].Given, names[id].Family, s.Code, s.Placement, s.Year, cards[id].Token, photos.GetValueOrDefault(id));
+        }).ToArray();
     }
 
     /// <summary>Students placed in a grade (or section) of a year, as of today within the year (or its last day).</summary>
     public async Task<(Guid[] Ids, DateOnly AsOf)> BatchAsync(CardBatchRequest request, CancellationToken ct)
     {
         var year = await db.Years.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.YearId, ct) ?? throw OperationException.NotFound("No encontramos ese ciclo.");
-        var today = courses.LocalDate(time.GetUtcNow());
-        var date = today < year.StartsOn ? year.StartsOn : today > year.EndsOn ? year.EndsOn : today;
+        var date = AsOf(year);
         // Ordered after Distinct (SQL DISTINCT does not keep ORDER BY): by section, then family and given names, so the
         // printed sheets can be handed out classroom by classroom.
         var rows = await (from e in db.Enrollments.AsNoTracking()
@@ -118,6 +118,169 @@ public sealed class CardService(SchoolDbContext db, SchoolAudit audit, TimeProvi
             .ThenBy(x => x.GivenNames, StringComparer.CurrentCulture).Select(x => x.StudentId).Distinct().ToArray();
         return (ids, date);
     }
+
+    // ---- any person with a card: students and staff (guardians have none)
+
+    /// <summary>Which card a person gets: the student card when they study here, otherwise the staff card; null for anyone else.</summary>
+    public async Task<CardKind?> KindAsync(Guid personId, CancellationToken ct)
+    {
+        if (await db.Students.AnyAsync(x => x.PersonId == personId, ct)) return CardKind.Student;
+        if (await db.Staff.AnyAsync(x => x.PersonId == personId, ct)) return CardKind.Staff;
+        return null;
+    }
+
+    /// <summary>Current card of a student or staff member, plus the cycles a card can be printed for. Null when the person gets no card.</summary>
+    public async Task<PersonCardView?> PersonCardAsync(Guid personId, CancellationToken ct)
+    {
+        if (await KindAsync(personId, ct) is not { } kind) return null;
+        var current = kind == CardKind.Student
+            ? await db.StudentCards.AsNoTracking().Where(x => x.StudentId == personId && x.RevokedAt == null)
+                .Select(x => new { x.Token, x.IssuedAt }).SingleOrDefaultAsync(ct)
+            : await db.StaffCards.AsNoTracking().Where(x => x.StaffId == personId && x.RevokedAt == null)
+                .Select(x => new { x.Token, x.IssuedAt }).SingleOrDefaultAsync(ct);
+        return new(kind == CardKind.Student ? "student" : "staff", current?.Token, current?.IssuedAt, await YearsAsync(ct));
+    }
+
+    /// <summary>Cycles a card can be printed for (enrollment open or in course), newest first.</summary>
+    public Task<CardYear[]> YearsAsync(CancellationToken ct) =>
+        db.Years.AsNoTracking().Where(x => x.Status == YearStatus.EnrollmentOpen || x.Status == YearStatus.Active)
+            .OrderByDescending(x => x.StartsOn).Select(x => new CardYear(x.Id, x.Label)).ToArrayAsync(ct);
+
+    public async Task<PersonCardView> ReissuePersonAsync(Guid actor, Guid personId, ReissueRequest request, CancellationToken ct)
+    {
+        switch (await KindAsync(personId, ct))
+        {
+            case CardKind.Student:
+                await ReissueAsync(actor, personId, request, ct);
+                break;
+            case CardKind.Staff:
+                await ReissueStaffAsync(actor, personId, request, ct);
+                break;
+            default:
+                throw NoCard();
+        }
+        return (await PersonCardAsync(personId, ct))!;
+    }
+
+    /// <summary>Prints the card of one person for an explicit cycle (students: their placement in that cycle).</summary>
+    public async Task<CardData> PrintPersonAsync(Guid actor, Guid personId, Guid yearId, CancellationToken ct)
+    {
+        var kind = await KindAsync(personId, ct) ?? throw NoCard();
+        var year = await CardYearAsync(yearId, ct);
+        if (kind == CardKind.Staff) return (await PrintStaffAsync(actor, [personId], yearId, ct))[0];
+        var asOf = AsOf(year);
+        // A student card states grade and validity: only for a placement in the chosen cycle.
+        if ((await gate.StudentsAsync([personId], ct, asOf)).GetValueOrDefault(personId) is not { Year.Length: > 0 })
+            throw new OperationException(409, "not-enrolled", "El estudiante no tiene inscripción activa en ese ciclo.");
+        return (await PrintAsync(actor, [personId], asOf, ct))[0];
+    }
+
+    public async Task<CardView> ReissueStaffAsync(Guid actor, Guid staffId, ReissueRequest request, CancellationToken ct)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await LockStaffAsync(staffId, ct);
+        await audit.RequireAsync(actor, ct, Permissions.PeopleManage);
+        var reason = Reasons.Require(request.Reason);
+        if (!await db.Staff.AnyAsync(x => x.PersonId == staffId, ct)) throw OperationException.NotFound("No encontramos a esa persona del personal.");
+        var now = time.GetUtcNow();
+        var current = await db.StaffCards.SingleOrDefaultAsync(x => x.StaffId == staffId && x.RevokedAt == null, ct);
+        if (current is not null)
+        {
+            current.RevokedAt = now;
+            current.RevokedBy = actor;
+            current.RevokeReason = reason;
+            // The filtered unique index allows one active card: persist the revocation before adding the new one.
+            await db.SaveChangesAsync(ct);
+        }
+        var card = new StaffCard { Id = Guid.NewGuid(), StaffId = staffId, Token = NewToken(), IssuedAt = now, IssuedBy = actor };
+        db.StaffCards.Add(card);
+        audit.Record("StaffCardReissued", actor, "Person", staffId, reason, current is null ? "first" : "replaced");
+        await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+        return new(staffId, card.Token, card.IssuedAt);
+    }
+
+    /// <summary>Staff card data for printing (active people only); members without an active card get one (audited as a batch).</summary>
+    public async Task<CardData[]> PrintStaffAsync(Guid actor, IReadOnlyList<Guid> staffIds, Guid yearId, CancellationToken ct)
+    {
+        await audit.RequireAsync(actor, ct, Permissions.PeopleManage);
+        if (staffIds.Count is 0 or > 400) throw OperationException.Invalid("Imprime entre 1 y 400 carnets por documento.");
+        var year = await CardYearAsync(yearId, ct);
+        var ids = staffIds.Distinct().ToArray();
+        var staff = await (from p in db.Persons.AsNoTracking()
+                           join s in db.Staff on p.Id equals s.PersonId
+                           where ids.Contains(p.Id) && p.Status == PersonStatus.Active
+                           select new { p.Id, s.Position }).ToDictionaryAsync(x => x.Id, x => x.Position, ct);
+        if (staff.Count != ids.Length) throw OperationException.NotFound("No encontramos a una de las personas activas del personal.");
+        var names = await NamesAsync(ids, ct);
+        var cards = await db.StaffCards.Where(x => ids.Contains(x.StaffId) && x.RevokedAt == null).ToDictionaryAsync(x => x.StaffId, ct);
+        var issued = 0;
+        foreach (var id in ids.Where(x => !cards.ContainsKey(x)))
+        {
+            var card = new StaffCard { Id = Guid.NewGuid(), StaffId = id, Token = NewToken(), IssuedAt = time.GetUtcNow(), IssuedBy = actor };
+            db.StaffCards.Add(card);
+            cards[id] = card;
+            issued++;
+        }
+        if (issued > 0)
+        {
+            audit.Record("StaffCardsIssued", actor, "Person", ids[0], "", $"{issued}");
+            await db.SaveChangesAsync(ct);
+        }
+        var photos = await PhotosAsync(ids, ct);
+        return ids.Select(id => new CardData(CardKind.Staff, names[id].Given, names[id].Family, "",
+            staff[id].Length > 0 ? staff[id] : "Personal", year.Label, cards[id].Token, photos.GetValueOrDefault(id))).ToArray();
+    }
+
+    /// <summary>Active staff members ordered by family and given names (sheet printing for the whole staff).</summary>
+    public async Task<Guid[]> StaffBatchAsync(CancellationToken ct)
+    {
+        var rows = await (from p in db.Persons.AsNoTracking()
+                          join s in db.Staff on p.Id equals s.PersonId
+                          where p.Status == PersonStatus.Active
+                          select new { p.Id, p.FamilyNames, p.GivenNames }).ToArrayAsync(ct);
+        return rows.OrderBy(x => x.FamilyNames, StringComparer.CurrentCulture).ThenBy(x => x.GivenNames, StringComparer.CurrentCulture)
+            .Select(x => x.Id).ToArray();
+    }
+
+    private static OperationException NoCard() =>
+        OperationException.NotFound("Solo estudiantes y personal del colegio tienen carnet.");
+
+    private async Task<AcademicYear> CardYearAsync(Guid yearId, CancellationToken ct)
+    {
+        var year = await db.Years.AsNoTracking().SingleOrDefaultAsync(x => x.Id == yearId, ct) ?? throw OperationException.NotFound("No encontramos ese ciclo.");
+        if (year.Status is not (YearStatus.EnrollmentOpen or YearStatus.Active))
+            throw OperationException.Invalid("Elige un ciclo con inscripción abierta o en curso.");
+        return year;
+    }
+
+    /// <summary>Today when it falls within the year; otherwise its first or last day.</summary>
+    private DateOnly AsOf(AcademicYear year)
+    {
+        var today = courses.LocalDate(time.GetUtcNow());
+        return today < year.StartsOn ? year.StartsOn : today > year.EndsOn ? year.EndsOn : today;
+    }
+
+    /// <summary>Printed name in two lines: preferred or given names, then family names.</summary>
+    private async Task<Dictionary<Guid, (string Given, string Family)>> NamesAsync(Guid[] ids, CancellationToken ct) =>
+        (await db.Persons.AsNoTracking().Where(x => ids.Contains(x.Id)).Select(x => new { x.Id, x.PreferredName, x.GivenNames, x.FamilyNames }).ToArrayAsync(ct))
+            .ToDictionary(x => x.Id, x => ((x.PreferredName ?? x.GivenNames).Trim(), x.FamilyNames.Trim()));
+
+    private async Task<Dictionary<Guid, byte[]>> PhotosAsync(Guid[] ids, CancellationToken ct)
+    {
+        var files = await db.PersonPhotos.AsNoTracking().Where(x => ids.Contains(x.PersonId)).ToArrayAsync(ct);
+        var result = new Dictionary<Guid, byte[]>();
+        foreach (var file in files)
+            if (File.Exists(PathFor(file.StorageKey))) result[file.PersonId] = await File.ReadAllBytesAsync(PathFor(file.StorageKey), ct);
+        return result;
+    }
+
+    private Task LockStaffAsync(Guid staffId, CancellationToken ct) =>
+        db.Database.ExecuteSqlRawAsync("""
+            DECLARE @result int;
+            EXEC @result = sp_getapplock @Resource={0}, @LockMode=N'Exclusive', @LockOwner=N'Transaction', @LockTimeout=5000;
+            IF @result < 0 THROW 51000, 'Card busy', 1;
+            """, ["SchoolPlatform.StaffCard." + staffId], ct);
 
     // ---- photos
 

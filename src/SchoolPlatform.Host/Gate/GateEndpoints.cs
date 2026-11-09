@@ -84,7 +84,7 @@ public static class GateEndpoints
             CancellationToken ct) =>
         {
             var data = await cards.PrintAsync(Actor(user), [id], null, ct);
-            return DocumentEndpoints.Pdf(pdf.Cards(data, Layout(layout)), $"carnet-{data[0].StudentCode}.pdf");
+            return DocumentEndpoints.Pdf(pdf.Cards(data, Layout(layout)), $"carnet-{FileName(data[0])}.pdf");
         });
         issuing.MapGet("/years/{yearId:guid}/cards.pdf", async (Guid yearId, Guid gradeId, Guid? sectionId, string? layout, ClaimsPrincipal user,
             CardService cards, PdfDocuments pdf, CancellationToken ct) =>
@@ -92,6 +92,26 @@ public static class GateEndpoints
             var (ids, asOf) = await cards.BatchAsync(new(yearId, gradeId, sectionId), ct);
             if (ids.Length == 0) return Results.Problem(statusCode: 404, title: "No hay estudiantes activos en ese grado o sección.");
             return DocumentEndpoints.Pdf(pdf.Cards(await cards.PrintAsync(Actor(user), ids, asOf, ct), Layout(layout)), "carnets.pdf");
+        });
+        // Any person with a card (students and staff; guardians get none). The cycle is always explicit when printing.
+        var cardReaders = app.MapGroup("/api/v1").RequireAuthorization(Permissions.PeopleRead).AddEndpointFilter<ApiWriteFilter>();
+        cardReaders.MapGet("/people/{id:guid}/card", async (Guid id, CardService cards, CancellationToken ct) =>
+            await cards.PersonCardAsync(id, ct) is { } card ? Results.Ok(card) : Results.NotFound());
+        cardReaders.MapGet("/cards/years", (CardService cards, CancellationToken ct) => cards.YearsAsync(ct));
+        issuing.MapPost("/people/{id:guid}/card/reissue", (Guid id, ReissueRequest request, ClaimsPrincipal user, CardService cards, CancellationToken ct) =>
+            cards.ReissuePersonAsync(Actor(user), id, request, ct));
+        issuing.MapGet("/people/{id:guid}/card.pdf", async (Guid id, Guid yearId, string? layout, ClaimsPrincipal user, CardService cards,
+            PdfDocuments pdf, CancellationToken ct) =>
+        {
+            var card = await cards.PrintPersonAsync(Actor(user), id, yearId, ct);
+            return DocumentEndpoints.Pdf(pdf.Cards([card], Layout(layout)), $"carnet-{FileName(card)}.pdf");
+        });
+        issuing.MapGet("/staff/cards.pdf", async (Guid yearId, string? layout, ClaimsPrincipal user, CardService cards, PdfDocuments pdf,
+            CancellationToken ct) =>
+        {
+            var ids = await cards.StaffBatchAsync(ct);
+            if (ids.Length == 0) return Results.Problem(statusCode: 404, title: "No hay personal activo registrado.");
+            return DocumentEndpoints.Pdf(pdf.Cards(await cards.PrintStaffAsync(Actor(user), ids, yearId, ct), Layout(layout)), "carnets-personal.pdf");
         });
         issuing.MapPost("/people/{id:guid}/photo", async (Guid id, IFormFile file, ClaimsPrincipal user, CardService cards, CancellationToken ct) =>
         {
@@ -106,6 +126,10 @@ public static class GateEndpoints
     }
 
     private static string Layout(string? layout) => layout == "card" ? "card" : "sheet";
+
+    /// <summary>Student code, or "personal" for staff (no names or card tokens in file names).</summary>
+    private static string FileName(CardData card) =>
+        card.Code.Length > 0 && card.Code.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_') ? card.Code : "personal";
 
     private static Guid Actor(ClaimsPrincipal user) => PeopleEndpoints.Actor(user);
 }

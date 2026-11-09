@@ -59,6 +59,7 @@ builder.Services.AddScoped<SchoolPlatform.Host.Finance.FinanceSetupService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Finance.ChargeService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Finance.PaymentService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Finance.ClearanceService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Inventory.InventoryService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Grades.GradeService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Common.DashboardService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Grades.GradeReportService>();
@@ -261,6 +262,7 @@ SchoolPlatform.Host.LegacyImport.MigrationAssistantEndpoints.MapMigrationAssista
 SchoolPlatform.Host.Academic.AcademicEndpoints.MapAcademic(app);
 SchoolPlatform.Host.Academic.AcademicEndpoints.MapCourses(app);
 SchoolPlatform.Host.Finance.FinanceEndpoints.MapFinance(app);
+SchoolPlatform.Host.Inventory.InventoryEndpoints.MapInventory(app);
 SchoolPlatform.Host.Grades.GradeEndpoints.MapGrades(app);
 SchoolPlatform.Host.Learning.LearningEndpoints.MapLearning(app);
 SchoolPlatform.Host.Attendance.AttendanceEndpoints.MapAttendance(app);

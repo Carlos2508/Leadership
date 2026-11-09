@@ -13,6 +13,7 @@ import '../../shared/page_layout.dart';
 import 'academic_page.dart';
 import 'connected_session.dart';
 import 'connected_shell.dart';
+import 'inventory_page.dart';
 import 'school_api.dart';
 import 'students_tab.dart';
 
@@ -67,6 +68,33 @@ class _SchoolTabState extends ConsumerState<SchoolTab> {
                         session.can('academic.manage')
                             ? 'Prepara bimestres, secciones, cursos y el inicio de clases'
                             : 'Bimestres, cursos y estado del ciclo',
+                        style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: colors.muted),
+              ],
+            ),
+          ),
+          const SizedBox(height: Spacing.lg),
+        ],
+        if (session.can('inventory.read')) ...[
+          AppCard(
+            onTap: () =>
+                Navigator.of(context)
+                    .push(MaterialPageRoute<void>(builder: (_) => const InventoryPage())),
+            child: Row(
+              children: [
+                const ToneIcon(icon: Icons.inventory_2_outlined, tone: AppTone.accent),
+                const SizedBox(width: Spacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Inventario y bodega', style: theme.textTheme.titleSmall),
+                      Text(
+                        'Artículos, existencias y movimientos',
                         style: theme.textTheme.bodySmall?.copyWith(color: colors.muted),
                       ),
                     ],

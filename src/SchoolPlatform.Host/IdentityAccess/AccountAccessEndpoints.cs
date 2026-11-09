@@ -74,10 +74,11 @@ public static class AccountAccessEndpoints
                 "academic" => ["AcademicYear", "Grade", "Course", "Enrollment", "Subject", "Assignment"],
                 "finance" => ["Charge", "Payment", "FeeConcept"],
                 "communication" => ["Announcement"],
+                "inventory" => ["InventoryProduct"],
                 "access" => [],
                 _ => null
             };
-            if (area is not (null or "" or "all" or "changes" or "people" or "academic" or "finance" or "communication" or "access" or "gate"))
+            if (area is not (null or "" or "all" or "changes" or "people" or "academic" or "finance" or "communication" or "inventory" or "access" or "gate"))
                 return Results.BadRequest();
             var query = db.AuditEvents.AsNoTracking();
             // "changes": everything except routine sign-ins/sign-outs; "gate": ID cards, photos, gate marks and scanner devices.

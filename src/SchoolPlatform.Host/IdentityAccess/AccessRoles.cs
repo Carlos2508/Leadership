@@ -42,6 +42,9 @@ public static class PermissionCatalog
         new(Permissions.CommunicationPublish, "Publicar y administrar avisos", "Comunicación"),
         new(Permissions.AttendanceGate, "Registrar entradas y salidas", "Portería"),
         new(Permissions.AttendanceRead, "Consultar reportes de portería", "Portería"),
-        new(Permissions.AttendanceManage, "Administrar lectores y anular marcas", "Portería")
+        new(Permissions.AttendanceManage, "Administrar lectores y anular marcas", "Portería"),
+        new(Permissions.InventoryRead, "Consultar artículos, existencias y movimientos", "Inventario y bodega"),
+        new(Permissions.InventoryManage, "Administrar artículos y corregir conteos físicos", "Inventario y bodega"),
+        new(Permissions.InventoryMove, "Registrar entradas y salidas de artículos", "Inventario y bodega")
     ];
 }

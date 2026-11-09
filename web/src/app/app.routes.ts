@@ -148,6 +148,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/finance-cashier').then((x) => x.FinanceCashier),
   },
   {
+    path: 'workspace/inventory',
+    canActivate: [permissionGuard('inventory.read')],
+    canDeactivate: [pendingChangesGuard],
+    loadComponent: () => import('./features/inventory').then((x) => x.Inventory),
+  },
+  {
     path: 'workspace/finance/setup',
     canActivate: [permissionGuard('finance.read')],
     loadComponent: () => import('./features/finance-setup').then((x) => x.FinanceSetup),

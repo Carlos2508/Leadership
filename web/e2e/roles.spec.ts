@@ -13,9 +13,9 @@ test('custom access roles accept all permissions and update assigned accounts th
     .getByLabel('Contraseña', { exact: true })
     .fill(process.env['SCHOOLPLATFORM_E2E_PASSWORD']!);
   await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
-  await expect(
-    page.getByRole('heading', { name: /^¡Hola,/ }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^¡Hola,/ })).toBeVisible();
+  const permissionCount = (await (await page.request.get('/api/v1/access/permissions')).json())
+    .length;
   await page.goto('/workspace/roles');
   await expect(page.getByRole('heading', { name: 'Roles y permisos', exact: true })).toBeVisible();
   const suffix = randomUUID().slice(0, 6);
@@ -23,7 +23,7 @@ test('custom access roles accept all permissions and update assigned accounts th
   await page.getByRole('button', { name: 'Crear rol', exact: true }).click();
   await page.getByLabel('Nombre del rol', { exact: true }).fill(label);
   await page.getByRole('button', { name: 'Seleccionar todos', exact: true }).click();
-  await expect(page.getByRole('checkbox', { checked: true })).toHaveCount(15);
+  await expect(page.getByRole('checkbox', { checked: true })).toHaveCount(permissionCount);
   await page
     .getByLabel('Motivo del cambio')
     .fill('Permisos completos aprobados para el rol sintético.');
@@ -35,7 +35,7 @@ test('custom access roles accept all permissions and update assigned accounts th
   await page.getByRole('button', { name: 'Guardar rol', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeHidden();
   const row = page.getByRole('row').filter({ hasText: label });
-  await expect(row).toContainText('15 de 15');
+  await expect(row).toContainText(`${permissionCount} de ${permissionCount}`);
   const roles = await (await page.request.get('/api/v1/access/roles')).json();
   const role = roles.find((r: { label: string }) => r.label === label);
   const { token } = await (await page.request.get('/api/v1/antiforgery')).json();
@@ -72,7 +72,9 @@ test('custom access roles accept all permissions and update assigned accounts th
   await expect(page.locator('.sp-alert')).toContainText('1 cuenta');
   await page.getByRole('button', { name: 'Actualizar permisos', exact: true }).click();
   await expect(page.locator('dialog.account-dialog')).toBeHidden();
-  await expect(page.getByRole('row').filter({ hasText: label })).toContainText('1 de 15');
+  await expect(page.getByRole('row').filter({ hasText: label })).toContainText(
+    `1 de ${permissionCount}`,
+  );
   expect(
     (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
       .violations,

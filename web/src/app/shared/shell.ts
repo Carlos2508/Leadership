@@ -96,9 +96,15 @@ import { ChatInbox } from '../core/chat';
             <span class="nav-group" aria-hidden="true">DOCENCIA</span>
             @if (session.myCourses().length <= 6) {
               @for (course of session.myCourses(); track course.id) {
-                <a [routerLink]="['/workspace/courses', course.id]" routerLinkActive="active" ariaCurrentWhenActive="page"
+                <a
+                  [routerLink]="['/workspace/courses', course.id]"
+                  routerLinkActive="active"
+                  ariaCurrentWhenActive="page"
                   ><app-icon name="book" /><span class="nav-text"
-                    >{{ course.subject }}<small>{{ course.grade }}{{ course.section ? ' · ' + course.section : '' }}</small></span
+                    >{{ course.subject
+                    }}<small
+                      >{{ course.grade }}{{ course.section ? ' · ' + course.section : '' }}</small
+                    ></span
                   ></a
                 >
               }
@@ -224,6 +230,15 @@ import { ChatInbox } from '../core/chat';
               routerLinkActive="active"
               ariaCurrentWhenActive="page"
               ><app-icon name="wallet" />Caja y cobros</a
+            >
+          }
+          @if (!preview() && session.can('inventory.read')) {
+            <span class="nav-group" aria-hidden="true">Bodega</span>
+            <a
+              routerLink="/workspace/inventory"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+              ><app-icon name="book" />Inventario</a
             >
           }
           @if (!preview() && (session.can('accounts.manage') || session.can('audit.read'))) {
@@ -475,7 +490,10 @@ export class Shell {
       group.courses.push({ id: c.id, subject: c.subject });
       groups.set(label, group);
     }
-    return [...groups.values()].map((g) => ({ ...g, courses: g.courses.sort((a, b) => a.subject.localeCompare(b.subject, 'es')) }));
+    return [...groups.values()].map((g) => ({
+      ...g,
+      courses: g.courses.sort((a, b) => a.subject.localeCompare(b.subject, 'es')),
+    }));
   });
   readonly menuOpen = signal(false);
   readonly notifications = inject(NotificationService);

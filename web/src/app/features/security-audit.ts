@@ -6,6 +6,12 @@ import { Icon } from '../shared/icon';
 
 const actionLabels: Record<string, string> = {
   OwnerProvisioned: 'Gestor inicial creado',
+  InventoryProductCreated: 'Artículo de bodega registrado',
+  InventoryProductUpdated: 'Ficha de artículo actualizada',
+  InventoryStockReceived: 'Existencias iniciales registradas',
+  InventoryStockIn: 'Entrada de artículos',
+  InventoryStockOut: 'Salida de artículos',
+  InventoryStockCount: 'Conteo físico de inventario',
   AccountInvited: 'Cuenta invitada',
   AccessProfileChanged: 'Rol de la cuenta modificado',
   AccessRoleCreated: 'Rol de acceso creado',
@@ -205,6 +211,7 @@ const detailLabels: Record<string, string> = {
               <option value="academic">Académico</option>
               <option value="finance">Finanzas</option>
               <option value="communication">Avisos</option>
+              <option value="inventory">Inventario y bodega</option>
               <option value="gate">Carnets y portería</option>
             </select></label
           >

@@ -74,6 +74,7 @@ public sealed partial class SchoolDbContext(DbContextOptions<SchoolDbContext> op
         ConfigureAttendanceModel(builder);
         ConfigureCommunicationModel(builder);
         ConfigureChat(builder);
+        ConfigureInventory(builder);
         ConfigureGateModel(builder);
     }
 
@@ -194,6 +195,8 @@ public sealed partial class SchoolDbContext(DbContextOptions<SchoolDbContext> op
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
+        if (ChangeTracker.Entries<SchoolPlatform.Host.Inventory.InventoryMovement>().Any(x => x.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("El historial de inventario solo admite nuevos movimientos.");
         if (ChangeTracker.Entries<SecurityAuditEvent>().Any(x => x.State is EntityState.Modified or EntityState.Deleted) ||
             ChangeTracker.Entries<AccountRef>().Any(x => x.State != EntityState.Unchanged) ||
             ChangeTracker.Entries<PermissionRef>().Any(x => x.State != EntityState.Unchanged))

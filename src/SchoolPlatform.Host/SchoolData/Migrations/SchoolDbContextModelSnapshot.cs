@@ -1581,6 +1581,144 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
                 });
 
+            modelBuilder.Entity("SchoolPlatform.Host.Inventory.InventoryMovement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("After")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Before")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Delta")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte[]>("RequestHash")
+                        .IsRequired()
+                        .HasColumnType("binary(32)");
+
+                    b.Property<long>("Sequence")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorId");
+
+                    b.HasIndex("ProductId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("Movements", "inventory", t =>
+                        {
+                            t.HasTrigger("Movements_AppendOnly");
+
+                            t.HasCheckConstraint("CK_InventoryMovement_Kind", "([Kind] = 'In' AND [Delta] > 0) OR ([Kind] = 'Out' AND [Delta] < 0) OR [Kind] = 'Count'");
+
+                            t.HasCheckConstraint("CK_InventoryMovement_Reason", "LEN(LTRIM(RTRIM([Reason]))) >= 8");
+
+                            t.HasCheckConstraint("CK_InventoryMovement_Stock", "[Before] BETWEEN 0 AND 1000000 AND [After] BETWEEN 0 AND 1000000 AND [After] = [Before] + [Delta] AND [Sequence] > 0");
+                        });
+
+                    b.HasAnnotation("SqlServer:UseSqlOutputClause", false);
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Inventory.InventoryProduct", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("CreationHash")
+                        .IsRequired()
+                        .HasColumnType("binary(32)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("LastSequence")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Minimum")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<int>("OnHand")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedBy");
+
+                    b.ToTable("Products", "inventory", t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryProduct_Stock", "[OnHand] BETWEEN 0 AND 1000000 AND [Minimum] BETWEEN 0 AND 1000000 AND [LastSequence] >= 0 AND ([IsActive] = 1 OR [OnHand] = 0)");
+
+                            t.HasCheckConstraint("CK_InventoryProduct_Text", "LEN(LTRIM(RTRIM([Code]))) > 0 AND LEN(LTRIM(RTRIM([Name]))) > 0");
+                        });
+                });
+
             modelBuilder.Entity("SchoolPlatform.Host.Learning.Assignment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2713,6 +2851,30 @@ namespace SchoolPlatform.Host.SchoolData.Migrations
                     b.HasOne("SchoolPlatform.Host.Grades.PeriodScore", null)
                         .WithMany()
                         .HasForeignKey("ScoreId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Inventory.InventoryMovement", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("ActorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SchoolPlatform.Host.Inventory.InventoryProduct", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolPlatform.Host.Inventory.InventoryProduct", b =>
+                {
+                    b.HasOne("SchoolPlatform.Host.SchoolData.AccountRef", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

@@ -24,6 +24,9 @@ public static class Permissions
     public const string AttendanceRead = "attendance.read";
     /// <summary>Register/revoke scanner devices and void gate marks.</summary>
     public const string AttendanceManage = "attendance.manage";
+    public const string InventoryRead = "inventory.read";
+    public const string InventoryManage = "inventory.manage";
+    public const string InventoryMove = "inventory.move";
 }
 
 public sealed record AccessProfile(string Key, string Label, string[] Permissions);

@@ -1,0 +1,391 @@
+<app-shell title="Inventario">
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">BODEGA DEL COLEGIO</span>
+      <h1>Inventario</h1>
+      <p>Materiales, útiles e insumos del colegio, con control de existencias y movimientos.</p>
+    </div>
+    <div class="inventory-actions">
+      <button class="outline" (click)="export()" [disabled]="loading() || exporting()">
+        {{ exporting() ? 'Exportando…' : 'Exportar CSV' }}
+      </button>
+      @if (canManage()) {
+        <button (click)="open('new')"><app-icon name="plus" />Nuevo artículo</button>
+      }
+    </div>
+  </div>
+  @if (summary(); as s) {
+    <div class="inventory-stats" aria-label="Resumen de artículos activos">
+      <div class="card">
+        <span>Artículos activos</span><strong>{{ s.activeProducts }}</strong>
+      </div>
+      <div class="card">
+        <span>Unidades disponibles</span><strong>{{ s.units }}</strong>
+      </div>
+      <div class="card">
+        <span>Con stock bajo o agotado</span><strong>{{ s.lowStockProducts }}</strong>
+      </div>
+    </div>
+  }
+  <section class="card inventory-filters" aria-label="Filtros de inventario">
+    <form (ngSubmit)="filter()">
+      <label class="form-field"
+        ><span>Buscar artículo</span
+        ><input
+          type="search"
+          name="search"
+          [(ngModel)]="search"
+          maxlength="100"
+          placeholder="Código, nombre, categoría o ubicación" /></label
+      ><label class="form-field"
+        ><span id="inventory-status-label">Estado</span
+        ><select name="status" [(ngModel)]="status" aria-labelledby="inventory-status-label">
+          <option value="active">Activos</option>
+          <option value="archived">Archivados</option>
+          <option value="all">Todos</option>
+        </select></label
+      ><label class="checkbox-field"
+        ><input name="low" type="checkbox" [(ngModel)]="low" /><span>Solo stock bajo</span></label
+      ><button type="submit" class="outline">Buscar</button>
+    </form>
+  </section>
+  @if (loading()) {
+    <p class="card loading-state" role="status">Cargando inventario…</p>
+  } @else if (error()) {
+    <div class="card">
+      <p class="feedback error-feedback" role="alert">{{ error() }}</p>
+      <button class="outline" (click)="load()">Reintentar inventario</button>
+    </div>
+  } @else {
+    <div class="inventory-grid">
+      <section class="card inventory-catalog" aria-label="Artículos">
+        <header>
+          <h2>
+            Artículos <small>{{ total() }}</small>
+          </h2>
+        </header>
+        @for (p of rows(); track p.id) {
+          <button
+            class="inventory-product"
+            [class.selected]="selected()?.id === p.id"
+            [attr.aria-pressed]="selected()?.id === p.id"
+            (click)="choose(p)"
+          >
+            <span class="inventory-item-icon"><app-icon name="book" /></span
+            ><span class="inventory-product-info"
+              ><b>{{ p.name }}</b
+              ><small>{{ p.code }}{{ p.category ? ' · ' + p.category : '' }}</small
+              ><small>{{ p.location || 'Sin ubicación' }}</small></span
+            ><span class="inventory-quantity"
+              ><b>{{ p.onHand }}</b
+              ><small [class.stock-low]="p.lowStock">{{
+                !p.isActive
+                  ? 'Archivado'
+                  : p.onHand === 0
+                    ? 'Agotado'
+                    : p.lowStock
+                      ? 'Stock bajo'
+                      : 'Disponible'
+              }}</small></span
+            >
+          </button>
+        } @empty {
+          <div class="empty-state">
+            <app-icon name="book" />
+            <h3>No hay artículos en esta lista</h3>
+            <p>
+              {{
+                search || low || status !== 'active'
+                  ? 'Cambia los filtros para encontrar otros artículos.'
+                  : 'Registra el primer artículo y sus unidades iniciales.'
+              }}
+            </p>
+          </div>
+        }
+        @if (total() > 40) {
+          <div class="inventory-pagination">
+            <button class="outline" (click)="filter(page - 1)" [disabled]="page <= 1">
+              Anterior</button
+            ><span>Página {{ page }}</span
+            ><button class="outline" (click)="filter(page + 1)" [disabled]="page * 40 >= total()">
+              Siguiente
+            </button>
+          </div>
+        }
+      </section>
+      <section class="card inventory-detail" aria-label="Detalle del artículo">
+        @if (selected(); as p) {
+          <header>
+            <div>
+              <span class="eyebrow">{{ p.code }}</span>
+              <h2>{{ p.name }}</h2>
+              <p>{{ p.category || 'Sin categoría' }} · {{ p.location || 'Sin ubicación' }}</p>
+            </div>
+            <button class="icon-button" aria-label="Cerrar detalle" (click)="choose(null)">
+              <app-icon name="close" />
+            </button>
+          </header>
+          <div class="inventory-balance">
+            <div>
+              <span>Existencia actual</span><strong>{{ p.onHand }} <small>unidades</small></strong>
+            </div>
+            <span class="pill" [class.due]="p.lowStock">{{
+              !p.isActive
+                ? 'Archivado'
+                : p.onHand === 0
+                  ? 'Agotado'
+                  : p.lowStock
+                    ? 'Stock bajo'
+                    : 'Disponible'
+            }}</span>
+          </div>
+          <p class="muted-copy">Stock mínimo: {{ p.minimum }} unidades.</p>
+          <div class="inventory-actions">
+            @if (p.isActive && canMove()) {
+              <button (click)="open('move', 'In')">Entrada</button
+              ><button class="outline" (click)="open('move', 'Out')" [disabled]="p.onHand === 0">
+                Salida
+              </button>
+            }
+            @if (p.isActive && canManage()) {
+              <button class="outline" (click)="open('move', 'Count')">Conteo físico</button>
+            }
+            @if (canManage()) {
+              <button class="outline" (click)="open('edit')">Editar artículo</button>
+            }
+          </div>
+          <h3 class="inventory-history-title">Historial de movimientos</h3>
+          <p class="muted-copy">
+            Los registros se conservan. Corrige diferencias con un nuevo conteo físico.
+          </p>
+          <ol class="inventory-history">
+            @for (m of movements(); track m.id) {
+              <li>
+                <div>
+                  <b
+                    >{{ kindLabels[m.kind] }}
+                    <span [class.stock-out]="m.delta < 0"
+                      >{{ m.delta > 0 ? '+' : '' }}{{ m.delta }}</span
+                    ></b
+                  ><small>{{ api.date(m.occurredAt) }} · {{ m.actor }}</small>
+                </div>
+                <p>{{ m.before }} → {{ m.after }} unidades</p>
+                <p>{{ m.reason }}</p>
+                @if (m.reference) {
+                  <small>Referencia: {{ m.reference }}</small>
+                }
+              </li>
+            } @empty {
+              <li class="muted-copy">Todavía no hay movimientos.</li>
+            }
+          </ol>
+          @if (movementTotal() > 40) {
+            <div class="inventory-pagination">
+              <button
+                class="outline"
+                (click)="history(movementPage - 1)"
+                [disabled]="movementPage <= 1"
+              >
+                Más recientes</button
+              ><span>Página {{ movementPage }}</span
+              ><button
+                class="outline"
+                (click)="history(movementPage + 1)"
+                [disabled]="movementPage * 40 >= movementTotal()"
+              >
+                Más antiguos
+              </button>
+            </div>
+          }
+        } @else {
+          <div class="empty-state">
+            <app-icon name="clipboard" />
+            <h2>Todo movimiento, en orden</h2>
+            <p>
+              Selecciona un artículo para consultar sus existencias y registrar entradas, salidas o
+              un conteo físico.
+            </p>
+          </div>
+        }
+      </section>
+    </div>
+  }
+  <dialog
+    class="access-dialog inventory-dialog"
+    #editor
+    (cancel)="$event.preventDefault(); close()"
+    aria-labelledby="inventory-editor-title"
+  >
+    <header>
+      <div>
+        <span class="eyebrow">BODEGA</span>
+        <h2 id="inventory-editor-title">{{ title() }}</h2>
+      </div>
+      <button
+        class="icon-button"
+        aria-label="Cerrar formulario"
+        (click)="close()"
+        [disabled]="busy()"
+      >
+        <app-icon name="close" />
+      </button>
+    </header>
+    <form class="access-form" (ngSubmit)="save()">
+      @if (mode() !== 'new') {
+        <p class="muted-copy">{{ productLabel() }}</p>
+      }
+      <fieldset [disabled]="busy() || !!pending()">
+        @if (mode() !== 'move') {
+          <label class="form-field"
+            ><span>Código del artículo</span
+            ><input
+              name="code"
+              [(ngModel)]="form.code"
+              required
+              maxlength="40"
+              pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,39}"
+              placeholder="Por ejemplo, LAP-01"
+          /></label>
+          <label class="form-field"
+            ><span>Nombre del artículo</span
+            ><input name="name" [(ngModel)]="form.name" required minlength="2" maxlength="160"
+          /></label>
+          <div class="form-row">
+            <label class="form-field"
+              ><span>Categoría</span
+              ><input
+                name="category"
+                [(ngModel)]="form.category"
+                maxlength="80"
+                placeholder="Cuadernos, escritura…" /></label
+            ><label class="form-field"
+              ><span>Ubicación</span
+              ><input
+                name="location"
+                [(ngModel)]="form.location"
+                maxlength="100"
+                placeholder="Estante, caja…"
+            /></label>
+          </div>
+          <div class="form-row">
+            <label class="form-field"
+              ><span>Stock mínimo</span
+              ><input
+                name="minimum"
+                type="number"
+                [(ngModel)]="form.minimum"
+                required
+                min="0"
+                max="1000000"
+                step="1"
+            /></label>
+            @if (mode() === 'new') {
+              <label class="form-field"
+                ><span>Unidades iniciales</span
+                ><input
+                  name="initialQuantity"
+                  type="number"
+                  [(ngModel)]="form.initialQuantity"
+                  required
+                  min="0"
+                  max="1000000"
+                  step="1"
+                  [readOnly]="!canMove()"
+              /></label>
+            }
+          </div>
+          @if (mode() === 'edit') {
+            <label class="checkbox-field"
+              ><input
+                name="isActive"
+                type="checkbox"
+                [(ngModel)]="form.isActive"
+                [disabled]="available() > 0"
+              /><span
+                >Artículo activo<small
+                  >Para archivar, primero debe quedar sin existencias.</small
+                ></span
+              ></label
+            >
+          }
+          <label class="form-field"
+            ><span>Motivo del registro</span
+            ><textarea
+              name="reason"
+              [(ngModel)]="form.reason"
+              required
+              minlength="8"
+              maxlength="500"
+            ></textarea>
+          </label>
+        } @else {
+          <div class="inventory-preview">
+            <span
+              >Disponible: <b>{{ available() }}</b></span
+            ><span
+              >Quedará: <b>{{ projected() }}</b></span
+            >
+          </div>
+          <label class="form-field"
+            ><span>{{
+              movement.kind === 'Count' ? 'Unidades contadas físicamente' : 'Cantidad de unidades'
+            }}</span
+            ><input
+              name="quantity"
+              type="number"
+              [(ngModel)]="movement.quantity"
+              required
+              [min]="movement.kind === 'Count' ? 0 : 1"
+              max="1000000"
+              step="1"
+          /></label>
+          @if (movement.kind === 'Count') {
+            <p class="muted-copy">
+              Escribe el total que encontraste. Se conservará el ajuste con el motivo y tu cuenta.
+            </p>
+          }
+          <label class="form-field"
+            ><span>Referencia (opcional)</span
+            ><input
+              name="reference"
+              [(ngModel)]="movement.reference"
+              maxlength="100"
+              placeholder="Factura, entrega o documento"
+          /></label>
+          <label class="form-field"
+            ><span>Motivo del movimiento</span
+            ><textarea
+              name="reason"
+              [(ngModel)]="movement.reason"
+              required
+              minlength="8"
+              maxlength="500"
+            ></textarea>
+          </label>
+        }
+      </fieldset>
+      @if (dialogError()) {
+        <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
+        @if (!pending() && mode() !== 'new') {
+          <button class="outline" type="button" (click)="refreshEditor()" [disabled]="busy()">
+            Actualizar existencia y revisar
+          </button>
+        }
+      }
+      <div class="dialog-actions">
+        <button class="outline" type="button" (click)="close()" [disabled]="busy()">Cancelar</button
+        ><button type="submit" [disabled]="busy()">
+          {{
+            busy()
+              ? 'Guardando…'
+              : pending()
+                ? 'Reintentar registro'
+                : mode() === 'move'
+                  ? 'Registrar ' + kindLabels[movement.kind].toLowerCase()
+                  : 'Guardar artículo'
+          }}
+        </button>
+      </div>
+    </form>
+  </dialog>
+</app-shell>

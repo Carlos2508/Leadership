@@ -210,7 +210,7 @@ export class Messages implements PendingChanges {
           else this.newMessages.set(true);
         } else if (atEnd) void this.markRead();
       }
-      this.threadError.set('');
+      if (!this.retrying()) this.threadError.set('');
     } catch (e) {
       if (generation === this.generation) {
         this.threadError.set(this.api.message(e));
@@ -254,6 +254,7 @@ export class Messages implements PendingChanges {
     }
   }
   private sent(): void {
+    this.threadError.set('');
     this.sending.set(false);
     this.pending = undefined;
     this.retrying.set(false);

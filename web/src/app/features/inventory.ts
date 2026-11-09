@@ -142,6 +142,11 @@ export class Inventory implements PendingChanges {
       this.selected.set(detail);
       this.movements.set(history?.items ?? []);
       this.movementTotal.set(history?.total ?? 0);
+      if (detail && window.innerWidth <= 1000)
+        requestAnimationFrame(() => {
+          if (generation === this.generation)
+            document.querySelector('.inventory-detail')?.scrollIntoView({ block: 'start' });
+        });
     } catch (error) {
       if (generation === this.generation) this.error.set(this.api.message(error));
     } finally {

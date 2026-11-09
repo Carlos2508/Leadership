@@ -56,6 +56,8 @@ test('school warehouse records initial stock, safely retries a lost response, co
   await expect(page.getByRole('dialog')).toBeHidden();
   await page.locator('.inventory-product').filter({ hasText: code }).click();
   await expect(page.locator('.inventory-balance strong')).toContainText('20');
+  if (info.project.name === 'mobile')
+    await expect(page.locator('.inventory-detail h2')).toBeInViewport();
   await expect(page.locator('.inventory-history li')).toHaveCount(1);
   await page.getByRole('button', { name: 'Salida', exact: true }).click();
   await page.getByLabel('Cantidad de unidades', { exact: true }).fill('17');

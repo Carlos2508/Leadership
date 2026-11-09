@@ -1,3 +1,9 @@
+.inventory-mobile-back.button {
+  display: none;
+}
+.inventory-mobile-back app-icon {
+  transform: rotate(180deg);
+}
 .inventory-actions {
   display: flex;
   flex-wrap: wrap;
@@ -127,6 +133,7 @@
   }
 }
 .inventory-detail {
+  scroll-margin-top: 90px;
   padding: 24px;
   > header {
     display: flex;
@@ -243,6 +250,16 @@
 @media (max-width: 1000px) {
   .inventory-grid {
     grid-template-columns: 1fr;
+  }
+  .inventory-grid.has-selection .inventory-catalog {
+    display: none;
+  }
+  .inventory-grid:not(.has-selection) .inventory-detail {
+    display: none;
+  }
+  .inventory-mobile-back.button {
+    display: inline-flex;
+    margin-bottom: 20px;
   }
 }
 @media (max-width: 600px) {

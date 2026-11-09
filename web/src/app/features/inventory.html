@@ -6,11 +6,11 @@
       <p>Materiales, útiles e insumos del colegio, con control de existencias y movimientos.</p>
     </div>
     <div class="inventory-actions">
-      <button class="outline" (click)="export()" [disabled]="loading() || exporting()">
+      <button class="button outline" (click)="export()" [disabled]="loading() || exporting()">
         {{ exporting() ? 'Exportando…' : 'Exportar CSV' }}
       </button>
       @if (canManage()) {
-        <button (click)="open('new')"><app-icon name="plus" />Nuevo artículo</button>
+        <button class="button" (click)="open('new')"><app-icon name="plus" />Nuevo artículo</button>
       }
     </div>
   </div>
@@ -46,7 +46,7 @@
         </select></label
       ><label class="checkbox-field"
         ><input name="low" type="checkbox" [(ngModel)]="low" /><span>Solo stock bajo</span></label
-      ><button type="submit" class="outline">Buscar</button>
+      ><button type="submit" class="button outline">Buscar</button>
     </form>
   </section>
   @if (loading()) {
@@ -54,10 +54,10 @@
   } @else if (error()) {
     <div class="card">
       <p class="feedback error-feedback" role="alert">{{ error() }}</p>
-      <button class="outline" (click)="load()">Reintentar inventario</button>
+      <button class="button outline" (click)="load()">Reintentar inventario</button>
     </div>
   } @else {
-    <div class="inventory-grid">
+    <div class="inventory-grid" [class.has-selection]="!!selected()">
       <section class="card inventory-catalog" aria-label="Artículos">
         <header>
           <h2>
@@ -104,10 +104,14 @@
         }
         @if (total() > 40) {
           <div class="inventory-pagination">
-            <button class="outline" (click)="filter(page - 1)" [disabled]="page <= 1">
+            <button class="button outline" (click)="filter(page - 1)" [disabled]="page <= 1">
               Anterior</button
             ><span>Página {{ page }}</span
-            ><button class="outline" (click)="filter(page + 1)" [disabled]="page * 40 >= total()">
+            ><button
+              class="button outline"
+              (click)="filter(page + 1)"
+              [disabled]="page * 40 >= total()"
+            >
               Siguiente
             </button>
           </div>
@@ -115,6 +119,9 @@
       </section>
       <section class="card inventory-detail" aria-label="Detalle del artículo">
         @if (selected(); as p) {
+          <button class="button outline inventory-mobile-back" (click)="choose(null)">
+            <app-icon name="arrow" />Volver a artículos
+          </button>
           <header>
             <div>
               <span class="eyebrow">{{ p.code }}</span>
@@ -142,16 +149,20 @@
           <p class="muted-copy">Stock mínimo: {{ p.minimum }} unidades.</p>
           <div class="inventory-actions">
             @if (p.isActive && canMove()) {
-              <button (click)="open('move', 'In')">Entrada</button
-              ><button class="outline" (click)="open('move', 'Out')" [disabled]="p.onHand === 0">
+              <button class="button" (click)="open('move', 'In')">Entrada</button
+              ><button
+                class="button outline"
+                (click)="open('move', 'Out')"
+                [disabled]="p.onHand === 0"
+              >
                 Salida
               </button>
             }
             @if (p.isActive && canManage()) {
-              <button class="outline" (click)="open('move', 'Count')">Conteo físico</button>
+              <button class="button outline" (click)="open('move', 'Count')">Conteo físico</button>
             }
             @if (canManage()) {
-              <button class="outline" (click)="open('edit')">Editar artículo</button>
+              <button class="button outline" (click)="open('edit')">Editar artículo</button>
             }
           </div>
           <h3 class="inventory-history-title">Historial de movimientos</h3>
@@ -182,14 +193,14 @@
           @if (movementTotal() > 40) {
             <div class="inventory-pagination">
               <button
-                class="outline"
+                class="button outline"
                 (click)="history(movementPage - 1)"
                 [disabled]="movementPage <= 1"
               >
                 Más recientes</button
               ><span>Página {{ movementPage }}</span
               ><button
-                class="outline"
+                class="button outline"
                 (click)="history(movementPage + 1)"
                 [disabled]="movementPage * 40 >= movementTotal()"
               >
@@ -367,14 +378,20 @@
       @if (dialogError()) {
         <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
         @if (!pending() && mode() !== 'new') {
-          <button class="outline" type="button" (click)="refreshEditor()" [disabled]="busy()">
+          <button
+            class="button outline"
+            type="button"
+            (click)="refreshEditor()"
+            [disabled]="busy()"
+          >
             Actualizar existencia y revisar
           </button>
         }
       }
       <div class="dialog-actions">
-        <button class="outline" type="button" (click)="close()" [disabled]="busy()">Cancelar</button
-        ><button type="submit" [disabled]="busy()">
+        <button class="button outline" type="button" (click)="close()" [disabled]="busy()">
+          Cancelar</button
+        ><button class="button" type="submit" [disabled]="busy()">
           {{
             busy()
               ? 'Guardando…'

@@ -209,6 +209,10 @@ void main() {
         'Mensaje importante',
       );
       expect(tester.widget<TextField>(find.byType(TextField)).readOnly, isTrue);
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(find.text('Conexión interrumpida'), findsOneWidget);
+      expect(find.text('Reintentar'), findsOneWidget);
       failSend = false;
       await tester.tap(find.text('Reintentar'));
       await tester.pumpAndSettle();

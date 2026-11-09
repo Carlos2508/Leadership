@@ -133,6 +133,11 @@ test('private course chat notifies on login, retries once, keeps read receipts a
     await student.p.getByRole('button', { name: 'Enviar mensaje', exact: true }).click();
     await expect(student.p.getByRole('button', { name: 'Reintentar envío' })).toBeVisible();
     await expect(composer).toHaveValue('Hola, ¿podemos revisar mi tarea?');
+    await student.p.waitForResponse(
+      (response) =>
+        response.request().method() === 'GET' && response.url().includes('/messages?after='),
+    );
+    await expect(student.p.getByRole('button', { name: 'Reintentar envío' })).toBeVisible();
     await student.p.unroute('**/chat/conversations/*/messages');
     await student.p.getByRole('button', { name: 'Reintentar envío' }).click();
     await expect(student.p.locator('.chat-bubble')).toHaveCount(1);

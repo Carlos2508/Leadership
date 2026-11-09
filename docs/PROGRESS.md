@@ -1,6 +1,13 @@
 # Progreso
 
-Actualizado: 6 de noviembre de 2026, America/Guatemala.
+Actualizado: 8 de noviembre de 2026, America/Guatemala.
+
+## Inventario y bodega del colegio — incremento vigente
+
+- El propietario pidió terminar `feat/school-store-inventory`, aclaró uso de bodega escolar y autorizó merge/push a main. Catálogo general de artículos, categoría/ubicación, stock mínimo, carga inicial, entradas, salidas, conteos físicos, historial y exportación CSV en web; operación conectada en el app. Guía `INVENTARIO_BODEGA.md`, ADR-018.
+- Transacciones SQL con saldo/movimiento/auditoría atómicos, versión optimista, secuencia por artículo y UUID de intento para no duplicar existencias al reintentar. Stock negativo rechazado; archivo solo con saldo cero; historial protegido en EF y SQL. Permisos configurables `inventory.read`, `inventory.manage`, `inventory.move`, con CSRF/ActiveAccount y MFA por operación. No se amplían roles existentes automáticamente.
+- Migración aditiva `20261107004645_SchoolStoreInventory`, aplicada solo a fixtures propios; el nombre corresponde a la preparación inicial y el alcance final es bodega general. Existencias independientes del ciclo académico. No se modificaron el legado, datos escolares ni la instalación.
+- Se integró `origin/main` `5fdc9fb` en la rama de trabajo, conservando las correcciones de carnets, libreta, chat y app docente. Regresión combinada: 150 SQL, 101 Flutter, 89 E2E web + 2 de migración MariaDB/SQL correctas, análisis limpio, builds Angular/Release/APK y snapshot correctos. Dos omisiones ordinarias se resolvieron en el fixture aparte; rendimiento móvil se mide en escritorio. La revisión detectó y corrigió la pérdida del botón de reintento del chat tras un poll, en web/app, con cobertura expresa. Informe `QA_INVENTARIO_BODEGA_2026-11-08.md`. Incremento integrado en main por autorización del propietario; sin despliegue ni actualización de la base escolar.
 
 ## Revisión completa de flujos (integrada en main)
 

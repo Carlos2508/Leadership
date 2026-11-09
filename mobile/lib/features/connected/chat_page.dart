@@ -631,7 +631,7 @@ class _ChatThreadPageState extends ConsumerState<ChatThreadPage> {
         ];
         _thread = page['conversation'] as ChatMap;
         _messages.addAll(added);
-        _error = null;
+        if (!_retry) _error = null;
         if (_pending != null &&
             _messages.any(
               (m) => m['mine'] == true && m['clientMessageId'] == _pending!['clientMessageId'],
@@ -684,6 +684,7 @@ class _ChatThreadPageState extends ConsumerState<ChatThreadPage> {
   }
 
   void _sent() {
+    _error = null;
     _sending = false;
     _pending = null;
     _retry = false;

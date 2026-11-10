@@ -156,8 +156,13 @@ class _ConnectedHomeState extends ConsumerState<ConnectedHome> with WidgetsBindi
           (ModalRoute.of(context)?.isCurrent ?? false)) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
+          final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+          messenger.showSnackBar(
             SnackBar(
+              // With an action Flutter keeps the bar until dismissed; it would then cover the chat composer
+              // after the user opens a conversation. Let it go on its own.
+              persist: false,
+              duration: const Duration(seconds: 5),
               content: Text(
                 unread == 1 ? 'Tienes un mensaje sin leer' : 'Tienes $unread mensajes sin leer',
               ),

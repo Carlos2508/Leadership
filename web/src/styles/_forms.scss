@@ -439,10 +439,12 @@ input[type='date']::-webkit-calendar-picker-indicator:hover {
 .account-dialog > form,
 .account-dialog > .dialog-body {
   min-height: 0;
+  margin: 0;
   overflow-y: auto;
   padding: 4px 24px 0;
 }
 .account-dialog > form > .dialog-actions,
+.account-dialog > .dialog-body > .dialog-actions,
 .account-dialog .dialog-actions.sticky {
   position: sticky;
   bottom: 0;
@@ -489,7 +491,11 @@ input[type='date']::-webkit-calendar-picker-indicator:hover {
   .account-dialog > :not(.dialog-heading):not(form) {
     margin-inline: 18px;
   }
-  .account-dialog > form > .dialog-actions {
+  .account-dialog > .dialog-body {
+    margin-inline: 0;
+  }
+  .account-dialog > form > .dialog-actions,
+  .account-dialog > .dialog-body > .dialog-actions {
     margin: 8px -18px 0;
     padding: 14px 18px calc(16px + env(safe-area-inset-bottom));
   }

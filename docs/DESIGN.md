@@ -36,7 +36,7 @@ El editor de roles usa acciones agrupadas por área, selección completa opciona
 - Menú personal: el docente ve el grupo «Docencia» con sus cursos asignados (máximo seis) y la familia «Mis estudiantes» con cada vínculo vigente. Se cargan de `/api/v1/me/courses` y `/api/v1/me`; son atajos de presentación, la autorización sigue en el servidor.
 
 - Encabezado: solo nombre y perfil escolar, sin menú desplegable. «Mi cuenta» y «Cerrar sesión» viven únicamente en el pie del menú lateral; no hay enlace al sitio público dentro del espacio privado. El menú usa una sola columna del ancho de la barra y los nombres largos terminan en elipsis.
-- Estudiante y familia: páginas propias de Resumen, Tareas, Calificaciones y Asistencia con las mismas pestañas (`shared/student-header.ts`). Los cursos llevan uno de seis tonos estables derivados del nombre, con contraste AA. Calendarios mensuales con lunes primero y días de otros meses punteados. Las calificaciones no muestran promedios. ADR-022.
+- Estudiante y familia: páginas propias de Resumen, Tareas, Calificaciones y Asistencia con las mismas pestañas (`shared/student-header.ts`). El nombre del estudiante queda explícito también bajo el título de cada sección, especialmente en teléfono. Al cambiar de estudiante se retiran los datos anteriores y se ignoran sus respuestas tardías. Los cursos llevan uno de seis tonos estables derivados del nombre, con contraste AA. Calendarios mensuales con lunes primero y días de otros meses punteados. Las calificaciones no muestran promedios. ADR-022.
 - Libreta del docente: cuadrícula de actividades con punteo y total en vivo (color relativo a los puntos asignados). El guardado automático se informa junto al botón y no cambia el texto del botón.
 
 ## Formularios y diálogos

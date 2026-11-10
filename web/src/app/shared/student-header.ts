@@ -11,8 +11,13 @@ import { Icon } from './icon';
   template: `
     <header class="student-hero">
       <div class="student-hero-copy">
-        <span class="eyebrow">{{ view().isSelf ? 'MI ESPACIO ESCOLAR' : 'ESTUDIANTE A MI CARGO' }}</span>
+        <span class="eyebrow">{{
+          view().isSelf ? 'MI ESPACIO ESCOLAR' : 'ESTUDIANTE A MI CARGO'
+        }}</span>
         <h1>{{ heading() }}</h1>
+        @if (title() && title() !== view().student.displayName) {
+          <p class="student-hero-name">{{ view().student.displayName }}</p>
+        }
         <p>
           <span class="pill blue">{{ view().student.studentCode }}</span>
           @if (view().placement; as p) {

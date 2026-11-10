@@ -207,6 +207,7 @@ export const routes: Routes = [
   },
   {
     path: 'workspace/my/students/:id/tasks',
+    canDeactivate: [pendingChangesGuard],
     canActivate: [sessionGuard],
     loadComponent: () => import('./features/my-student-tasks').then((x) => x.MyStudentTasks),
   },
@@ -218,7 +219,8 @@ export const routes: Routes = [
   {
     path: 'workspace/my/students/:id/attendance',
     canActivate: [sessionGuard],
-    loadComponent: () => import('./features/my-student-attendance').then((x) => x.MyStudentAttendance),
+    loadComponent: () =>
+      import('./features/my-student-attendance').then((x) => x.MyStudentAttendance),
   },
   {
     path: 'workspace/my/students/:studentId/receipts/:id',

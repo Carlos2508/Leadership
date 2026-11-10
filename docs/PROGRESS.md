@@ -2,6 +2,12 @@
 
 Actualizado: 9 de noviembre de 2026, America/Guatemala.
 
+## Revisión visual y de experiencia — incremento vigente
+
+- Revisión solicitada por el propietario sobre `main` `1d45066`, en `codex/qa-visual-experiencia`. Corregidos ocho grupos de hallazgos: nombre del hijo en páginas académicas, datos/respuestas cruzados entre hijos, errores y respuestas tardías de adjuntos, pérdida del texto de una entrega, consultas fallidas sin reintento, acciones fuera de pantalla en Inventario/Horarios, atajo del rol propio fuera de la primera página y campos de punteo ocultos por títulos largos en teléfono.
+- 166 vistas privadas antes/después por ocho perfiles, 42 diálogos en tres tamaños, 9 vistas públicas y 23 páginas de PDF evaluadas mediante capturas. Axe sin infracciones detectadas y sin desbordamiento horizontal de página en las matrices; tablas/pestañas conservan su desplazamiento interno. La libreta poblada se verificó también a 320 px.
+- Validación: 183 .NET/SQL, 105 Flutter y análisis limpio, 115 pruebas en la suite web completa más 2 nuevas de libreta y 2 de migración aislada; las 10 pruebas de notas/tareas relacionadas se repitieron después del ajuste final de CSS. Angular/Release correctos. Informe `QA_REVISION_VISUAL_2026-11-09.md`, evidencia bajo `.local/qa/evidencia/review-visual-2026-11-09/`. Sin cambios de esquema propios ni de la base escolar; conserva los pendientes físicos y del app en ADR-022.
+
 ## Experiencia escolar: actividades con punteo, páginas del estudiante y adjuntos — rama `feat/experiencia-escolar`
 
 - Las notas del período se arman con actividades con punteo, como en el sistema anterior: la nota es la suma de los puntos (sin promedios ni redondeos). Las tareas pueden valer puntos y se califican desde la entrega. Hay plantillas institucionales de actividades y una libreta en PDF con una columna por actividad. Sin actividades, se mantiene la nota directa 0–100. ADR-022.

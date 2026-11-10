@@ -22,29 +22,58 @@ interface SettingsView {
         <div>
           <span class="eyebrow">ADMINISTRACIÓN</span>
           <h1>Ajustes de la plataforma</h1>
-          <p>Opciones de funcionamiento de esta instalación. Cada cambio queda en la auditoría con su motivo.</p>
+          <p>
+            Opciones de funcionamiento de esta instalación. Cada cambio queda en la auditoría con su
+            motivo.
+          </p>
         </div>
       </div>
       @if (error()) {
-        <p class="feedback error-feedback" role="alert">{{ error() }}</p>
+        <p class="feedback error-feedback" role="alert">
+          {{ error() }}
+          @if (!settings()) {
+            <button class="text-button" (click)="load()">Reintentar</button>
+          }
+        </p>
       }
       @if (settings(); as s) {
         <section class="card detail-card" aria-labelledby="chat-settings">
           <h2 id="chat-settings"><app-icon name="message" /> Archivos en mensajes</h2>
           <p class="muted-copy">
-            En el chat se pueden enviar documentos e imágenes: {{ s.chatAttachmentTypes.join(', ') }}. Los programas y scripts
-            (por ejemplo .exe o .bat) nunca se aceptan, tampoco dentro de un ZIP.
+            En el chat se pueden enviar documentos e imágenes:
+            {{ s.chatAttachmentTypes.join(', ') }}. Los programas y scripts (por ejemplo .exe o
+            .bat) nunca se aceptan, tampoco dentro de un ZIP.
           </p>
           <form class="access-form" (ngSubmit)="save()">
             <label class="form-field"
               ><span>Tamaño máximo por archivo (MB)</span
-              ><input name="maxMb" type="number" min="1" [max]="s.chatAttachmentLimitMb" step="1" [(ngModel)]="maxMb" required
-            /><small>Entre 1 y {{ s.chatAttachmentLimitMb }} MB. Valor actual: {{ s.chatAttachmentMaxMb }} MB.</small></label>
+              ><input
+                name="maxMb"
+                type="number"
+                min="1"
+                [max]="s.chatAttachmentLimitMb"
+                step="1"
+                [(ngModel)]="maxMb"
+                required
+              /><small
+                >Entre 1 y {{ s.chatAttachmentLimitMb }} MB. Valor actual:
+                {{ s.chatAttachmentMaxMb }} MB.</small
+              ></label
+            >
             <label class="form-field"
-              ><span>Motivo del cambio</span><input name="reason" [(ngModel)]="reason" required minlength="8" maxlength="500" autocomplete="off"
+              ><span>Motivo del cambio</span
+              ><input
+                name="reason"
+                [(ngModel)]="reason"
+                required
+                minlength="8"
+                maxlength="500"
+                autocomplete="off"
             /></label>
             <div class="dialog-actions">
-              <button class="button" type="submit" [disabled]="busy()">{{ busy() ? 'Guardando…' : 'Guardar ajustes' }}</button>
+              <button class="button" type="submit" [disabled]="busy()">
+                {{ busy() ? 'Guardando…' : 'Guardar ajustes' }}
+              </button>
             </div>
           </form>
         </section>
@@ -68,6 +97,8 @@ export class PlatformSettings {
     void this.load();
   }
   async load(): Promise<void> {
+    this.error.set('');
+    this.settings.set(null);
     try {
       const settings = await this.api.get<SettingsView>('/api/v1/settings');
       this.settings.set(settings);
@@ -82,7 +113,11 @@ export class PlatformSettings {
     this.busy.set(true);
     this.error.set('');
     try {
-      await this.api.post('/api/v1/settings', { chatAttachmentMaxMb: Number(this.maxMb), version: settings.version, reason: this.reason });
+      await this.api.post('/api/v1/settings', {
+        chatAttachmentMaxMb: Number(this.maxMb),
+        version: settings.version,
+        reason: this.reason,
+      });
       this.reason = '';
       this.alerts.success('Los ajustes se guardaron.');
       await this.load();

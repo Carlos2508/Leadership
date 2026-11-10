@@ -45,11 +45,29 @@ export class AccessManagement {
     void this.load().then(() => queueMicrotask(() => this.applyAction()));
   }
 
-  private applyAction(): void {
+  private async applyAction(): Promise<void> {
     if (this.action() === 'invite') this.openInvite();
     if (this.action() === 'my-role') {
-      const me = this.data()?.items.find((x) => x.id === this.session.userId());
-      if (!me) return;
+      let me = this.data()?.items.find((x) => x.id === this.session.userId());
+      try {
+        // The current account may be beyond the first page of the directory.
+        for (let page = 1; !me; page++) {
+          const result = await this.api.get<PageResult<AccountSummary>>(
+            `/api/v1/access/accounts?search=${encodeURIComponent(this.session.username())}&page=${page}`,
+          );
+          me = result.items.find((x) => x.id === this.session.userId());
+          if (!result.items.length || page * result.pageSize >= result.total) break;
+        }
+      } catch (error) {
+        this.error.set(this.api.message(error));
+        return;
+      }
+      if (!me) {
+        this.error.set(
+          'No se pudo localizar tu cuenta. Búscala por tu nombre de usuario para cambiar su rol.',
+        );
+        return;
+      }
       this.openAccount(me);
       this.profile = 'administrator';
       this.reason = 'Configuración inicial del colegio por la dirección.';

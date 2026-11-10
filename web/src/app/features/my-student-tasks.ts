@@ -1,8 +1,21 @@
-import { Component, ElementRef, ViewChild, ViewEncapsulation, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  ViewChild,
+  ViewEncapsulation,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi } from '../core/access-api';
 import { Alerts } from '../core/alerts';
+import { PendingChanges } from '../core/pending-changes';
 import { InstitutionService } from '../core/institution';
 import {
   MyGrades,
@@ -37,26 +50,64 @@ type Filter = 'pending' | 'submitted' | 'reviewed' | 'overdue' | 'all';
       } @else if (view(); as v) {
         <app-student-header [view]="v" title="Tareas" />
         @if (!v.isSelf && !v.faculties.includes('AcademicRecords')) {
-          <section class="card empty-state"><app-icon name="shield" /><h2>Sin acceso a tareas</h2><p>Tu vínculo no incluye el seguimiento académico.</p></section>
+          <section class="card empty-state">
+            <app-icon name="shield" />
+            <h2>Sin acceso a tareas</h2>
+            <p>Tu vínculo no incluye el seguimiento académico.</p>
+          </section>
         } @else if (error()) {
-          <p class="feedback error-feedback" role="alert">{{ error() }} <button class="text-button" (click)="load()">Reintentar</button></p>
+          <p class="feedback error-feedback" role="alert">
+            {{ error() }} <button class="text-button" (click)="load()">Reintentar</button>
+          </p>
         } @else if (tasks(); as list) {
           <section class="sp-stats" aria-label="Resumen de tareas">
-            <button type="button" class="sp-stat" [class.active]="filter() === 'pending'" (click)="filter.set('pending')">
+            <button
+              type="button"
+              class="sp-stat"
+              [class.active]="filter() === 'pending'"
+              (click)="filter.set('pending')"
+            >
               <span class="sp-stat-icon tone-gold"><app-icon name="clipboard" /></span>
-              <span><strong>{{ counts().pending }}</strong><small>Por entregar</small></span>
+              <span
+                ><strong>{{ counts().pending }}</strong
+                ><small>Por entregar</small></span
+              >
             </button>
-            <button type="button" class="sp-stat" [class.active]="filter() === 'overdue'" (click)="filter.set('overdue')">
+            <button
+              type="button"
+              class="sp-stat"
+              [class.active]="filter() === 'overdue'"
+              (click)="filter.set('overdue')"
+            >
               <span class="sp-stat-icon tone-red"><app-icon name="clock" /></span>
-              <span><strong>{{ counts().overdue }}</strong><small>Vencidas sin entregar</small></span>
+              <span
+                ><strong>{{ counts().overdue }}</strong
+                ><small>Vencidas sin entregar</small></span
+              >
             </button>
-            <button type="button" class="sp-stat" [class.active]="filter() === 'submitted'" (click)="filter.set('submitted')">
+            <button
+              type="button"
+              class="sp-stat"
+              [class.active]="filter() === 'submitted'"
+              (click)="filter.set('submitted')"
+            >
               <span class="sp-stat-icon tone-blue"><app-icon name="check" /></span>
-              <span><strong>{{ counts().submitted }}</strong><small>Entregadas</small></span>
+              <span
+                ><strong>{{ counts().submitted }}</strong
+                ><small>Entregadas</small></span
+              >
             </button>
-            <button type="button" class="sp-stat" [class.active]="filter() === 'reviewed'" (click)="filter.set('reviewed')">
+            <button
+              type="button"
+              class="sp-stat"
+              [class.active]="filter() === 'reviewed'"
+              (click)="filter.set('reviewed')"
+            >
               <span class="sp-stat-icon tone-green"><app-icon name="star" /></span>
-              <span><strong>{{ counts().reviewed }}</strong><small>Revisadas</small></span>
+              <span
+                ><strong>{{ counts().reviewed }}</strong
+                ><small>Revisadas</small></span
+              >
             </button>
           </section>
 
@@ -67,7 +118,13 @@ type Filter = 'pending' | 'submitted' | 'reviewed' | 'overdue' | 'all';
           <div class="sp-toolbar">
             <div class="segmented sp-segment" role="tablist" aria-label="Filtrar tareas">
               @for (f of filters; track f.value) {
-                <button type="button" role="tab" [attr.aria-selected]="filter() === f.value" [class.active]="filter() === f.value" (click)="filter.set(f.value)">
+                <button
+                  type="button"
+                  role="tab"
+                  [attr.aria-selected]="filter() === f.value"
+                  [class.active]="filter() === f.value"
+                  (click)="filter.set(f.value)"
+                >
                   {{ f.label }}
                 </button>
               }
@@ -83,8 +140,22 @@ type Filter = 'pending' | 'submitted' | 'reviewed' | 'overdue' | 'all';
                 </select></label
               >
               <div class="sp-view-toggle" role="group" aria-label="Vista">
-                <button type="button" [class.active]="mode() === 'list'" [attr.aria-pressed]="mode() === 'list'" (click)="mode.set('list')">Lista</button>
-                <button type="button" [class.active]="mode() === 'calendar'" [attr.aria-pressed]="mode() === 'calendar'" (click)="mode.set('calendar')">Calendario</button>
+                <button
+                  type="button"
+                  [class.active]="mode() === 'list'"
+                  [attr.aria-pressed]="mode() === 'list'"
+                  (click)="mode.set('list')"
+                >
+                  Lista
+                </button>
+                <button
+                  type="button"
+                  [class.active]="mode() === 'calendar'"
+                  [attr.aria-pressed]="mode() === 'calendar'"
+                  (click)="mode.set('calendar')"
+                >
+                  Calendario
+                </button>
               </div>
             </div>
           </div>
@@ -92,9 +163,23 @@ type Filter = 'pending' | 'submitted' | 'reviewed' | 'overdue' | 'all';
           @if (mode() === 'calendar') {
             <section class="card sp-calendar" aria-label="Calendario de entregas">
               <header class="sp-calendar-head">
-                <button type="button" class="icon-button" (click)="shiftMonth(-1)" aria-label="Mes anterior"><app-icon name="chevron" class="flip" /></button>
+                <button
+                  type="button"
+                  class="icon-button"
+                  (click)="shiftMonth(-1)"
+                  aria-label="Mes anterior"
+                >
+                  <app-icon name="chevron" class="flip" />
+                </button>
                 <h2>{{ monthLabel() }}</h2>
-                <button type="button" class="icon-button" (click)="shiftMonth(1)" aria-label="Mes siguiente"><app-icon name="chevron" /></button>
+                <button
+                  type="button"
+                  class="icon-button"
+                  (click)="shiftMonth(1)"
+                  aria-label="Mes siguiente"
+                >
+                  <app-icon name="chevron" />
+                </button>
               </header>
               <div class="sp-month" role="group" [attr.aria-label]="monthLabel()">
                 @for (d of weekdays; track d) {
@@ -108,15 +193,27 @@ type Filter = 'pending' | 'submitted' | 'reviewed' | 'overdue' | 'all';
                       [class.outside]="!cell.inside"
                       [class.today]="cell.date === today"
                       [class.selected]="cell.date === selectedDay()"
-                      [attr.aria-label]="longDate(cell.date) + ': ' + (byDay().get(cell.date)?.length ?? 0) + ' entregas'"
+                      [attr.aria-label]="
+                        longDate(cell.date) +
+                        ': ' +
+                        (byDay().get(cell.date)?.length ?? 0) +
+                        ' entregas'
+                      "
                       (click)="selectedDay.set(cell.date)"
                     >
                       <span class="sp-day-number">{{ cell.day }}</span>
                       @for (t of (byDay().get(cell.date) ?? []).slice(0, 3); track t.id) {
-                        <span class="sp-day-chip" [attr.data-tone]="tone(t.course)" [class.done]="!!t.submissionStatus">{{ t.title }}</span>
+                        <span
+                          class="sp-day-chip"
+                          [attr.data-tone]="tone(t.course)"
+                          [class.done]="!!t.submissionStatus"
+                          >{{ t.title }}</span
+                        >
                       }
                       @if ((byDay().get(cell.date)?.length ?? 0) > 3) {
-                        <span class="sp-day-more">+{{ (byDay().get(cell.date)?.length ?? 0) - 3 }}</span>
+                        <span class="sp-day-more"
+                          >+{{ (byDay().get(cell.date)?.length ?? 0) - 3 }}</span
+                        >
                       }
                     </button>
                   }
@@ -125,44 +222,71 @@ type Filter = 'pending' | 'submitted' | 'reviewed' | 'overdue' | 'all';
             </section>
           }
 
-          <section class="sp-task-list" [attr.aria-label]="mode() === 'calendar' ? 'Tareas del día seleccionado' : 'Tareas'">
+          <section
+            class="sp-task-list"
+            [attr.aria-label]="mode() === 'calendar' ? 'Tareas del día seleccionado' : 'Tareas'"
+          >
             @if (mode() === 'calendar') {
-              <h2 class="sp-section-title">{{ selectedDay() ? 'Entregas del ' + longDate(selectedDay()!) : 'Elige un día del calendario' }}</h2>
+              <h2 class="sp-section-title">
+                {{
+                  selectedDay()
+                    ? 'Entregas del ' + longDate(selectedDay()!)
+                    : 'Elige un día del calendario'
+                }}
+              </h2>
             }
             @for (task of visible(); track task.id) {
               <article class="card sp-task" [attr.data-tone]="tone(task.course)">
                 <div class="sp-task-main">
                   <div class="sp-task-top">
-                    <span class="sp-subject" [attr.data-tone]="tone(task.course)">{{ task.course }}</span>
-                    <span class="sp-status" [attr.data-state]="state(task)">{{ stateLabel(task) }}</span>
+                    <span class="sp-subject" [attr.data-tone]="tone(task.course)">{{
+                      task.course
+                    }}</span>
+                    <span class="sp-status" [attr.data-state]="state(task)">{{
+                      stateLabel(task)
+                    }}</span>
                   </div>
                   <h3>{{ task.title }}</h3>
                   @if (task.instructions) {
                     <p class="sp-task-text">{{ task.instructions }}</p>
                   }
                   <div class="sp-task-meta">
-                    <span [class.urgent]="urgent(task)"><app-icon name="clock" />{{ dueText(task) }}</span>
+                    <span [class.urgent]="urgent(task)"
+                      ><app-icon name="clock" />{{ dueText(task) }}</span
+                    >
                     @if (task.points !== null) {
-                      <span><app-icon name="star" />Vale {{ fmt(task.points) }} pts{{ task.period ? ' · ' + task.period : '' }}</span>
+                      <span
+                        ><app-icon name="star" />Vale {{ fmt(task.points) }} pts{{
+                          task.period ? ' · ' + task.period : ''
+                        }}</span
+                      >
                     }
                     @if (earned(task); as e) {
                       <span class="sp-earned"><app-icon name="check" />Obtuviste {{ e }}</span>
                     }
                     @if (task.submittedAt) {
-                      <span>Entregada {{ api.date(task.submittedAt) }}{{ task.late ? ' · tarde' : '' }}</span>
+                      <span
+                        >Entregada {{ api.date(task.submittedAt)
+                        }}{{ task.late ? ' · tarde' : '' }}</span
+                      >
                     }
                   </div>
                   @if (task.feedback) {
-                    <p class="sp-feedback"><strong>Comentario del docente:</strong> {{ task.feedback }}</p>
+                    <p class="sp-feedback">
+                      <strong>Comentario del docente:</strong> {{ task.feedback }}
+                    </p>
                   }
                 </div>
                 <div class="sp-task-actions">
                   @if (task.canSubmit) {
                     <button class="button compact-button" (click)="openSubmit(task)">
-                      {{ task.submissionStatus ? 'Actualizar entrega' : 'Entregar' }} <span class="sr-only">{{ task.title }}</span>
+                      {{ task.submissionStatus ? 'Actualizar entrega' : 'Entregar' }}
+                      <span class="sr-only">{{ task.title }}</span>
                     </button>
                   } @else {
-                    <button class="button outline compact-button" (click)="openSubmit(task)">Ver detalle <span class="sr-only">{{ task.title }}</span></button>
+                    <button class="button outline compact-button" (click)="openSubmit(task)">
+                      Ver detalle <span class="sr-only">{{ task.title }}</span>
+                    </button>
                   }
                 </div>
               </article>
@@ -170,7 +294,13 @@ type Filter = 'pending' | 'submitted' | 'reviewed' | 'overdue' | 'all';
               <section class="card empty-state sp-empty">
                 <app-icon name="clipboard" />
                 <h2>{{ emptyTitle() }}</h2>
-                <p>{{ list.length ? 'Cambia el filtro para ver otras tareas.' : 'Cuando tus docentes publiquen tareas aparecerán aquí con su fecha de entrega.' }}</p>
+                <p>
+                  {{
+                    list.length
+                      ? 'Cambia el filtro para ver otras tareas.'
+                      : 'Cuando tus docentes publiquen tareas aparecerán aquí con su fecha de entrega.'
+                  }}
+                </p>
               </section>
             }
           </section>
@@ -178,15 +308,29 @@ type Filter = 'pending' | 'submitted' | 'reviewed' | 'overdue' | 'all';
           <p class="loading-state card" role="status">Cargando tareas…</p>
         }
       } @else if (error()) {
-        <p class="feedback error-feedback" role="alert">{{ error() }}</p>
+        <p class="feedback error-feedback" role="alert">
+          {{ error() }} <button class="text-button" (click)="load()">Reintentar</button>
+        </p>
       } @else {
         <p class="loading-state card" role="status">Cargando…</p>
       }
 
-      <dialog #submitDialog class="account-dialog wide-dialog" aria-labelledby="submit-title" (cancel)="onCancel($event)">
+      <dialog
+        #submitDialog
+        class="account-dialog wide-dialog"
+        aria-labelledby="submit-title"
+        (cancel)="onCancel($event)"
+      >
         <div class="dialog-heading">
           <h2 id="submit-title">{{ selected()?.title }}</h2>
-          <button class="icon-button" (click)="closeSubmit()" aria-label="Cerrar ventana" [disabled]="busy()"><app-icon name="close" /></button>
+          <button
+            class="icon-button"
+            (click)="closeSubmit()"
+            aria-label="Cerrar ventana"
+            [disabled]="busy()"
+          >
+            <app-icon name="close" />
+          </button>
         </div>
         <form class="access-form" (ngSubmit)="submitTask()">
           @if (selected(); as t) {
@@ -205,26 +349,56 @@ type Filter = 'pending' | 'submitted' | 'reviewed' | 'overdue' | 'all';
             }
             @if (t.canSubmit) {
               <label class="form-field"
-                ><span>Tu entrega</span><textarea name="submission" [(ngModel)]="submission" required maxlength="8000" rows="7"></textarea
-              ></label>
+                ><span>Tu entrega</span
+                ><textarea
+                  name="submission"
+                  [(ngModel)]="submission"
+                  required
+                  maxlength="8000"
+                  rows="7"
+                ></textarea>
+              </label>
               @if (t.submissionStatus) {
                 <fieldset class="choice-group">
                   <legend>Archivos adjuntos</legend>
-                  @for (file of files(); track file.id) {
-                    <div class="file-row">
-                      <app-icon name="receipt" />
-                      <a [href]="'/api/v1/files/' + file.id" download>{{ file.fileName }}</a>
-                      <small>{{ api.size(file.size) }}</small>
-                      <button type="button" class="text-button danger-text" (click)="removeFile(file.id)" [disabled]="busy()">
-                        Quitar <span class="sr-only">{{ file.fileName }}</span>
+                  @if (filesLoading()) {
+                    <p class="muted-copy" role="status">Consultando archivos…</p>
+                  } @else if (filesError()) {
+                    <p class="feedback error-feedback" role="alert">
+                      {{ filesError() }}
+                      <button type="button" class="text-button" (click)="loadFiles(t.id)">
+                        Reintentar archivos
                       </button>
-                    </div>
-                  } @empty {
-                    <p class="muted-copy">Sin archivos. Puedes adjuntar PDF, imágenes, documentos de Office o texto (máx. 10 MB).</p>
+                    </p>
+                  } @else {
+                    @for (file of files(); track file.id) {
+                      <div class="file-row">
+                        <app-icon name="receipt" />
+                        <a [href]="'/api/v1/files/' + file.id" download>{{ file.fileName }}</a>
+                        <small>{{ api.size(file.size) }}</small>
+                        <button
+                          type="button"
+                          class="text-button danger-text"
+                          (click)="removeFile(file.id)"
+                          [disabled]="busy()"
+                        >
+                          Quitar <span class="sr-only">{{ file.fileName }}</span>
+                        </button>
+                      </div>
+                    } @empty {
+                      <p class="muted-copy">
+                        Sin archivos. Puedes adjuntar PDF, imágenes, documentos de Office o texto
+                        (máx. 10 MB).
+                      </p>
+                    }
                   }
                   <label class="file-picker"
                     ><span class="button outline compact-button">Adjuntar archivo</span
-                    ><input type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.pptx,.txt" (change)="uploadFile($event)" [disabled]="busy()"
+                    ><input
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.pptx,.txt"
+                      (change)="uploadFile($event)"
+                      [disabled]="busy()"
                   /></label>
                 </fieldset>
               } @else {
@@ -234,17 +408,36 @@ type Filter = 'pending' | 'submitted' | 'reviewed' | 'overdue' | 'all';
               <h3 class="subheading">Tu entrega</h3>
               <p class="assignment-text">{{ t.text }}</p>
             } @else if (!t.submissionStatus) {
-              <p class="muted-copy">{{ view()?.isSelf ? 'Esta tarea ya no recibe entregas.' : 'Solo el estudiante puede entregar desde su cuenta.' }}</p>
+              <p class="muted-copy">
+                {{
+                  view()?.isSelf
+                    ? 'Esta tarea ya no recibe entregas.'
+                    : 'Solo el estudiante puede entregar desde su cuenta.'
+                }}
+              </p>
             }
           }
           @if (submitError()) {
             <p class="feedback error-feedback" role="alert">{{ submitError() }}</p>
           }
           <div class="dialog-actions">
-            <button class="button outline" type="button" (click)="closeSubmit()" [disabled]="busy()">Cerrar</button>
+            <button
+              class="button outline"
+              type="button"
+              (click)="closeSubmit()"
+              [disabled]="busy()"
+            >
+              Cerrar
+            </button>
             @if (selected()?.canSubmit) {
               <button class="button" type="submit" [disabled]="busy()">
-                {{ busy() ? 'Enviando…' : selected()?.submissionStatus ? 'Actualizar texto' : 'Enviar entrega' }}
+                {{
+                  busy()
+                    ? 'Enviando…'
+                    : selected()?.submissionStatus
+                      ? 'Actualizar texto'
+                      : 'Enviar entrega'
+                }}
               </button>
             }
           </div>
@@ -253,7 +446,7 @@ type Filter = 'pending' | 'submitted' | 'reviewed' | 'overdue' | 'all';
     </app-shell>
   `,
 })
-export class MyStudentTasks {
+export class MyStudentTasks implements PendingChanges {
   readonly id = input.required<string>();
   readonly api = inject(AccessApi);
   readonly alerts = inject(Alerts);
@@ -272,6 +465,8 @@ export class MyStudentTasks {
   readonly selectedDay = signal<string | null>(isoDate(new Date()));
   readonly selected = signal<StudentTask | null>(null);
   readonly files = signal<{ id: string; fileName: string; size: number }[]>([]);
+  readonly filesLoading = signal(false);
+  readonly filesError = signal('');
   readonly busy = signal(false);
   readonly submitError = signal('');
   readonly today = isoDate(new Date());
@@ -284,8 +479,16 @@ export class MyStudentTasks {
     { value: 'all', label: 'Todas' },
   ];
   submission = '';
+  private submissionBaseline = '';
+  private loadRequest = 0;
+  private fileRequest = 0;
+  private loadedFor = '';
 
-  readonly courses = computed(() => [...new Set((this.tasks() ?? []).map((t) => t.course))].sort((a, b) => a.localeCompare(b, 'es')));
+  readonly courses = computed(() =>
+    [...new Set((this.tasks() ?? []).map((t) => t.course))].sort((a, b) =>
+      a.localeCompare(b, 'es'),
+    ),
+  );
   readonly counts = computed(() => {
     const list = this.tasks() ?? [];
     return {
@@ -302,7 +505,14 @@ export class MyStudentTasks {
       for (const grade of period.grades)
         for (const a of grade.activities ?? [])
           if (a.assignmentId && a.status)
-            map.set(a.assignmentId, a.status === 'Scored' ? `${points(a.points)} de ${points(a.maxPoints)} pts` : a.status === 'Missing' ? `0 de ${points(a.maxPoints)} pts` : 'exonerada');
+            map.set(
+              a.assignmentId,
+              a.status === 'Scored'
+                ? `${points(a.points)} de ${points(a.maxPoints)} pts`
+                : a.status === 'Missing'
+                  ? `0 de ${points(a.maxPoints)} pts`
+                  : 'exonerada',
+            );
     return map;
   });
   readonly visible = computed(() => {
@@ -317,7 +527,10 @@ export class MyStudentTasks {
     else if (f === 'submitted') list = list.filter((t) => t.submissionStatus === 'Submitted');
     else if (f === 'reviewed') list = list.filter((t) => t.submissionStatus === 'Reviewed');
     const pendingFirst = f === 'pending' || f === 'overdue';
-    return [...list].sort((a, b) => (pendingFirst ? 1 : -1) * (new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime()));
+    return [...list].sort(
+      (a, b) =>
+        (pendingFirst ? 1 : -1) * (new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime()),
+    );
   });
   readonly weeks = computed(() => monthWeeks(this.month().getFullYear(), this.month().getMonth()));
   readonly byDay = computed(() => {
@@ -330,7 +543,12 @@ export class MyStudentTasks {
     return map;
   });
   readonly monthLabel = computed(() =>
-    capitalize(new Intl.DateTimeFormat(this.school.locale.culture, { month: 'long', year: 'numeric' }).format(this.month())),
+    capitalize(
+      new Intl.DateTimeFormat(this.school.locale.culture, {
+        month: 'long',
+        year: 'numeric',
+      }).format(this.month()),
+    ),
   );
 
   constructor() {
@@ -341,21 +559,41 @@ export class MyStudentTasks {
   }
 
   async load(): Promise<void> {
+    const request = ++this.loadRequest;
+    const id = this.id();
+    this.fileRequest++;
+    this.dialog?.nativeElement.close();
+    this.selected.set(null);
+    this.view.set(null);
+    this.tasks.set(null);
+    this.grades.set(null);
+    this.notice.set('');
+    if (this.loadedFor !== id) {
+      this.loadedFor = id;
+      this.course.set('');
+      this.filter.set('pending');
+    }
     this.error.set('');
     this.notFound.set(false);
     try {
-      const view = await this.api.get<StudentAccessView>(`/api/v1/me/students/${encodeURIComponent(this.id())}`);
+      const view = await this.api.get<StudentAccessView>(
+        `/api/v1/me/students/${encodeURIComponent(id)}`,
+      );
+      if (request !== this.loadRequest) return;
       this.view.set(view);
       if (!view.isSelf && !view.faculties.includes('AcademicRecords')) return;
       const [tasks, grades] = await Promise.all([
         this.api.get<StudentTask[]>(`/api/v1/me/students/${view.student.id}/assignments`),
         this.api.get<MyGrades>(`/api/v1/me/students/${view.student.id}/grades`).catch(() => null),
       ]);
+      if (request !== this.loadRequest) return;
       this.tasks.set(tasks);
       this.grades.set(grades);
       if (!tasks.some((t) => this.kind(t) === 'pending') && tasks.length) this.filter.set('all');
     } catch (error) {
-      if (error instanceof HttpErrorResponse && (error.status === 404 || error.status === 400)) this.notFound.set(true);
+      if (request !== this.loadRequest) return;
+      if (error instanceof HttpErrorResponse && (error.status === 404 || error.status === 400))
+        this.notFound.set(true);
       else this.error.set(this.api.message(error));
     }
   }
@@ -363,7 +601,11 @@ export class MyStudentTasks {
   kind(task: StudentTask): 'pending' | 'overdue' | 'done' {
     if (task.submissionStatus) return 'done';
     if (task.closed) return 'overdue';
-    return new Date(task.dueAt).getTime() < Date.now() && !task.allowLate ? 'overdue' : new Date(task.dueAt).getTime() < Date.now() ? 'overdue' : 'pending';
+    return new Date(task.dueAt).getTime() < Date.now() && !task.allowLate
+      ? 'overdue'
+      : new Date(task.dueAt).getTime() < Date.now()
+        ? 'overdue'
+        : 'pending';
   }
   state(task: StudentTask): string {
     if (task.submissionStatus === 'Reviewed') return 'reviewed';
@@ -385,8 +627,13 @@ export class MyStudentTasks {
   }
   dueText(task: StudentTask): string {
     const due = new Date(task.dueAt);
-    const time = new Intl.DateTimeFormat(this.school.locale.culture, { hour: '2-digit', minute: '2-digit' }).format(due);
-    const days = Math.round((new Date(isoDate(due)).getTime() - new Date(this.today).getTime()) / 86400000);
+    const time = new Intl.DateTimeFormat(this.school.locale.culture, {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(due);
+    const days = Math.round(
+      (new Date(isoDate(due)).getTime() - new Date(this.today).getTime()) / 86400000,
+    );
     if (days === 0) return `Vence hoy, ${time}`;
     if (days === 1) return `Vence mañana, ${time}`;
     if (days > 1 && days <= 7) return `Vence en ${days} días · ${this.api.date(task.dueAt)}`;
@@ -398,7 +645,13 @@ export class MyStudentTasks {
     return this.earnedById().get(task.id) ?? null;
   }
   emptyTitle(): string {
-    return { pending: '¡Todo al día!', overdue: 'Sin tareas vencidas', submitted: 'Sin entregas por revisar', reviewed: 'Aún no hay tareas revisadas', all: 'Sin tareas' }[this.filter()];
+    return {
+      pending: '¡Todo al día!',
+      overdue: 'Sin tareas vencidas',
+      submitted: 'Sin entregas por revisar',
+      reviewed: 'Aún no hay tareas revisadas',
+      all: 'Sin tareas',
+    }[this.filter()];
   }
   tone(course: string): number {
     return subjectTone(course);
@@ -407,7 +660,13 @@ export class MyStudentTasks {
     return points(value);
   }
   longDate(value: string): string {
-    return capitalize(new Intl.DateTimeFormat(this.school.locale.culture, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(value + 'T12:00:00')));
+    return capitalize(
+      new Intl.DateTimeFormat(this.school.locale.culture, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      }).format(new Date(value + 'T12:00:00')),
+    );
   }
   shiftMonth(step: number): void {
     const m = this.month();
@@ -417,20 +676,63 @@ export class MyStudentTasks {
   openSubmit(task: StudentTask): void {
     this.selected.set(task);
     this.submission = task.text ?? '';
+    this.submissionBaseline = this.submission;
     this.submitError.set('');
     this.files.set([]);
+    this.filesError.set('');
     if (task.submissionStatus && task.canSubmit) void this.loadFiles(task.id);
     this.dialog?.nativeElement.showModal();
   }
   async loadFiles(taskId: string): Promise<void> {
-    this.files.set(await this.api.get(`/api/v1/me/assignments/${taskId}/files`));
+    const request = ++this.fileRequest;
+    this.files.set([]);
+    this.filesLoading.set(true);
+    this.filesError.set('');
+    try {
+      const files = await this.api.get<{ id: string; fileName: string; size: number }[]>(
+        `/api/v1/me/assignments/${taskId}/files`,
+      );
+      if (request === this.fileRequest && this.selected()?.id === taskId) this.files.set(files);
+    } catch (error) {
+      if (request === this.fileRequest && this.selected()?.id === taskId)
+        this.filesError.set(this.api.message(error));
+    } finally {
+      if (request === this.fileRequest) this.filesLoading.set(false);
+    }
   }
-  closeSubmit(): void {
-    if (!this.busy()) this.dialog?.nativeElement.close();
+  async closeSubmit(): Promise<void> {
+    if (this.busy() || !(await this.confirmDraft())) return;
+    this.fileRequest++;
+    this.selected.set(null);
+    this.dialog?.nativeElement.close();
   }
   onCancel(event: Event): void {
-    if (this.busy()) event.preventDefault();
-    else this.closeSubmit();
+    event.preventDefault();
+    void this.closeSubmit();
+  }
+  private async confirmDraft(): Promise<boolean> {
+    return (
+      !this.selected()?.canSubmit ||
+      this.submission === this.submissionBaseline ||
+      this.alerts.confirm({
+        title: 'Hay una entrega sin guardar',
+        text: '¿Quieres salir y descartar el texto que escribiste?',
+        confirmText: 'Descartar texto',
+        danger: true,
+      })
+    );
+  }
+  async canLeave(): Promise<boolean> {
+    return !this.busy() && (await this.confirmDraft());
+  }
+  @HostListener('window:beforeunload', ['$event']) beforeUnload(event: BeforeUnloadEvent): void {
+    if (
+      this.busy() ||
+      (this.selected()?.canSubmit && this.submission !== this.submissionBaseline)
+    ) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
   }
   async submitTask(): Promise<void> {
     const task = this.selected();
@@ -439,8 +741,14 @@ export class MyStudentTasks {
     this.busy.set(true);
     this.submitError.set('');
     try {
-      await this.api.post(`/api/v1/me/assignments/${task.id}/submission`, { text: this.submission, version: task.version });
-      this.tasks.set(await this.api.get<StudentTask[]>(`/api/v1/me/students/${view.student.id}/assignments`));
+      await this.api.post(`/api/v1/me/assignments/${task.id}/submission`, {
+        text: this.submission,
+        version: task.version,
+      });
+      this.submissionBaseline = this.submission;
+      this.tasks.set(
+        await this.api.get<StudentTask[]>(`/api/v1/me/students/${view.student.id}/assignments`),
+      );
       const updated = this.tasks()?.find((x) => x.id === task.id) ?? null;
       this.selected.set(updated);
       this.notice.set(`Tu entrega de «${task.title}» quedó registrada.`);
@@ -479,7 +787,14 @@ export class MyStudentTasks {
   async removeFile(fileId: string): Promise<void> {
     const task = this.selected();
     if (!task || this.busy()) return;
-    if (!(await this.alerts.confirm({ title: '¿Quitar este archivo de tu entrega?', confirmText: 'Quitar archivo', danger: true }))) return;
+    if (
+      !(await this.alerts.confirm({
+        title: '¿Quitar este archivo de tu entrega?',
+        confirmText: 'Quitar archivo',
+        danger: true,
+      }))
+    )
+      return;
     this.busy.set(true);
     try {
       await this.api.post(`/api/v1/me/assignments/${task.id}/files/${fileId}/remove`, {});

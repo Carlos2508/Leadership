@@ -1,4 +1,13 @@
-import { Component, ViewEncapsulation, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import {
+  Component,
+  ViewEncapsulation,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi } from '../core/access-api';
 import { InstitutionService } from '../core/institution';
@@ -34,36 +43,82 @@ import { StudentHeader } from '../shared/student-header';
       } @else if (view(); as v) {
         <app-student-header [view]="v" title="Asistencia" />
         @if (!v.isSelf && !v.faculties.includes('AcademicRecords')) {
-          <section class="card empty-state"><app-icon name="shield" /><h2>Sin acceso a asistencia</h2><p>Tu vínculo no incluye la consulta académica.</p></section>
+          <section class="card empty-state">
+            <app-icon name="shield" />
+            <h2>Sin acceso a asistencia</h2>
+            <p>Tu vínculo no incluye la consulta académica.</p>
+          </section>
         } @else {
           <section class="sp-stats" aria-label="Resumen del mes">
             <div class="sp-stat static">
               <span class="sp-stat-icon tone-green"><app-icon name="check" /></span>
-              <span><strong>{{ calendar()?.present ?? '—' }}</strong><small>Presente</small></span>
+              <span
+                ><strong>{{ calendar()?.present ?? '—' }}</strong
+                ><small>Presente</small></span
+              >
             </div>
             <div class="sp-stat static">
               <span class="sp-stat-icon tone-red"><app-icon name="close" /></span>
-              <span><strong>{{ calendar()?.absent ?? '—' }}</strong><small>Ausencias</small></span>
+              <span
+                ><strong>{{ calendar()?.absent ?? '—' }}</strong
+                ><small>Ausencias</small></span
+              >
             </div>
             <div class="sp-stat static">
               <span class="sp-stat-icon tone-gold"><app-icon name="clock" /></span>
-              <span><strong>{{ calendar()?.late ?? '—' }}</strong><small>Llegadas tarde</small></span>
+              <span
+                ><strong>{{ calendar()?.late ?? '—' }}</strong
+                ><small>Llegadas tarde</small></span
+              >
             </div>
             <div class="sp-stat static">
               <span class="sp-stat-icon tone-blue"><app-icon name="shield" /></span>
-              <span><strong>{{ calendar()?.excused ?? '—' }}</strong><small>Justificadas</small></span>
+              <span
+                ><strong>{{ calendar()?.excused ?? '—' }}</strong
+                ><small>Justificadas</small></span
+              >
             </div>
           </section>
-          <p class="sp-note">Cada marca es una clase registrada por el docente del curso en el mes elegido.</p>
+          <p class="sp-note">
+            Cada marca es una clase registrada por el docente del curso en el mes elegido.
+          </p>
+          @if (gateError()) {
+            <p class="feedback error-feedback" role="alert">
+              No se pudieron consultar las marcas de portería.
+              <button class="text-button" (click)="loadGate()">Reintentar portería</button>
+            </p>
+          }
           @if (error()) {
-            <p class="feedback error-feedback" role="alert">{{ error() }} <button class="text-button" (click)="loadMonth()">Reintentar</button></p>
+            <p class="feedback error-feedback" role="alert">
+              {{ error() }} <button class="text-button" (click)="loadMonth()">Reintentar</button>
+            </p>
           }
           <div class="sa-layout">
-            <section class="card sp-calendar sa-calendar" aria-label="Calendario de asistencia" [attr.aria-busy]="loading()">
+            <section
+              class="card sp-calendar sa-calendar"
+              aria-label="Calendario de asistencia"
+              [attr.aria-busy]="loading()"
+            >
               <header class="sp-calendar-head">
-                <button type="button" class="icon-button" (click)="shiftMonth(-1)" aria-label="Mes anterior" [disabled]="loading()"><app-icon name="chevron" class="flip" /></button>
+                <button
+                  type="button"
+                  class="icon-button"
+                  (click)="shiftMonth(-1)"
+                  aria-label="Mes anterior"
+                  [disabled]="loading()"
+                >
+                  <app-icon name="chevron" class="flip" />
+                </button>
                 <h2>{{ monthLabel() }}</h2>
-                <button type="button" class="icon-button" (click)="shiftMonth(1)" aria-label="Mes siguiente" [disabled]="loading()"><app-icon name="chevron" /></button>
+                <button
+                  type="button"
+                  class="icon-button"
+                  (click)="shiftMonth(1)"
+                  aria-label="Mes siguiente"
+                  [disabled]="loading()"
+                >
+                  <app-icon name="chevron" />
+                </button>
               </header>
               <div class="sp-month" role="group" [attr.aria-label]="monthLabel()">
                 @for (d of weekdays; track d) {
@@ -83,10 +138,18 @@ import { StudentHeader } from '../shared/student-header';
                     >
                       <span class="sp-day-number">{{ cell.day }}</span>
                       @switch (state(cell.date)) {
-                        @case ('Present') { <span class="sa-mark"><app-icon name="check" /></span> }
-                        @case ('Absent') { <span class="sa-mark"><app-icon name="close" /></span> }
-                        @case ('Late') { <span class="sa-mark"><app-icon name="clock" /></span> }
-                        @case ('Excused') { <span class="sa-mark"><app-icon name="shield" /></span> }
+                        @case ('Present') {
+                          <span class="sa-mark"><app-icon name="check" /></span>
+                        }
+                        @case ('Absent') {
+                          <span class="sa-mark"><app-icon name="close" /></span>
+                        }
+                        @case ('Late') {
+                          <span class="sa-mark"><app-icon name="clock" /></span>
+                        }
+                        @case ('Excused') {
+                          <span class="sa-mark"><app-icon name="shield" /></span>
+                        }
                       }
                       @if (gateFor(cell.date); as g) {
                         <span class="sa-gate" title="Entrada registrada en portería"></span>
@@ -107,14 +170,22 @@ import { StudentHeader } from '../shared/student-header';
               <span class="eyebrow">DETALLE DEL DÍA</span>
               <h2>{{ longDate(selectedDay()) }}</h2>
               @if (gateFor(selectedDay()); as g) {
-                <p class="sa-gate-line"><app-icon name="scan" />Entrada {{ api.time(g.firstIn) }} · Salida {{ api.time(g.lastOut) }}</p>
+                <p class="sa-gate-line">
+                  <app-icon name="scan" />Entrada {{ api.time(g.firstIn) }} · Salida
+                  {{ api.time(g.lastOut) }}
+                </p>
               }
               @if (detail(); as d) {
                 <ul class="sa-entries">
                   @for (e of d.entries; track $index) {
                     <li [attr.data-state]="e.status">
                       <span class="sa-entry-mark"><app-icon [name]="icon(e.status)" /></span>
-                      <span class="sa-entry-copy"><strong>{{ e.subject }}</strong>@if (e.note) {<small>{{ e.note }}</small>}</span>
+                      <span class="sa-entry-copy"
+                        ><strong>{{ e.subject }}</strong>
+                        @if (e.note) {
+                          <small>{{ e.note }}</small>
+                        }
+                      </span>
                       <span class="sa-entry-label">{{ labels[e.status] }}</span>
                     </li>
                   }
@@ -126,7 +197,9 @@ import { StudentHeader } from '../shared/student-header';
           </div>
         }
       } @else if (error()) {
-        <p class="feedback error-feedback" role="alert">{{ error() }}</p>
+        <p class="feedback error-feedback" role="alert">
+          {{ error() }} <button class="text-button" (click)="load()">Reintentar</button>
+        </p>
       } @else {
         <p class="loading-state card" role="status">Cargando…</p>
       }
@@ -140,6 +213,7 @@ export class MyStudentAttendance {
   readonly view = signal<StudentAccessView | null>(null);
   readonly calendar = signal<AttendanceCalendar | null>(null);
   readonly gate = signal<MyGateDay[]>([]);
+  readonly gateError = signal(false);
   readonly notFound = signal(false);
   readonly error = signal('');
   readonly loading = signal(false);
@@ -149,12 +223,19 @@ export class MyStudentAttendance {
   readonly weekdays = weekdayShort;
   readonly labels = attendanceLabels;
   private request = 0;
+  private loadRequest = 0;
+  private gateRequest = 0;
   readonly weeks = computed(() => monthWeeks(this.month().getFullYear(), this.month().getMonth()));
   readonly byDate = computed(() => new Map((this.calendar()?.days ?? []).map((d) => [d.date, d])));
   readonly gateByDate = computed(() => new Map(this.gate().map((d) => [d.date, d])));
   readonly detail = computed(() => this.byDate().get(this.selectedDay()) ?? null);
   readonly monthLabel = computed(() =>
-    capitalize(new Intl.DateTimeFormat(this.school.locale.culture, { month: 'long', year: 'numeric' }).format(this.month())),
+    capitalize(
+      new Intl.DateTimeFormat(this.school.locale.culture, {
+        month: 'long',
+        year: 'numeric',
+      }).format(this.month()),
+    ),
   );
 
   constructor() {
@@ -164,16 +245,43 @@ export class MyStudentAttendance {
     });
   }
   async load(): Promise<void> {
+    const request = ++this.loadRequest;
+    const id = this.id();
+    this.request++;
+    this.gateRequest++;
+    this.view.set(null);
+    this.calendar.set(null);
+    this.gate.set([]);
+    this.gateError.set(false);
+    this.notFound.set(false);
     this.error.set('');
     try {
-      const view = await this.api.get<StudentAccessView>(`/api/v1/me/students/${encodeURIComponent(this.id())}`);
+      const view = await this.api.get<StudentAccessView>(
+        `/api/v1/me/students/${encodeURIComponent(id)}`,
+      );
+      if (request !== this.loadRequest) return;
       this.view.set(view);
       if (!view.isSelf && !view.faculties.includes('AcademicRecords')) return;
-      void this.api.get<MyGateDay[]>(`/api/v1/me/students/${view.student.id}/gate`).then((x) => this.gate.set(x)).catch(() => undefined);
+      void this.loadGate();
       await this.loadMonth();
     } catch (error) {
-      if (error instanceof HttpErrorResponse && (error.status === 404 || error.status === 400)) this.notFound.set(true);
+      if (request !== this.loadRequest) return;
+      if (error instanceof HttpErrorResponse && (error.status === 404 || error.status === 400))
+        this.notFound.set(true);
       else this.error.set(this.api.message(error));
+    }
+  }
+  async loadGate(): Promise<void> {
+    const view = this.view();
+    if (!view) return;
+    const request = ++this.gateRequest;
+    this.gate.set([]);
+    this.gateError.set(false);
+    try {
+      const marks = await this.api.get<MyGateDay[]>(`/api/v1/me/students/${view.student.id}/gate`);
+      if (request === this.gateRequest) this.gate.set(marks);
+    } catch {
+      if (request === this.gateRequest) this.gateError.set(true);
     }
   }
   async loadMonth(): Promise<void> {
@@ -184,9 +292,12 @@ export class MyStudentAttendance {
     const from = isoDate(m);
     const to = isoDate(new Date(m.getFullYear(), m.getMonth() + 1, 0));
     this.loading.set(true);
+    this.calendar.set(null);
     this.error.set('');
     try {
-      const calendar = await this.api.get<AttendanceCalendar>(`/api/v1/me/students/${view.student.id}/attendance/calendar?from=${from}&to=${to}`);
+      const calendar = await this.api.get<AttendanceCalendar>(
+        `/api/v1/me/students/${view.student.id}/attendance/calendar?from=${from}&to=${to}`,
+      );
       if (request !== this.request) return;
       this.calendar.set(calendar);
     } catch (error) {
@@ -219,6 +330,12 @@ export class MyStudentAttendance {
     return `${this.longDate(date)}: ${state ? this.labels[state] : 'sin registro'}`;
   }
   longDate(value: string): string {
-    return capitalize(new Intl.DateTimeFormat(this.school.locale.culture, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(value + 'T12:00:00')));
+    return capitalize(
+      new Intl.DateTimeFormat(this.school.locale.culture, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      }).format(new Date(value + 'T12:00:00')),
+    );
   }
 }

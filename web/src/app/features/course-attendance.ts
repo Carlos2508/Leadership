@@ -37,6 +37,7 @@ interface Sheet {
   course: CourseView;
   date: string;
   canEdit: boolean;
+  readOnlyReason: string | null;
   rows: Omit<Row, 'draft' | 'draftNote'>[];
 }
 
@@ -108,7 +109,9 @@ interface Sheet {
         <section class="card directory-card">
           <div class="filters">
             @if (!s.canEdit) {
-              <p class="muted-copy">Esta lista es de consulta.</p>
+              <p class="feedback info-feedback" role="note">
+                {{ s.readOnlyReason || 'Esta lista es de consulta.' }}
+              </p>
             }
             <p class="directory-summary attendance-counts" aria-live="polite">
               @if (dirty()) {

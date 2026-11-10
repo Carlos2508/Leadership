@@ -69,6 +69,6 @@ public sealed class ChatThread
     public bool CanSend { get; init; }
 }
 public sealed record ChatMessageView(long Sequence, Guid ClientMessageId, string Body, DateTimeOffset SentAt, bool Mine,
-    DateTimeOffset? DeliveredAt = null, DateTimeOffset? ReadAt = null);
+    DateTimeOffset? DeliveredAt = null, DateTimeOffset? ReadAt = null, ChatAttachmentView? Attachment = null);
 public sealed record ChatPage(ChatThread Conversation, ChatMessageView[] Items, bool HasMore, ChatReceipt[] Receipts);
-public sealed record ChatSummary(bool Available, int Unread, int Conversations, string Revision, ChatDelivery[] PendingDeliveries);
+public sealed record ChatSummary(bool Available, int Unread, int Conversations, string Revision, ChatDelivery[] PendingDeliveries, int AttachmentMaxMb = 0);

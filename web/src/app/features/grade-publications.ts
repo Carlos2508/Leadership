@@ -55,6 +55,9 @@ interface CourseCompletion {
             las ven solo con la facultad académica y la solvencia del corte elegido.
           </p>
         </div>
+        <a class="button outline" routerLink="/workspace/grades/templates"
+          ><app-icon name="folder" />Plantillas de actividades</a
+        >
       </div>
       @if (notice()) {
         <p class="feedback success-feedback" role="status" tabindex="-1" #noticeRef>

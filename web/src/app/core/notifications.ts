@@ -163,8 +163,7 @@ export class NotificationService {
           detail: overdue
             ? `${overdue} vencida${overdue === 1 ? '' : 's'}`
             : 'Revisa las fechas de entrega',
-          link: ['/workspace/my/students', s.id],
-          fragment: 'tasks-title',
+          link: ['/workspace/my/students', s.id, 'tasks'],
         });
       if (s.canFinance && (s.balance ?? 0) > 0)
         result.push({

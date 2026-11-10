@@ -10,6 +10,8 @@ public sealed partial class SchoolDbContext
     public DbSet<ChatConversation> ChatConversations => Set<ChatConversation>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<ChatPresence> ChatPresences => Set<ChatPresence>();
+    public DbSet<ChatAttachment> ChatAttachments => Set<ChatAttachment>();
+    public DbSet<SchoolPlatform.Host.Common.PlatformSetting> PlatformSettings => Set<SchoolPlatform.Host.Common.PlatformSetting>();
 
     private static void ConfigureChat(ModelBuilder builder)
     {
@@ -43,6 +45,27 @@ public sealed partial class SchoolDbContext
             e.Property(x => x.Body).HasMaxLength(4000);
             e.HasOne<ChatConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Person>().WithMany().HasForeignKey(x => x.SenderId).OnDelete(DeleteBehavior.Restrict);
+        });
+        builder.Entity<ChatAttachment>(e =>
+        {
+            e.ToTable("Attachments", "chat", t => t.HasCheckConstraint("CK_ChatAttachment_Size", "[Size] > 0"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.FileName).HasMaxLength(150);
+            e.Property(x => x.ContentType).HasMaxLength(120).IsUnicode(false);
+            e.Property(x => x.Sha256).HasMaxLength(64).IsUnicode(false);
+            e.Property(x => x.StorageKey).HasMaxLength(120).IsUnicode(false);
+            e.HasIndex(x => new { x.ConversationId, x.Sequence }).IsUnique();
+            e.HasOne<ChatMessage>().WithOne().HasForeignKey<ChatAttachment>(x => new { x.ConversationId, x.Sequence }).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<AccountRef>().WithMany().HasForeignKey(x => x.UploadedBy).OnDelete(DeleteBehavior.Restrict);
+        });
+        builder.Entity<SchoolPlatform.Host.Common.PlatformSetting>(e =>
+        {
+            e.ToTable("Settings", "platform");
+            e.HasKey(x => x.Key);
+            e.Property(x => x.Key).HasMaxLength(80).IsUnicode(false);
+            e.Property(x => x.Value).HasMaxLength(400);
+            e.Property(x => x.Version).IsRowVersion();
+            e.HasOne<AccountRef>().WithMany().HasForeignKey(x => x.UpdatedBy).OnDelete(DeleteBehavior.Restrict);
         });
         builder.Entity<ChatPresence>(e =>
         {

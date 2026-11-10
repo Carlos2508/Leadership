@@ -323,8 +323,7 @@
         <div class="reference-course-list">
           @for (course of student.courseItems; track course.id) {
             <a
-              [routerLink]="['/workspace/my/students', student.id]"
-              fragment="tasks-title"
+              [routerLink]="['/workspace/my/students', student.id, 'tasks']"
               [queryParams]="{ year: st.yearId }"
               ><span class="course-symbol"><app-icon name="book" /></span
               ><span

@@ -188,6 +188,22 @@ test('private course chat notifies on login, retries once, keeps read receipts a
         .locator('.chat-history')
         .getByText('Claro, mañana lo vemos en clase.', { exact: true }),
     ).toBeVisible({ timeout: 15000 });
+    // Attachments: a program is refused before upload; a PDF travels as a file card both sides can download.
+    const attach = teacherUser.p.locator('.chat-attach input[type=file]');
+    await attach.setInputFiles({ name: 'tarea.exe', mimeType: 'application/octet-stream', buffer: Buffer.from('MZ') });
+    await expect(teacherUser.p.locator('.chat-error')).toContainText('no se puede enviar');
+    await attach.setInputFiles({
+      name: 'guia-de-estudio.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4 guía sintética para la prueba'),
+    });
+    await expect(teacherUser.p.locator('.chat-attachment-chip')).toContainText('guia-de-estudio.pdf');
+    await teacherUser.p.getByRole('button', { name: 'Enviar mensaje', exact: true }).click();
+    const file = student.p.locator('.chat-file').filter({ hasText: 'guia-de-estudio.pdf' });
+    await expect(file).toBeVisible({ timeout: 15000 });
+    const download = await student.p.request.get((await file.getAttribute('href'))!);
+    expect(download.status()).toBe(200);
+    expect((await download.body()).subarray(0, 4).toString()).toBe('%PDF');
     // The write commits, the automatic poll confirms it, then its HTTP acknowledgment is lost.
     await student.p.route('**/chat/conversations/*/messages', async (route) => {
       if (route.request().method() !== 'POST') {

@@ -6,6 +6,8 @@ ADR-020 registra horarios semanales por grado/sección: borrador y publicación 
 
 ADR-021 registra el carnet para todo el personal (no encargados), su tabla propia, la impresión con ciclo explícito y el rediseño CR80.
 
+ADR-022 registra la calificación por actividades con punteo (suma del período, tareas con valor, plantillas), las páginas de tareas, calificaciones y asistencia del estudiante, el horario en PDF como el tablero y los adjuntos del chat con límite configurable.
+
 ADR-011 registra el dashboard operativo por ciclo, permisos y recurso. ADR-012 registra roles de acceso configurables en SQL, independientes de los perfiles escolares.
 
 ADR-010 registra el rediseño web y la navegación por Estudiantes, Padres y Docentes, conservando el modelo de personas y los permisos existentes. Complementa `docs/DESIGN.md`.

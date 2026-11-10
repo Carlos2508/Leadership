@@ -65,31 +65,21 @@ import { ChatInbox } from '../core/chat';
           }
           @if (!preview() && session.studentId(); as studentId) {
             <a
-              routerLink="/workspace"
-              fragment="personal-courses"
-              queryParamsHandling="preserve"
-              [class.active]="router.url.endsWith('#personal-courses')"
-              ><app-icon name="school" />Académico</a
-            >
-            <a
-              [routerLink]="['/workspace/my/students', studentId]"
-              fragment="tasks-title"
-              queryParamsHandling="preserve"
-              [class.active]="router.url.endsWith('#tasks-title')"
+              [routerLink]="['/workspace/my/students', studentId, 'tasks']"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
               ><app-icon name="clipboard" />Tareas</a
             >
             <a
-              [routerLink]="['/workspace/my/students', studentId]"
-              fragment="grades-title"
-              queryParamsHandling="preserve"
-              [class.active]="router.url.endsWith('#grades-title')"
+              [routerLink]="['/workspace/my/students', studentId, 'grades']"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
               ><app-icon name="chart" />Calificaciones</a
             >
             <a
-              [routerLink]="['/workspace/my/students', studentId]"
-              fragment="attendance-title"
-              queryParamsHandling="preserve"
-              [class.active]="router.url.endsWith('#attendance-title')"
+              [routerLink]="['/workspace/my/students', studentId, 'attendance']"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
               ><app-icon name="calendar" />Asistencia</a
             >
           }
@@ -261,7 +251,8 @@ import { ChatInbox } from '../core/chat';
               [open]="
                 router.url.startsWith('/workspace/access') ||
                 router.url.startsWith('/workspace/audit') ||
-                router.url.startsWith('/workspace/roles')
+                router.url.startsWith('/workspace/roles') ||
+                router.url.startsWith('/workspace/settings')
               "
             >
               <summary>
@@ -281,6 +272,12 @@ import { ChatInbox } from '../core/chat';
                   routerLinkActive="active"
                   ariaCurrentWhenActive="page"
                   ><app-icon name="key" />Cuentas y accesos</a
+                >
+                <a
+                  routerLink="/workspace/settings"
+                  routerLinkActive="active"
+                  ariaCurrentWhenActive="page"
+                  ><app-icon name="selector" />Ajustes</a
                 >
               }
               @if (session.can('audit.read')) {
@@ -444,29 +441,20 @@ import { ChatInbox } from '../core/chat';
                 }
               </div>
             }
-            <details class="topbar-profile-menu">
-              <summary
-                [attr.aria-label]="
-                  'Mi cuenta: ' + (session.displayName() || session.username() || 'Demostración')
-                "
+            <!-- Name and school profile only: «Mi cuenta» and «Cerrar sesión» live at the foot of the menu. -->
+            <div class="topbar-profile-menu topbar-profile-static">
+              <span class="avatar">{{
+                preview() ? 'D' : session.initials() || school.shortName.slice(0, 1)
+              }}</span
+              ><span class="topbar-profile-copy"
+                ><strong>{{
+                  preview() ? 'Demostración' : session.displayName() || session.username()
+                }}</strong
+                ><small>{{
+                  preview() ? 'Vista de muestra' : session.schoolProfile() || 'Mi espacio'
+                }}</small></span
               >
-                <span class="avatar">{{
-                  preview() ? 'D' : session.initials() || school.shortName.slice(0, 1)
-                }}</span
-                ><span class="topbar-profile-copy"
-                  ><strong>{{
-                    preview() ? 'Demostración' : session.displayName() || session.username()
-                  }}</strong
-                  ><small>{{
-                    preview() ? 'Vista de muestra' : session.schoolProfile() || 'Mi espacio'
-                  }}</small></span
-                ><app-icon name="chevron" />
-              </summary>
-              <div class="topbar-profile-dropdown">
-                <a routerLink="/workspace/security"><app-icon name="user" />Mi cuenta y seguridad</a
-                ><a routerLink="/"><app-icon name="home" />Ir al sitio público</a>
-              </div>
-            </details>
+            </div>
           </div>
         </header>
         @if (preview()) {

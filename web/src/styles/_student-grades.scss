@@ -1,0 +1,42 @@
+/* Student grades: period tabs, subject cards with a ring and activity bars, evolution table. */
+.sp-empty{padding:42px 20px}
+.sp-period-tabs{display:flex;gap:8px;overflow-x:auto;margin-bottom:16px}
+.sp-period-tabs button{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border:1px solid var(--border);border-radius:999px;background:#fff;font:inherit;font-size:14px;font-weight:600;color:var(--muted);white-space:nowrap;cursor:pointer}
+.sp-period-tabs button app-icon{width:15px;height:15px}
+.sp-period-tabs button.active{background:var(--deep);border-color:var(--deep);color:#fff}
+.sp-blocked{display:flex;gap:14px;padding:20px}
+.sp-blocked h2{margin:0 0 6px;font-size:17px}
+.sp-blocked p{margin:0 0 8px;color:var(--muted)}
+.sp-blocked small{display:block;color:var(--muted)}
+.sp-subjects{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:18px}
+.sp-subject-card{padding:18px;border-top:4px solid var(--tone)}
+.sp-subject-card header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.sp-subject-card header>div:first-child{display:flex;flex-direction:column;gap:6px;min-width:0}
+.sp-subject-card header small{color:var(--muted);font-size:12px}
+.sp-ring{position:relative;flex:0 0 64px;height:64px}
+.sp-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.sp-ring circle{fill:none;stroke-width:3.4}
+.sp-ring .track{stroke:#efeae2}
+.sp-ring .value{stroke:var(--tone);stroke-linecap:round;stroke-dasharray:calc(var(--value) * 1px) 100px}
+.sp-ring span{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:17px;font-variant-numeric:tabular-nums}
+.sp-activities{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.sp-activities li{display:grid;grid-template-columns:minmax(0,1fr) 70px auto;align-items:center;gap:10px;font-size:13px}
+.sp-activity-name{overflow-wrap:anywhere}
+.sp-activity-name em{margin-left:6px;padding:1px 6px;border-radius:6px;background:#e8f0fe;color:#1f4fa3;font-style:normal;font-size:10px;font-weight:700}
+.sp-activity-bar{height:6px;border-radius:99px;background:#efeae2;overflow:hidden}
+.sp-activity-bar span{display:block;height:100%;border-radius:inherit;background:var(--tone)}
+.sp-activity-points{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sp-activity-points small{color:var(--muted);font-weight:500}
+.sp-evolution{padding:18px}
+.sp-evolution h2{margin:0 0 12px;font-size:17px}
+.sp-matrix{width:100%;border-collapse:collapse;font-size:14px}
+.sp-matrix th,.sp-matrix td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.sp-matrix thead th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+.sp-dot{display:inline-block;width:9px;height:9px;margin-right:8px;border-radius:50%;background:var(--tone)}
+.sp-cell{position:relative;display:inline-flex;align-items:center;min-width:90px;height:26px;padding:0 8px;border-radius:8px;background:#f6f3ee;overflow:hidden}
+.sp-cell-bar{position:absolute;inset:0 auto 0 0;background:color-mix(in srgb,var(--accent) 30%,transparent)}
+.sp-cell strong{position:relative;font-variant-numeric:tabular-nums}
+@media (max-width:700px){
+  .sp-subjects{grid-template-columns:1fr}
+  .sp-activities li{grid-template-columns:minmax(0,1fr) 48px auto}
+}

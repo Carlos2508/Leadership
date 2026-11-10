@@ -1,5 +1,14 @@
 # Handoff para la siguiente sesión
 
+## Experiencia escolar — 9 de noviembre de 2026, leer primero
+
+- Solicitud del propietario tras revisar la instancia QA (`.local/main-local`, puerto 5085, base `SchoolPlatform_E2E_f013…`, solo datos sintéticos): páginas separadas de tareas, calificaciones y asistencia; calificación por actividades con punteo como el sistema anterior; tareas con punteo; menú y encabezado sin duplicados; horario en PDF como el tablero; adjuntos del chat con límite configurable; corregir textos desbordados. Rama `feat/experiencia-escolar` desde `main` `ce2e473`. Leer ADR-022.
+- Backend: `Grades/ActivityModel.cs`, `ActivityService.cs` (suma → `PeriodScores` con revisión, bloqueo por curso, quitar con motivo sin borrar historial), endpoints `/courses/{id}/activities*` y `/activity-templates`. `LearningService` acepta `PeriodId`/`Points` y califica entregas; la fecha de entrega debe estar dentro del ciclo. `AttendanceService.CalendarAsync` y `ReadOnlyReason`. `Chat/ChatAttachments.cs`, `Common/PlatformSettings.cs` (`/api/v1/settings`, `accounts.manage`). Migraciones `GradeActivities` y `ChatAttachmentsAndSettings`.
+- Web: `my-student*.ts`, `shared/student-header.ts`, `core/student-api.ts`, `course-grades.ts` (cuadrícula de actividades), `course-assignments.ts` (punteo y calificar), `activity-templates.ts`, `platform-settings.ts`, chat con adjuntos. Estilos de páginas diferidas en `_student-*.scss`, `_gradebook.scss`, `_activity-templates.scss`, `_course-assignments.scss` (componentes sin encapsulación para no crecer el paquete inicial).
+- Diagnóstico de la instancia QA: el ciclo «2027 · Pruebas QA» empieza el 11/01/2027, así que hoy la asistencia es de fecha futura (solo consulta) y una tarea con entrega en 2026 no tiene destinatarios. Ahora ambas situaciones se explican y la segunda se rechaza al guardar.
+- Playwright usa el puerto 5085 por defecto, el mismo de la instancia QA: usar `SCHOOLPLATFORM_E2E_PORT=5095`. Revisión visual con `.local/qa/experiencia/shots.mjs` (necesita `MSYS_NO_PATHCONV=1` en Git Bash) contra una copia publicada en `.local/main-local/branch-app` (puerto 5086, `Run-Branch-5086.ps1`).
+- Pendiente: el app Flutter no descarga adjuntos ni muestra el desglose de actividades; el colegio debe definir su plantilla de actividades.
+
 ## Horarios de cursos — 9 de noviembre de 2026, leer primero
 
 - Solicitud: completar los horarios que quedaron a medias en `codex/course-timetables` (base `main` `b945bcb`) y luego integrar en `main` los carnets de `feat/carnet-personal` y hacer push. Leer ADR-020.

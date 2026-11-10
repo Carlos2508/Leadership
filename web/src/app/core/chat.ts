@@ -15,6 +15,8 @@ export interface ChatSummary {
   conversations: number;
   revision: string;
   pendingDeliveries: ChatDelivery[];
+  /** Largest attachment the administrator allows, in MB. */
+  attachmentMaxMb?: number;
 }
 export interface ChatDelivery {
   academicYearId: string;
@@ -47,7 +49,10 @@ export interface ChatMessage {
   mine: boolean;
   deliveredAt: string | null;
   readAt: string | null;
+  attachment?: { id: string; fileName: string; contentType: string; size: number } | null;
 }
+/** File types the chat accepts (the server checks content and ZIP contents again). */
+export const chatAttachmentTypes = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.png', '.jpg', '.jpeg', '.txt', '.csv', '.zip'];
 export interface ChatPage {
   conversation: ChatThread;
   items: ChatMessage[];

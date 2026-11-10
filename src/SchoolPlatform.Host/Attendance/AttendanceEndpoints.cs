@@ -15,6 +15,8 @@ public static class AttendanceEndpoints
             Results.Ok(new { changed = await service.SaveAsync(Actor(user), id, request, ct) }));
         api.MapGet("/me/students/{id:guid}/attendance", async (Guid id, ClaimsPrincipal user, AttendanceService service, CancellationToken ct) =>
             await service.SummaryAsync(Actor(user), id, ct) is { } summary ? Results.Ok(summary) : Results.NotFound());
+        api.MapGet("/me/students/{id:guid}/attendance/calendar", async (Guid id, DateOnly from, DateOnly to, ClaimsPrincipal user, AttendanceService service,
+            CancellationToken ct) => await service.CalendarAsync(Actor(user), id, from, to, ct) is { } calendar ? Results.Ok(calendar) : Results.NotFound());
     }
 
     private static Guid Actor(ClaimsPrincipal user) => PeopleEndpoints.Actor(user);

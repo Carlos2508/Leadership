@@ -1,0 +1,16 @@
+/* Activity templates (academic management). */
+.tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.tpl-card{display:flex;flex-direction:column;gap:12px;padding:20px}
+.tpl-card.inactive{opacity:.65}
+.tpl-card header,.tpl-card footer{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.tpl-card h2{margin:0;font-size:16px;overflow-wrap:anywhere}
+.tpl-row{display:grid;grid-template-columns:minmax(0,1fr) 110px 40px;gap:8px;align-items:center;margin-bottom:8px}
+.tpl-row .form-field{margin:0}
+.tpl-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
+.tpl-foot .text-button{display:inline-flex;align-items:center;gap:4px}
+.tpl-foot .text-button app-icon{width:16px;height:16px}
+.tpl-foot .over{color:var(--danger)}
+.gb-template-items{list-style:none;margin:0;padding:0;border:1px solid var(--border);border-radius:12px}
+.gb-template-items li{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);font-size:14px}
+.gb-template-items li:last-child{border-bottom:0}
+@media (max-width:700px){.tpl-row{grid-template-columns:minmax(0,1fr) 84px 40px}}

@@ -87,8 +87,7 @@ export class Workspace {
           title: task.title,
           detail: (student.isSelf ? '' : student.name + ' · ') + task.course,
           date: this.localDate(task.dueAt),
-          route: ['/workspace/my/students', student.id],
-          fragment: 'tasks-title',
+          route: ['/workspace/my/students', student.id, 'tasks'],
           overdue: task.overdue,
           kind: 'Tarea',
         });
@@ -131,14 +130,12 @@ export class Workspace {
         {
           label: 'Mis tareas',
           icon: 'clipboard',
-          route: ['/workspace/my/students', student.id],
-          fragment: 'tasks-title',
+          route: ['/workspace/my/students', student.id, 'tasks'],
         },
         {
           label: 'Calificaciones',
           icon: 'chart',
-          route: ['/workspace/my/students', student.id],
-          fragment: 'grades-title',
+          route: ['/workspace/my/students', student.id, 'grades'],
         },
         { label: 'Mi cuenta', icon: 'user', route: ['/workspace/security'] },
       ];

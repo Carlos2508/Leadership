@@ -361,6 +361,13 @@ h2 {
   min-height: 42px;
   color: #fff;
 }
+.topbar-profile-static {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 42px;
+  color: #fff;
+}
 .topbar-profile-menu summary::-webkit-details-marker {
   display: none;
 }
@@ -1026,6 +1033,13 @@ textarea:focus {
 }
 
 /* Personal shortcuts in the menu (teacher courses, guardian students): name plus a muted second line. */
+/* One column as wide as the menu: long names end in an ellipsis instead of widening the list. */
+.sidebar nav {
+  grid-template-columns: minmax(0, 1fr);
+}
+.sidebar nav a {
+  min-width: 0;
+}
 .sidebar nav .nav-text {
   display: grid;
   min-width: 0;

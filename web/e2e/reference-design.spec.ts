@@ -305,9 +305,7 @@ test('student reference dashboard uses authorized SQL data and its calendar and 
     .locator('.reference-shortcuts')
     .getByRole('link', { name: 'Mis tareas', exact: true })
     .click();
-  await expect(page).toHaveURL(
-    new RegExp(`/workspace/my/students/${student}\\?year=${yearId}#tasks-title$`),
-  );
-  await expect(page.getByRole('heading', { name: 'Tareas', exact: true })).toBeVisible();
-  await expect(page.locator('.task-list')).toContainText('Entrega de proyecto');
+  await expect(page).toHaveURL(new RegExp(`/workspace/my/students/${student}/tasks`));
+  await expect(page.getByRole('heading', { level: 1, name: 'Tareas', exact: true })).toBeVisible();
+  await expect(page.locator('.sp-task-list')).toContainText('Entrega de proyecto');
 });

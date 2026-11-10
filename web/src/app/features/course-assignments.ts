@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, inject, input, signal, effect, untracked } from '@angular/core';
+import { Component, ElementRef, ViewChild, ViewEncapsulation, computed, inject, input, signal, effect, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AccessApi } from '../core/access-api';
@@ -18,6 +18,14 @@ interface AssignmentView {
   recipients: number;
   submitted: number;
   version: string;
+  periodId: string | null;
+  points: number | null;
+  scored: number;
+}
+interface PeriodOption {
+  id: string;
+  name: string;
+  published: boolean;
 }
 interface SubmissionRow {
   studentId: string;
@@ -32,6 +40,8 @@ interface SubmissionRow {
   feedback: string | null;
   version: string | null;
   files: { id: string; fileName: string; size: number }[] | null;
+  points: number | null;
+  scoreStatus: 'Scored' | 'Missing' | 'Excused' | null;
 }
 
 const statusLabels = { Draft: 'Borrador', Published: 'Publicada', Closed: 'Cerrada' } as const;
@@ -39,6 +49,8 @@ const statusLabels = { Draft: 'Borrador', Published: 'Publicada', Closed: 'Cerra
 /** Course activities for the assigned teacher (and academic staff): create, publish, close and review text submissions. */
 @Component({
   imports: [Shell, Icon, CourseNav, FormsModule, PluralPipe],
+  encapsulation: ViewEncapsulation.None,
+  styleUrls: ['../../styles/_course-assignments.scss'],
   template: `
     <app-shell title="Actividades del curso">
       <app-course-nav [courseId]="id()" active="assignments" />
@@ -71,7 +83,12 @@ const statusLabels = { Draft: 'Borrador', Published: 'Publicada', Closed: 'Cerra
               <div class="section-heading">
                 <span class="person-copy"
                   ><strong>{{ item.title }}</strong
-                  ><small>Entrega: {{ api.date(item.dueAt) }}{{ item.allowLate ? ' · acepta entregas tardías' : '' }}</small></span
+                  ><small
+                    >Entrega: {{ api.date(item.dueAt) }}{{ item.allowLate ? ' · acepta entregas tardías' : '' }}
+                    @if (item.points !== null) {
+                      · <strong class="points-tag">Vale {{ item.points }} pts · {{ periodName(item.periodId) }}</strong>
+                    }</small
+                  ></span
                 >
                 <span class="pill" [class.gold]="item.status === 'Draft'" [class.mint]="item.status === 'Published'">{{ labels[item.status] }}</span>
               </div>
@@ -121,14 +138,31 @@ const statusLabels = { Draft: 'Borrador', Published: 'Publicada', Closed: 'Cerra
                           <small class="feedback-note">Retroalimentación: {{ row.feedback }}</small>
                         }</span
                       >
-                      @if (row.submissionId && row.status !== 'Reviewed') {
-                        <button class="text-button" (click)="openFeedback(row)">
-                          Retroalimentar <span class="sr-only">a {{ row.name }}</span>
-                        </button>
-                      }
+                      <span class="submission-actions">
+                        @if (item.points !== null) {
+                          <span class="score-chip" [class.empty]="!row.scoreStatus">{{
+                            row.scoreStatus === 'Scored' ? row.points + ' / ' + item.points + ' pts' : row.scoreStatus === 'Missing' ? 'No entregó · 0 pts' : row.scoreStatus === 'Excused' ? 'Exonerado' : 'Sin calificar'
+                          }}</span>
+                        }
+                        @if (row.submissionId && row.status !== 'Reviewed') {
+                          <button class="text-button" (click)="openFeedback(row, item)">
+                            {{ item.points !== null ? 'Calificar' : 'Retroalimentar' }} <span class="sr-only">a {{ row.name }}</span>
+                          </button>
+                        } @else if (item.points !== null && item.status !== 'Draft') {
+                          <button class="text-button" (click)="openScore(row, item)">
+                            {{ row.scoreStatus ? 'Cambiar punteo' : row.submissionId ? 'Calificar' : 'Registrar punteo' }} <span class="sr-only">de {{ row.name }}</span>
+                          </button>
+                        }
+                      </span>
                     </li>
                   } @empty {
-                    <li><span class="muted-copy">Sin estudiantes destinatarios.</span></li>
+                    <li class="no-recipients">
+                      <app-icon name="info" />
+                      <span
+                        ><strong>Sin estudiantes destinatarios.</strong> La tarea llega a quienes están inscritos en el curso entre su publicación y la
+                        fecha de entrega. Revisa que la fecha de entrega esté dentro del ciclo y que el curso tenga estudiantes inscritos.</span
+                      >
+                    </li>
                   }
                 </ul>
               }
@@ -144,7 +178,7 @@ const statusLabels = { Draft: 'Borrador', Published: 'Publicada', Closed: 'Cerra
 
       <dialog #assignmentDialog class="account-dialog wide-dialog" (cancel)="onCancel($event)" aria-labelledby="assignment-title">
         <div class="dialog-heading">
-          <h2 id="assignment-title">{{ mode() === 'feedback' ? 'Retroalimentación' : editing() ? 'Editar actividad' : 'Nueva actividad' }}</h2>
+          <h2 id="assignment-title">{{ mode() === 'feedback' ? (scoring()?.points !== null && scoring() ? 'Calificar entrega' : 'Retroalimentación') : mode() === 'score' ? 'Registrar punteo' : editing() ? 'Editar actividad' : 'Nueva actividad' }}</h2>
           <button class="icon-button" (click)="close()" aria-label="Cerrar ventana" [disabled]="busy()"><app-icon name="close" /></button>
         </div>
         <form class="access-form" (ngSubmit)="submit()">
@@ -161,11 +195,64 @@ const statusLabels = { Draft: 'Borrador', Published: 'Publicada', Closed: 'Cerra
                 >Aceptar entregas tardías<small>Se marcarán como tardías.</small></span
               ></label
             >
+            <label class="checkbox-field"
+              ><input type="checkbox" name="graded" [(ngModel)]="form.graded" (ngModelChange)="gradedChanged()" [disabled]="(editing()?.scored ?? 0) > 0 || !openPeriods().length" /><span
+                >Esta tarea vale puntos<small>Se agrega como actividad de la libreta y su punteo suma a la nota del período.</small></span
+              ></label
+            >
+            @if (form.graded) {
+              <div class="form-row two">
+                <label class="form-field"
+                  ><span>Período</span
+                  ><select name="period" [(ngModel)]="form.periodId" required [disabled]="(editing()?.scored ?? 0) > 0">
+                    @for (p of openPeriods(); track p.id) {
+                      <option [value]="p.id">{{ p.name }}</option>
+                    }
+                  </select></label
+                >
+                <label class="form-field"
+                  ><span>Punteo (puntos)</span
+                  ><input name="points" type="number" min="0.01" max="100" step="0.01" [(ngModel)]="form.points" required
+                /></label>
+              </div>
+            }
+          } @else if (mode() === 'feedback') {
+            <p class="managed-user">{{ feedbackRow()?.name }}</p>
+            @if (scoring()?.points !== null && scoring()) {
+              <div class="form-row two">
+                <label class="form-field"
+                  ><span>Resultado</span
+                  ><select name="scoreStatus" [(ngModel)]="scoreForm.status">
+                    <option value="Scored">Con punteo</option>
+                    <option value="Missing">No entregó (0 pts)</option>
+                    <option value="Excused">Exonerado</option>
+                  </select></label
+                >
+                <label class="form-field"
+                  ><span>Puntos (de {{ scoring()?.points }})</span
+                  ><input name="scorePoints" type="number" min="0" [max]="scoring()?.points ?? 100" step="0.01" [(ngModel)]="scoreForm.points" [disabled]="scoreForm.status !== 'Scored'"
+                /></label>
+              </div>
+            }
+            <label class="form-field"
+              ><span>Comentario para el estudiante{{ scoring()?.points !== null && scoring() ? ' (opcional)' : '' }}</span><textarea name="feedback" [(ngModel)]="feedback" [required]="!(scoring()?.points !== null && scoring())" maxlength="2000" rows="4"></textarea
+            ></label>
           } @else {
             <p class="managed-user">{{ feedbackRow()?.name }}</p>
-            <label class="form-field"
-              ><span>Comentario para el estudiante</span><textarea name="feedback" [(ngModel)]="feedback" required maxlength="2000" rows="4"></textarea
-            ></label>
+            <div class="form-row two">
+              <label class="form-field"
+                ><span>Resultado</span
+                ><select name="scoreOnlyStatus" [(ngModel)]="scoreForm.status">
+                  <option value="Scored">Con punteo</option>
+                  <option value="Missing">No entregó (0 pts)</option>
+                  <option value="Excused">Exonerado</option>
+                </select></label
+              >
+              <label class="form-field"
+                ><span>Puntos (de {{ scoring()?.points }})</span
+                ><input name="scoreOnlyPoints" type="number" min="0" [max]="scoring()?.points ?? 100" step="0.01" [(ngModel)]="scoreForm.points" [disabled]="scoreForm.status !== 'Scored'"
+              /></label>
+            </div>
           }
           @if (dialogError()) {
             <p class="feedback error-feedback" role="alert">{{ dialogError() }}</p>
@@ -192,14 +279,18 @@ export class CourseAssignments {
   readonly openId = signal<string | null>(null);
   readonly editing = signal<AssignmentView | null>(null);
   readonly feedbackRow = signal<SubmissionRow | null>(null);
-  readonly mode = signal<'edit' | 'feedback'>('edit');
+  readonly mode = signal<'edit' | 'feedback' | 'score'>('edit');
+  readonly scoring = signal<AssignmentView | null>(null);
+  readonly periods = signal<PeriodOption[]>([]);
+  readonly openPeriods = computed(() => this.periods().filter((p) => !p.published));
+  scoreForm = { status: 'Scored' as 'Scored' | 'Missing' | 'Excused', points: null as number | null };
   readonly notFound = signal(false);
   readonly busy = signal(false);
   readonly error = signal('');
   readonly notice = signal('');
   readonly dialogError = signal('');
   readonly labels = statusLabels;
-  form = { title: '', instructions: '', due: '', allowLate: false };
+  form = { title: '', instructions: '', due: '', allowLate: false, graded: false, periodId: '', points: 10 as number | null };
   feedback = '';
 
   constructor() {
@@ -220,6 +311,7 @@ export class CourseAssignments {
   async load(): Promise<void> {
     try {
       this.items.set(await this.api.get<AssignmentView[]>(`${this.root()}/assignments`));
+      if (!this.periods().length) await this.loadPeriods();
       if (!this.courseName())
         void this.api
           .get<{ course: { subject: string; grade: string; section: string | null } }>(`${this.root()}/roster`)
@@ -247,16 +339,49 @@ export class CourseAssignments {
   openEdit(item?: AssignmentView): void {
     this.mode.set('edit');
     this.editing.set(item ?? null);
+    const firstOpen = this.openPeriods()[0]?.id ?? '';
     this.form = item
-      ? { title: item.title, instructions: item.instructions, due: this.localValue(item.dueAt), allowLate: item.allowLate }
-      : { title: '', instructions: '', due: '', allowLate: false };
+      ? {
+          title: item.title,
+          instructions: item.instructions,
+          due: this.localValue(item.dueAt),
+          allowLate: item.allowLate,
+          graded: item.points !== null,
+          periodId: item.periodId ?? firstOpen,
+          points: item.points ?? 10,
+        }
+      : { title: '', instructions: '', due: '', allowLate: false, graded: false, periodId: firstOpen, points: 10 };
     this.dialogError.set('');
     this.dialog.nativeElement.showModal();
   }
-  openFeedback(row: SubmissionRow): void {
+  /** Periods of the course's cycle (to say what a homework is worth); a cycle without periods simply offers none. */
+  private async loadPeriods(): Promise<void> {
+    try {
+      this.periods.set((await this.api.get<{ periods: PeriodOption[] }>(`${this.root()}/activities`)).periods);
+    } catch {
+      this.periods.set([]);
+    }
+  }
+  gradedChanged(): void {
+    if (this.form.graded && !this.form.periodId) this.form.periodId = this.openPeriods()[0]?.id ?? '';
+  }
+  periodName(id: string | null): string {
+    return this.periods().find((p) => p.id === id)?.name ?? 'período';
+  }
+  openFeedback(row: SubmissionRow, item?: AssignmentView): void {
     this.mode.set('feedback');
     this.feedbackRow.set(row);
+    this.scoring.set(item ?? null);
+    this.scoreForm = { status: row.scoreStatus ?? 'Scored', points: row.points };
     this.feedback = '';
+    this.dialogError.set('');
+    this.dialog.nativeElement.showModal();
+  }
+  openScore(row: SubmissionRow, item: AssignmentView): void {
+    this.mode.set('score');
+    this.feedbackRow.set(row);
+    this.scoring.set(item);
+    this.scoreForm = { status: row.scoreStatus ?? (row.submissionId ? 'Scored' : 'Missing'), points: row.points };
     this.dialogError.set('');
     this.dialog.nativeElement.showModal();
   }
@@ -281,16 +406,37 @@ export class CourseAssignments {
     try {
       if (this.mode() === 'edit') {
         const item = this.editing();
-        const body = { title: this.form.title, instructions: this.form.instructions, dueAt: new Date(this.form.due).toISOString(), allowLate: this.form.allowLate, version: item?.version ?? null };
+        const body = {
+          title: this.form.title,
+          instructions: this.form.instructions,
+          dueAt: new Date(this.form.due).toISOString(),
+          allowLate: this.form.allowLate,
+          version: item?.version ?? null,
+          periodId: this.form.graded ? this.form.periodId || null : null,
+          points: this.form.graded ? Number(this.form.points) : null,
+        };
         await this.api.post(item ? `${this.root()}/assignments/${item.id}` : `${this.root()}/assignments`, body);
+      } else if (this.mode() === 'feedback') {
+        const row = this.feedbackRow()!;
+        const graded = this.scoring()?.points !== null && !!this.scoring();
+        await this.api.post(`${this.root()}/submissions/${row.submissionId}/feedback`, {
+          feedback: this.feedback,
+          version: row.version,
+          scoreStatus: graded ? this.scoreForm.status : null,
+          points: graded && this.scoreForm.status === 'Scored' ? Number(this.scoreForm.points) : null,
+        });
       } else {
         const row = this.feedbackRow()!;
-        await this.api.post(`${this.root()}/submissions/${row.submissionId}/feedback`, { feedback: this.feedback, version: row.version });
+        await this.api.post(`${this.root()}/assignments/${this.scoring()!.id}/scores`, {
+          studentId: row.studentId,
+          status: this.scoreForm.status,
+          points: this.scoreForm.status === 'Scored' ? Number(this.scoreForm.points) : null,
+        });
       }
       this.busy.set(false);
       this.dialog.nativeElement.close();
       await this.load();
-      this.done(this.mode() === 'edit' ? 'La actividad se guardó.' : 'La retroalimentación se envió.');
+      this.done(this.mode() === 'edit' ? 'La actividad se guardó.' : this.mode() === 'score' ? 'El punteo quedó registrado.' : 'La retroalimentación se envió.');
     } catch (error) {
       this.dialogError.set(this.api.message(error));
     } finally {

@@ -14,8 +14,11 @@ public sealed record ReportLine(string Subject, decimal? Score, string Status);
 /// <summary>One period of one student. Withheld carries the reason and no results.</summary>
 public sealed record ReportSection(string Period, ReportLine[] Lines, string? Withheld);
 public sealed record StudentReport(string StudentName, string StudentCode, string Placement, string Year, ReportSection[] Sections);
-public sealed record SheetLine(string StudentName, string StudentCode, decimal? Score, string? Status);
-public sealed record CourseSheetDocument(string Subject, string Placement, string Year, string Period, bool Published, SheetLine[] Lines);
+/// <summary>ActivityCells: text of each activity in the order of <see cref="CourseSheetDocument.Activities"/> (points, NE, EX or —).</summary>
+public sealed record SheetLine(string StudentName, string StudentCode, decimal? Score, string? Status, string[]? ActivityCells = null);
+public sealed record SheetActivity(string Title, decimal MaxPoints);
+public sealed record CourseSheetDocument(string Subject, string Placement, string Year, string Period, bool Published, SheetLine[] Lines,
+    SheetActivity[]? Activities = null);
 public enum CardKind { Student, Staff }
 /// <summary>
 /// One printed ID card. Students: Code is the student code and Detail the grade/section. Staff: Code is empty and
@@ -353,6 +356,7 @@ public sealed partial class PdfDocuments(IOptions<InstitutionOptions> options, B
 
     public byte[] CourseSheet(CourseSheetDocument sheet)
     {
+        if (sheet.Activities is { Length: > 0 }) return ActivitySheet(sheet, sheet.Activities);
         var logo = Logo(School.Assets.ReportCardLogo);
         return Document.Create(document => document.Page(page =>
         {
@@ -401,6 +405,78 @@ public sealed partial class PdfDocuments(IOptions<InstitutionOptions> options, B
                         row.RelativeItem();
                         row.ConstantItem(220).BorderTop(1).BorderColor(Ink).PaddingTop(4).AlignCenter().Text("Firma del docente").FontSize(8.5f).FontColor(Muted);
                     });
+                });
+            });
+            page.Footer().Element(x => FooterBand(x, "Libreta del curso"));
+        })).GeneratePdf();
+    }
+
+    /// <summary>Gradebook with one column per activity (points obtained / value) and the period total, landscape.</summary>
+    private byte[] ActivitySheet(CourseSheetDocument sheet, SheetActivity[] activities)
+    {
+        var logo = Logo(FirstAsset(School.Assets.CardLogo, School.Assets.MainLogo, School.Assets.ReportCardLogo));
+        var assigned = activities.Sum(a => a.MaxPoints);
+        var narrow = activities.Length > 8;
+        return Document.Create(document => document.Page(page =>
+        {
+            Base(page, PageSizes.Letter.Landscape());
+            page.Header().Element(x => Band(x, logo.Bytes, logo.Type, School.DisplayName, School.CampusLabel,
+                $"LIBRETA DEL CURSO · {sheet.Year.ToUpper(Culture)}", t => t.Span(sheet.Subject).FontColor("#FFFFFF"), sheet.Placement));
+            page.Content().Column(col =>
+            {
+                var recorded = sheet.Lines.Count(x => x.Status is not null);
+                col.Item().Element(x => InfoStrip(x,
+                    ("Materia", sheet.Subject, null),
+                    ("Período", sheet.Period, sheet.Published ? "Publicado" : "En captura"),
+                    ("Actividades", $"{activities.Length} · {assigned.ToString("0.##", Culture)} de 100 pts", $"{recorded} de {sheet.Lines.Length} con nota")));
+                col.Item().PaddingHorizontal(26).PaddingTop(14).Border(1).BorderColor(Line).CornerRadius(10).Table(table =>
+                {
+                    table.ColumnsDefinition(c =>
+                    {
+                        c.ConstantColumn(34);
+                        c.RelativeColumn(narrow ? 3.2f : 4);
+                        foreach (var _ in activities) c.RelativeColumn(1);
+                        c.ConstantColumn(54);
+                    });
+                    table.Header(h =>
+                    {
+                        h.Cell().Element(DarkHead).Text("N.º");
+                        h.Cell().Element(DarkHead).Text("ESTUDIANTE");
+                        foreach (var a in activities)
+                            h.Cell().Background(Graphite).BorderLeft(0.5f).BorderColor("#22FFFFFF").PaddingVertical(6).PaddingHorizontal(4).AlignCenter().Column(c =>
+                            {
+                                c.Item().AlignCenter().Text(a.Title).FontSize(narrow ? 6 : 7).Bold().FontColor("#FFFFFF").ClampLines(2);
+                                c.Item().AlignCenter().Text($"{a.MaxPoints.ToString("0.##", Culture)} pts").FontSize(6).FontColor(Accent);
+                            });
+                        h.Cell().Background(Accent).PaddingVertical(7).PaddingHorizontal(4).AlignCenter().AlignMiddle().Text("TOTAL").FontSize(7.5f).Bold().FontColor(Graphite);
+                    });
+                    var i = 0;
+                    foreach (var line in sheet.Lines)
+                    {
+                        var zebra = i++ % 2 == 1;
+                        var number = i;
+                        table.Cell().Element(x => Cell(x, zebra, vertical: 4)).Text($"{number:00}").FontSize(8).FontColor(Muted);
+                        table.Cell().Element(x => Cell(x, zebra, vertical: 4)).Column(c =>
+                        {
+                            c.Item().Text(line.StudentName).FontSize(8.5f).SemiBold().ClampLines(1);
+                            c.Item().Text(line.StudentCode).FontSize(6.5f).FontColor(Muted);
+                        });
+                        for (var k = 0; k < activities.Length; k++)
+                        {
+                            var text = line.ActivityCells is { } cells && k < cells.Length ? cells[k] : "—";
+                            table.Cell().BorderLeft(0.5f).BorderColor(Line).Element(x => Cell(x, zebra, vertical: 4).AlignCenter())
+                                .Text(text).FontSize(8.5f).SemiBold().FontColor(text is "—" or "EX" ? Muted : text == "NE" ? Danger : Ink);
+                        }
+                        table.Cell().Element(x => Cell(x, zebra, AccentSoft, 4).AlignCenter())
+                            .Text(line.Status == "Scored" ? line.Score?.ToString("0.##", Culture) ?? "—" : line.Status == "Excused" ? "EX" : "—").FontSize(10).ExtraBold();
+                    }
+                });
+                col.Item().PaddingHorizontal(26).PaddingTop(8).Text("NE = no entregó (0 pts) · EX = exonerado · — = sin registrar. El total es la suma de los puntos del período.")
+                    .FontSize(7.5f).FontColor(Muted);
+                col.Item().PaddingHorizontal(26).PaddingTop(28).Row(row =>
+                {
+                    row.RelativeItem();
+                    row.ConstantItem(220).BorderTop(1).BorderColor(Ink).PaddingTop(4).AlignCenter().Text("Firma del docente").FontSize(8.5f).FontColor(Muted);
                 });
             });
             page.Footer().Element(x => FooterBand(x, "Libreta del curso"));
@@ -706,9 +782,13 @@ public sealed partial class PdfDocuments(IOptions<InstitutionOptions> options, B
                         row.ConstantItem(58).AlignMiddle().Element(x => LogoBadge(x, logo, type, 58, Unit.Point));
                         row.ConstantItem(12);
                     }
+                    // "Colegio X Mixco" + "MIXCO": the campus is shown once, under the name.
+                    var shown = tagline.Length > 0 && name.TrimEnd().EndsWith(tagline.Trim(), StringComparison.OrdinalIgnoreCase) && name.Trim().Length > tagline.Trim().Length
+                        ? name.TrimEnd()[..^tagline.Trim().Length].TrimEnd()
+                        : name;
                     row.ConstantItem(170).AlignMiddle().Column(c =>
                     {
-                        c.Item().Text(name.ToUpper(Culture)).FontSize(13).ExtraBold().LetterSpacing(0.02f).FontColor("#FFFFFF").LineHeight(1.05f);
+                        c.Item().Text(shown.ToUpper(Culture)).FontSize(13).ExtraBold().LetterSpacing(0.02f).FontColor("#FFFFFF").LineHeight(1.05f);
                         if (tagline.Length > 0) c.Item().PaddingTop(3).Text(tagline.ToUpper(Culture)).FontSize(7).Bold().LetterSpacing(0.14f).FontColor(Accent);
                     });
                     row.ConstantItem(26).AlignMiddle().AlignCenter().Width(1).Height(48).Background("#FFFFFF33");

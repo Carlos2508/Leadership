@@ -1,0 +1,10 @@
+/* Course homework: points, scoring chips and the explanation when a homework reaches nobody. */
+.form-row.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.points-tag{color:#6b4a00;font-weight:700}
+.submission-list li{gap:12px}
+.submission-actions{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.score-chip{padding:4px 10px;border-radius:999px;background:#e6f5ec;color:#1f7a4d;font-size:12px;font-weight:700;white-space:nowrap}
+.score-chip.empty{background:#f2efe9;color:var(--muted)}
+.no-recipients{display:flex;align-items:flex-start;gap:10px;padding:12px;border-radius:12px;background:#fff8e8;color:#6a4a12;font-size:13px;line-height:1.5}
+.no-recipients app-icon{flex:0 0 18px;height:18px;margin-top:2px}
+@media (max-width:700px){.form-row.two{grid-template-columns:1fr}.submission-actions{justify-content:flex-start}}

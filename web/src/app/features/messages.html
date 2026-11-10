@@ -148,7 +148,15 @@
                 [class.mine]="m.mine"
                 [attr.aria-label]="m.mine ? 'Tú' : thread.name"
               >
-                <p>{{ m.body }}</p>
+                @if (m.attachment; as a) {
+                  <a class="chat-file" [href]="'/api/v1/chat/attachments/' + a.id" download
+                    ><span class="chat-file-icon"><app-icon name="receipt" /></span
+                    ><span class="chat-file-copy"><strong>{{ a.fileName }}</strong><small>{{ api.size(a.size) }} · Descargar</small></span></a
+                  >
+                }
+                @if (text(m)) {
+                  <p>{{ text(m) }}</p>
+                }
                 <footer>
                   <time>{{ m.sentAt | date: 'dd/MM HH:mm' }}</time>
                   @if (m.mine) {
@@ -187,6 +195,18 @@
           }
           @if (thread.canSend) {
             <form class="chat-composer" (ngSubmit)="send()">
+              @if (file(); as f) {
+                <div class="chat-attachment-chip">
+                  <app-icon name="receipt" /><span>{{ f.name }} · {{ api.size(f.size) }}</span>
+                  <button type="button" class="icon-button" (click)="clearFile()" aria-label="Quitar archivo" [disabled]="sending() || retrying()">
+                    <app-icon name="close" />
+                  </button>
+                </div>
+              }
+              <label class="chat-attach" [class.disabled]="sending() || retrying()" [title]="'Adjuntar archivo (máx. ' + attachmentMaxMb() + ' MB)'"
+                ><app-icon name="paperclip" /><span class="sr-only">Adjuntar archivo (máximo {{ attachmentMaxMb() }} MB)</span
+                ><input type="file" [accept]="accept" (change)="chooseFile($event)" [disabled]="sending() || retrying()"
+              /></label>
               <label class="sr-only" for="chat-draft">Escribe un mensaje</label
               ><textarea
                 id="chat-draft"
@@ -196,11 +216,11 @@
                 rows="2"
                 maxlength="4000"
                 [readOnly]="sending() || retrying()"
-                placeholder="Escribe un mensaje…"
+                [placeholder]="file() ? 'Agrega un mensaje (opcional)…' : 'Escribe un mensaje…'"
               ></textarea
               ><button
                 type="submit"
-                [disabled]="sending() || retrying() || !draft.trim()"
+                [disabled]="sending() || retrying() || (!draft.trim() && !file())"
                 aria-label="Enviar mensaje"
               >
                 <app-icon name="arrow" /><span>{{

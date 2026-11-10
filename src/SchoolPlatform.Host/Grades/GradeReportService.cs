@@ -79,9 +79,22 @@ public sealed class GradeReportService(SchoolDbContext db, GradeService grades, 
         var sheet = await grades.SheetAsync(userId, courseId, periodId, ct);
         if (sheet is null) return null;
         var course = sheet.Course;
+        // Activities of the period (if the course grades by activities) with each student's points.
+        var activities = await db.GradeActivities.AsNoTracking()
+            .Where(a => a.CourseId == courseId && a.PeriodId == sheet.Period.Id && a.RemovedAt == null)
+            .OrderBy(a => a.Sequence).ThenBy(a => a.CreatedAt).Select(a => new { a.Id, a.Title, a.MaxPoints }).ToArrayAsync(ct);
+        var ids = activities.Select(a => a.Id).ToArray();
+        var points = (await db.ActivityScores.AsNoTracking().Where(s => ids.Contains(s.ActivityId)).ToArrayAsync(ct))
+            .ToDictionary(s => (s.ActivityId, s.StudentId));
+        string Cell(Guid activity, Guid student) => points.TryGetValue((activity, student), out var p)
+            ? p.Status == ScoreStatus.Scored ? p.Points!.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
+            : p.Status == ScoreStatus.Missing ? "NE" : "EX"
+            : "—";
         return new(course.Subject, course.Section is null ? course.Grade : $"{course.Grade} · Sección {course.Section}", course.Year,
             sheet.Period.Name, sheet.Period.Published,
-            sheet.Rows.Select(x => new SheetLine(x.Name, x.Code, x.Score, x.Status)).ToArray());
+            sheet.Rows.Select(x => new SheetLine(x.Name, x.Code, x.Score, x.Status,
+                activities.Length == 0 ? null : activities.Select(a => Cell(a.Id, x.StudentId)).ToArray())).ToArray(),
+            activities.Length == 0 ? null : activities.Select(a => new SheetActivity(a.Title, a.MaxPoints)).ToArray());
     }
 
     private async Task<(string Name, string Code)> StudentAsync(Guid studentId, CancellationToken ct)

@@ -2,6 +2,12 @@
 
 Actualizado: 9 de noviembre de 2026, America/Guatemala.
 
+## Experiencia escolar: actividades con punteo, páginas del estudiante y adjuntos — rama `feat/experiencia-escolar`
+
+- Las notas del período se arman con actividades con punteo, como en el sistema anterior: la nota es la suma de los puntos (sin promedios ni redondeos). Las tareas pueden valer puntos y se califican desde la entrega. Hay plantillas institucionales de actividades y una libreta en PDF con una columna por actividad. Sin actividades, se mantiene la nota directa 0–100. ADR-022.
+- Estudiantes y familias tienen páginas propias de Tareas (pendientes, historial y calendario), Calificaciones (tarjetas por materia con el detalle de actividades, solo de períodos publicados y con solvencia) y Asistencia (calendario mensual con ✓, ✗, tarde o justificada). Se quitó «Académico» del menú.
+- Encabezado solo con nombre y perfil; «Mi cuenta» y «Cerrar sesión» quedan en el menú. Asistencia de solo consulta y tareas sin destinatarios explican el motivo. Horario en PDF con la misma cuadrícula del tablero y el escudo visible. Chat con adjuntos (PDF, Office, imágenes, ZIP revisado) y límite configurable por administración (5 MB por defecto).
+
 ## Horarios semanales por grado y sección — incremento vigente
 
 - Preparar el horario de cada grupo con la estructura de la semana (días, períodos, recreos), aulas y docentes asignados; guardar el borrador; publicar con vigencia por fechas y versiones que conservan el historial. Al publicar se rechazan cruces de grupo, docente o aula y los docentes sin asignación vigente. Hay reintentos seguros, estructuras reutilizables, copiar un día o copiar desde otro horario, e impresión en carta o A4. ADR-020.

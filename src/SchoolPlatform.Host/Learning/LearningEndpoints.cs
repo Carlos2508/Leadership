@@ -36,6 +36,12 @@ public static class LearningEndpoints
             await service.FeedbackAsync(Actor(user), courseId, id, request, ct);
             return Results.NoContent();
         });
+        api.MapPost("/courses/{courseId:guid}/assignments/{id:guid}/scores", async (Guid courseId, Guid id, AssignmentScoreRequest request, ClaimsPrincipal user,
+            LearningService service, CancellationToken ct) =>
+        {
+            await service.ScoreAsync(Actor(user), courseId, id, request, ct);
+            return Results.NoContent();
+        });
         api.MapGet("/me/students/{studentId:guid}/assignments", async (Guid studentId, ClaimsPrincipal user, LearningService service, CancellationToken ct) =>
             await service.StudentAssignmentsAsync(Actor(user), studentId, ct) is { } items ? Results.Ok(items) : Results.NotFound());
         api.MapGet("/me/assignments/{id:guid}/files", async (Guid id, ClaimsPrincipal user, LearningService learning, SubmissionFileService files, CancellationToken ct) =>

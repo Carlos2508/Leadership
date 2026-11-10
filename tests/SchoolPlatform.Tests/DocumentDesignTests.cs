@@ -98,6 +98,18 @@ public sealed class DocumentDesignTests
                 i % 6 == 0 ? null : i % 9 == 0 ? "Missing" : "Scored")).ToArray());
         Assert.Contains("Estudiante Ficticio 18", Text(await WithDocuments(x => x.CourseSheet(sheet)), "libreta.pdf"));
 
+        // Activities mode: one column per activity, NE/EX marks and the period total.
+        SheetActivity[] activities = [new("Tarea 1", 10), new("Laboratorio de fracciones", 20), new("Proyecto", 30), new("Examen", 40)];
+        var graded = sheet with
+        {
+            Activities = activities,
+            Lines = Enumerable.Range(1, 18).Select(i => new SheetLine($"Estudiante Ficticio {i:00}", $"QA-{i:000}", 50 + i, "Scored",
+                [i % 5 == 0 ? "NE" : "9", i % 7 == 0 ? "EX" : "18.5", "25", "—"])).ToArray()
+        };
+        var activityText = Text(await WithDocuments(x => x.CourseSheet(graded)), "libreta-actividades.pdf");
+        Assert.Contains("Laboratorio", activityText);
+        Assert.Contains("NE", activityText);
+
         var cards = new[]
         {
             new CardData(CardKind.Student, "Ana Sofía", "Ficticia López", "QA-001", "Primero básico · Sección A", "Ciclo 2027", "Q0RFWRQMHPRP", null),

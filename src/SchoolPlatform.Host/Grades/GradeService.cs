@@ -22,7 +22,9 @@ public sealed record CourseCompletion(Guid CourseId, string Subject, string Grad
 {
     public int Missing => Expected - Recorded;
 }
-public sealed record MyGrade(string Subject, decimal? Score, string Status);
+/// <summary>Points of one activity in a published, cleared period (only returned through <see cref="GradeService.MyGradesAsync"/>).</summary>
+public sealed record MyActivity(string Title, decimal MaxPoints, decimal? Points, string? Status, Guid? AssignmentId);
+public sealed record MyGrade(string Subject, decimal? Score, string Status, MyActivity[]? Activities = null);
 public sealed record MyGradesPeriod(Guid PeriodId, int Sequence, string Name, string Status, MyGrade[] Grades, PendingItem[] Pending);
 public sealed record MyGrades(Guid StudentId, string? Year, MyGradesPeriod[] Periods);
 
@@ -76,6 +78,9 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
         var entries = request.Entries ?? [];
         if (entries.Length is 0 or > 200 || entries.Select(x => x.StudentId).Distinct().Count() != entries.Length)
             throw OperationException.Invalid("Envía una fila por estudiante.");
+        // With activities the period result is the sum of their points; it is not typed by hand.
+        if (await db.GradeActivities.AnyAsync(x => x.CourseId == courseId && x.PeriodId == period.Id && x.RemovedAt == null, ct))
+            throw new OperationException(409, "activity-graded", "Este curso califica por actividades en el período; registra los punteos en cada actividad.");
         foreach (var entry in entries)
         {
             if (!ScoreStatus.All.Contains(entry.Status)) throw OperationException.Invalid("Estado de nota inválido.");
@@ -224,11 +229,24 @@ public sealed class GradeService(SchoolDbContext db, SchoolAudit audit, TimeProv
                 continue;
             }
             var grades = await db.PeriodScores.AsNoTracking().Where(x => x.StudentId == studentId && x.PeriodId == publication.PeriodId)
-                .Join(db.Courses, s => s.CourseId, c => c.Id, (s, c) => new { s.Score, s.Status, c.SubjectId })
-                .Join(db.Subjects, x => x.SubjectId, subject => subject.Id, (x, subject) => new { Subject = subject.Name, x.Score, x.Status })
+                .Join(db.Courses, s => s.CourseId, c => c.Id, (s, c) => new { s.Score, s.Status, s.CourseId, c.SubjectId })
+                .Join(db.Subjects, x => x.SubjectId, subject => subject.Id, (x, subject) => new { Subject = subject.Name, x.Score, x.Status, x.CourseId })
                 .OrderBy(x => x.Subject).ToArrayAsync(ct);
+            // Activity breakdown of the same published, cleared period (points that make up each result).
+            var courseIds = grades.Select(x => x.CourseId).ToArray();
+            var activities = (await db.GradeActivities.AsNoTracking()
+                    .Where(a => a.PeriodId == publication.PeriodId && a.RemovedAt == null && courseIds.Contains(a.CourseId))
+                    .OrderBy(a => a.Sequence)
+                    .Select(a => new
+                    {
+                        a.CourseId, a.Title, a.MaxPoints, a.AssignmentId,
+                        Score = db.ActivityScores.Where(s => s.ActivityId == a.Id && s.StudentId == studentId).Select(s => new { s.Points, s.Status }).FirstOrDefault()
+                    }).ToArrayAsync(ct))
+                .ToLookup(a => a.CourseId);
             result.Add(new(publication.PeriodId, publication.Sequence, publication.Name, "Available",
-                grades.Select(x => new MyGrade(x.Subject, x.Score, x.Status)).ToArray(), []));
+                grades.Select(x => new MyGrade(x.Subject, x.Score, x.Status,
+                    activities[x.CourseId].Select(a => new MyActivity(a.Title, a.MaxPoints, a.Score?.Points, a.Score?.Status, a.AssignmentId)).ToArray()))
+                    .ToArray(), []));
         }
         return new(studentId, enrollment.Label, result.ToArray());
     }

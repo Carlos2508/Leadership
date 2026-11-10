@@ -303,8 +303,9 @@ test('teacher captures, coordination publishes and the family sees grades only o
     password,
   );
   await familyPage.locator('#content').getByRole('link', { name: 'Ema Sintética ' + s }).click();
-  await expect(familyPage.locator('.blocked-grades')).toContainText('colegiaturas requeridas');
-  await expect(familyPage.locator('.blocked-grades')).toContainText('Cuota 1');
+  await familyPage.getByRole('navigation', { name: 'Secciones del estudiante' }).getByRole('link', { name: 'Calificaciones' }).click();
+  await expect(familyPage.locator('.sp-blocked')).toContainText('colegiaturas requeridas');
+  await expect(familyPage.locator('.sp-blocked')).toContainText('Cuota 1');
   await expect(familyPage.getByText('91.5')).toHaveCount(0);
   await expectAccessible(familyPage);
   await familyPage.screenshot({ path: testInfo.outputPath('family-blocked.png'), fullPage: true });
@@ -323,7 +324,7 @@ test('teacher captures, coordination publishes and the family sees grades only o
     allocations: [{ chargeId: statement.charges[0].id, amount: 300 }],
   });
   await familyPage.reload();
-  await expect(familyPage.locator('.grade-matrix')).toContainText('91.5');
+  await expect(familyPage.locator('.sp-subjects')).toContainText('91.5');
   await expectAccessible(familyPage);
   await familyPage.screenshot({ path: testInfo.outputPath('family-grades.png'), fullPage: true });
   await familyPage.context().close();

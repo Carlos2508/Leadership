@@ -9,7 +9,8 @@ public static class ChatEndpoints
     public static void MapChat(this WebApplication app)
     {
         var api = app.MapGroup("/api/v1").RequireAuthorization("ActiveAccount").AddEndpointFilter<ApiWriteFilter>();
-        api.MapGet("/chat/summary", (ClaimsPrincipal user, ChatService service, CancellationToken ct) => service.SummaryAsync(PeopleEndpoints.Actor(user), ct));
+        api.MapGet("/chat/summary", async (ClaimsPrincipal user, ChatService service, PlatformSettingsService settings, CancellationToken ct) =>
+            await service.SummaryAsync(PeopleEndpoints.Actor(user), ct) with { AttachmentMaxMb = await settings.ChatAttachmentMaxMbAsync(ct) });
         api.MapGet("/chat/years", (ClaimsPrincipal user, ChatService service, CancellationToken ct) => service.YearsAsync(PeopleEndpoints.Actor(user), ct));
         api.MapPost("/chat/activity", async (ChatActivity request, ClaimsPrincipal user, ChatService service, CancellationToken ct) =>
         {
@@ -27,6 +28,14 @@ public static class ChatEndpoints
             service.MessagesAsync(PeopleEndpoints.Actor(user), yearId, id, before, after, ct, knownRead ?? 0, knownDelivered ?? 0, receiptFrom ?? 1));
         conversation.MapPost("/messages", (Guid yearId, Guid id, SendChat request, ClaimsPrincipal user, ChatService service, CancellationToken ct) =>
             service.SendAsync(PeopleEndpoints.Actor(user), yearId, id, request, ct)).RequireRateLimiting("chat-send");
+        // One file per message; the request limit covers the largest size the administrator may allow.
+        conversation.MapPost("/attachments", async (Guid yearId, Guid id, IFormFile file, [Microsoft.AspNetCore.Mvc.FromForm] Guid clientMessageId,
+            [Microsoft.AspNetCore.Mvc.FromForm] string? caption, ClaimsPrincipal user, ChatAttachmentService service, CancellationToken ct) =>
+            Results.Ok(await service.SendAsync(PeopleEndpoints.Actor(user), yearId, id, clientMessageId, caption, file, ct)))
+            .RequireRateLimiting("chat-send")
+            .WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute((PlatformSettingsService.ChatAttachmentLimitMb + 1) * 1024L * 1024));
+        api.MapGet("/chat/attachments/{id:guid}", async (Guid id, ClaimsPrincipal user, ChatAttachmentService service, CancellationToken ct) =>
+            await service.DownloadAsync(PeopleEndpoints.Actor(user), id, ct) is { } file ? Results.File(file.Path, file.ContentType, file.FileName) : Results.NotFound());
         conversation.MapPost("/read", async (Guid yearId, Guid id, ReadChat request, ClaimsPrincipal user, ChatService service, CancellationToken ct) =>
         {
             await service.ReadAsync(PeopleEndpoints.Actor(user), yearId, id, request.ThroughSequence, ct);

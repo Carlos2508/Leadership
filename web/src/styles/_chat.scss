@@ -306,7 +306,7 @@
 }
 .chat-composer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 10px;
   padding: 16px 20px;
   background: white;
@@ -556,5 +556,94 @@
     input {
       flex-basis: 100%;
     }
+  }
+}
+
+/* Attachments: one file per message, shown as a download card in the bubble. */
+.chat-attach {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 48px;
+  border: 1px solid #e7e1d9;
+  border-radius: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  &:hover,
+  &:focus-within {
+    color: var(--ink);
+    border-color: var(--accent);
+  }
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+.chat-attachment-chip {
+  grid-column: 1/-1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 12px;
+  background: #f6f3ee;
+  font-size: 13px;
+  min-width: 0;
+  span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  app-icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+.chat-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 320px;
+  margin-bottom: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #ffffffb3;
+  border: 1px solid #e7e1d9;
+  color: inherit;
+  text-decoration: none;
+  &:hover {
+    border-color: var(--accent);
+  }
+}
+.chat-file-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 20%, white);
+}
+.chat-file-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  strong {
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  small {
+    color: var(--muted);
+    font-size: 11px;
   }
 }

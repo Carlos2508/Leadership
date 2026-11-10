@@ -164,7 +164,55 @@ public sealed partial class ChatService(SchoolDbContext db, SchoolAudit audit, T
             m.Sequence >= receiptFrom && m.Sequence <= after &&
             ((m.ReadAt != null && m.Sequence > knownRead) || (m.DeliveredAt != null && m.Sequence > knownDelivered)))
             .OrderBy(m => m.Sequence).Select(m => new ChatReceipt(m.Sequence, m.DeliveredAt, m.ReadAt)).ToArrayAsync(ct);
-        return new(thread, rows.Take(50).OrderBy(x => x.Sequence).Select(x => View(x, person)).ToArray(), rows.Length > 50, receipts);
+        var sequences = rows.Select(r => r.Sequence).ToArray();
+        var files = await db.ChatAttachments.AsNoTracking().Where(a => a.ConversationId == id && sequences.Contains(a.Sequence))
+            .ToDictionaryAsync(a => a.Sequence, a => new ChatAttachmentView(a.Id, a.FileName, a.ContentType, a.Size), ct);
+        return new(thread, rows.Take(50).OrderBy(x => x.Sequence).Select(x => View(x, person) with { Attachment = files.GetValueOrDefault(x.Sequence) }).ToArray(),
+            rows.Length > 50, receipts);
+    }
+
+    /// <summary>Whether the account takes part in the conversation (attachment downloads use the same rule as messages).</summary>
+    public async Task<bool> CanReadAsync(Guid actor, Guid year, Guid id, CancellationToken ct) =>
+        await Threads(actor, year).AnyAsync(x => x.Id == id, ct);
+
+    /// <summary>
+    /// Sends a message carrying one file, with the same authorization, lock and retry rules as text messages. Without a caption
+    /// the message text names the file, so older clients still show it. Returns whether this attempt stored the file.
+    /// </summary>
+    internal async Task<(ChatMessageView View, bool Stored)> SendWithAttachmentAsync(Guid actor, Guid year, Guid id, Guid clientMessageId, string? caption,
+        ChatAttachment attachment, CancellationToken ct)
+    {
+        var text = (caption ?? "").Replace("\r\n", "\n").Trim();
+        var body = text.Length > 0 ? text : "📎 " + attachment.FileName;
+        if (clientMessageId == Guid.Empty || body.Length > 4000 || body.Any(c => char.IsControl(c) && c != '\n' && c != '\t'))
+            throw OperationException.Invalid("El mensaje del archivo admite hasta 4000 caracteres.");
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        await LockAsync(id.ToString("N"), ct);
+        var thread = await Threads(actor, year).SingleOrDefaultAsync(x => x.Id == id, ct) ?? throw Denied();
+        if (!thread.CanSend) throw OperationException.Invalid("El ciclo está cerrado. Esta conversación es de consulta.");
+        var person = await ActorPerson(actor, ct);
+        var duplicate = await db.ChatMessages.SingleOrDefaultAsync(x => x.ConversationId == id && x.SenderId == person && x.ClientMessageId == clientMessageId, ct);
+        if (duplicate is not null)
+        {
+            var previous = await db.ChatAttachments.AsNoTracking().SingleOrDefaultAsync(a => a.ConversationId == id && a.Sequence == duplicate.Sequence, ct);
+            if (previous is null || previous.Sha256 != attachment.Sha256) throw new OperationException(409, "message-key-reused", "Ese intento ya pertenece a otro mensaje.");
+            await tx.CommitAsync(ct);
+            return (View(duplicate, person) with { Attachment = new(previous.Id, previous.FileName, previous.ContentType, previous.Size) }, false);
+        }
+        var conversation = await db.ChatConversations.SingleAsync(x => x.Id == id, ct);
+        var now = time.GetUtcNow();
+        var message = new ChatMessage { ConversationId = id, Sequence = ++conversation.LastSequence, SenderId = person, ClientMessageId = clientMessageId, Body = body, SentAt = now };
+        conversation.UpdatedAt = now;
+        db.ChatMessages.Add(message);
+        attachment.ConversationId = id;
+        attachment.Sequence = message.Sequence;
+        attachment.UploadedAt = now;
+        attachment.UploadedBy = actor;
+        db.ChatAttachments.Add(attachment);
+        audit.Record("ChatAttachmentSent", actor, "Chat", id, detail: $"{message.Sequence}:{Path.GetExtension(attachment.FileName).ToLowerInvariant()}");
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return (View(message, person) with { Attachment = new(attachment.Id, attachment.FileName, attachment.ContentType, attachment.Size) }, true);
     }
 
     public async Task<ChatMessageView> SendAsync(Guid actor, Guid year, Guid id, SendChat request, CancellationToken ct)

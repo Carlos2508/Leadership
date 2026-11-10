@@ -40,9 +40,13 @@ public sealed class AttendanceRecord
 public sealed record AttendanceEntry(Guid StudentId, string Status, string? Note, string? Version);
 public sealed record SaveAttendanceRequest(DateOnly Date, AttendanceEntry[] Entries);
 public sealed record AttendanceRow(Guid StudentId, string Name, string Code, string? Status, string Note, string? Version);
-public sealed record AttendanceSheet(CourseView Course, DateOnly Date, bool CanEdit, AttendanceRow[] Rows);
+/// <summary>ReadOnlyReason explains a sheet that cannot be edited (a future date, or not the assigned teacher).</summary>
+public sealed record AttendanceSheet(CourseView Course, DateOnly Date, bool CanEdit, AttendanceRow[] Rows, string? ReadOnlyReason = null);
 public sealed record AttendanceDay(DateOnly Date, string Subject, string Status, string Note);
 public sealed record AttendanceSummary(int Present, int Absent, int Late, int Excused, AttendanceDay[] Incidents);
+public sealed record CalendarEntry(string Subject, string Status, string Note);
+public sealed record CalendarDay(DateOnly Date, CalendarEntry[] Entries);
+public sealed record AttendanceCalendar(DateOnly From, DateOnly To, int Present, int Absent, int Late, int Excused, CalendarDay[] Days);
 
 /// <summary>
 /// Daily attendance per course. Taken by the assigned teacher (or academic management) for students in the course on that
@@ -59,10 +63,14 @@ public sealed class AttendanceService(SchoolDbContext db, SchoolAudit audit, Tim
         var records = await db.AttendanceRecords.AsNoTracking()
             .Where(r => ids.Contains(r.StudentId) && db.AttendanceSessions.Any(s => s.Id == r.SessionId && s.CourseId == courseId && s.Date == day))
             .ToDictionaryAsync(x => x.StudentId, ct);
-        var editable = day <= courses.LocalDate(time.GetUtcNow()) && await courses.CanTeachAsync(userId, courseId, ct);
-        return new(course, day, editable, students.Select(s => records.TryGetValue(s.Id, out var r)
+        var today = courses.LocalDate(time.GetUtcNow());
+        var teaches = await courses.CanTeachAsync(userId, courseId, ct);
+        var reason = !teaches ? "Solo el docente asignado al curso o coordinación académica registran la asistencia."
+            : day > today ? $"Es una fecha futura: la asistencia del {day:dd/MM/yyyy} se registra ese día o después (hoy es {today:dd/MM/yyyy})."
+            : null;
+        return new(course, day, reason is null, students.Select(s => records.TryGetValue(s.Id, out var r)
             ? new AttendanceRow(s.Id, s.Name, s.Code, r.Status, r.Note, Versions.Encode(r.Version))
-            : new AttendanceRow(s.Id, s.Name, s.Code, null, "", null)).ToArray());
+            : new AttendanceRow(s.Id, s.Name, s.Code, null, "", null)).ToArray(), reason);
     }
 
     public async Task<int> SaveAsync(Guid userId, Guid courseId, SaveAttendanceRequest request, CancellationToken ct)
@@ -133,6 +141,28 @@ public sealed class AttendanceService(SchoolDbContext db, SchoolAudit audit, Tim
             current.Count(x => x.Status == AttendanceStatus.Late), current.Count(x => x.Status == AttendanceStatus.Excused),
             current.Where(x => x.Status != AttendanceStatus.Present).OrderByDescending(x => x.Date).Take(30)
                 .Select(x => new AttendanceDay(x.Date, x.Subject, x.Status, x.Note)).ToArray());
+    }
+
+    /// <summary>
+    /// Day-by-day attendance of a student between two dates (at most 62 days), per subject, for the student or a guardian
+    /// with AcademicRecords; null when there is no access. Days without records are simply absent from the result.
+    /// </summary>
+    public async Task<AttendanceCalendar?> CalendarAsync(Guid userId, Guid studentId, DateOnly start, DateOnly end, CancellationToken ct)
+    {
+        var access = await people.StudentAccessAsync(userId, studentId, ct);
+        if (access is null || !access.Has(Faculties.AcademicRecords)) return null;
+        if (end < start || end.DayNumber - start.DayNumber > 62) throw OperationException.Invalid("Consulta hasta dos meses a la vez.");
+        var rows = await (from r in db.AttendanceRecords.AsNoTracking()
+                          where r.StudentId == studentId
+                          join s in db.AttendanceSessions on r.SessionId equals s.Id
+                          where s.Date >= start && s.Date <= end
+                          join c in db.Courses on s.CourseId equals c.Id
+                          join subject in db.Subjects on c.SubjectId equals subject.Id
+                          select new { s.Date, Subject = subject.Name, r.Status, r.Note }).ToArrayAsync(ct);
+        return new(start, end, rows.Count(x => x.Status == AttendanceStatus.Present), rows.Count(x => x.Status == AttendanceStatus.Absent),
+            rows.Count(x => x.Status == AttendanceStatus.Late), rows.Count(x => x.Status == AttendanceStatus.Excused),
+            rows.GroupBy(x => x.Date).OrderBy(x => x.Key)
+                .Select(d => new CalendarDay(d.Key, d.OrderBy(x => x.Subject).Select(x => new CalendarEntry(x.Subject, x.Status, x.Note)).ToArray())).ToArray());
     }
 
     private async Task<(CourseView Course, DateOnly Day)> ResolveAsync(Guid courseId, DateOnly? date, CancellationToken ct, bool allowFuture = false)

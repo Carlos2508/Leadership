@@ -21,6 +21,13 @@ async function post(page: Page, path: string, data: object) {
   return response.status() === 204 ? null : response.json();
 }
 
+/** Opens a link of the main menu (behind the menu button on phones). */
+async function openNav(page: Page, name: string): Promise<void> {
+  const menu = page.getByRole('button', { name: 'Abrir menú' });
+  if (await menu.isVisible()) await menu.click();
+  await page.getByRole('navigation', { name: 'Navegación principal' }).getByRole('link', { name, exact: true }).click();
+}
+
 async function expectAccessible(page: Page): Promise<void> {
   expect(
     (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
@@ -201,7 +208,11 @@ test('teacher publishes an activity, the student submits and receives feedback',
     .getByRole('dialog')
     .getByLabel('Fecha y hora de entrega')
     .fill(new Date(due.getTime() - due.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+  // The homework is worth points: it becomes an activity of the gradebook.
+  await teacherPage.getByRole('dialog').getByLabel('Esta tarea vale puntos').check();
+  await teacherPage.getByRole('dialog').getByLabel('Punteo (puntos)').fill('20');
   await teacherPage.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click();
+  await expect(teacherPage.locator('.assignment-card')).toContainText('Vale 20 pts');
   await teacherPage.getByRole('button', { name: `Publicar ${title}` }).click();
   await teacherPage
     .locator('.sp-alert')
@@ -217,15 +228,17 @@ test('teacher publishes an activity, the student submits and receives feedback',
     'stu-' + s.toLowerCase(),
     password,
   );
-  await studentPage.getByRole('link', { name: 'Ver notas, tareas y asistencia' }).click();
-  await expect(studentPage.getByRole('heading', { name: 'Tareas' })).toBeVisible();
+  // Homework, grades and attendance are separate pages of the student's menu.
+  await openNav(studentPage, 'Tareas');
+  await expect(studentPage.getByRole('heading', { level: 1, name: 'Tareas' })).toBeVisible();
+  await expect(studentPage.locator('.sp-task-list')).toContainText('Vale 20 pts');
   await studentPage.getByRole('button', { name: `Entregar ${title}` }).click();
   await studentPage
     .getByRole('dialog')
     .getByLabel('Tu entrega')
     .fill('El capítulo describe el viaje del protagonista.');
   await studentPage.getByRole('button', { name: 'Enviar entrega' }).click();
-  await expect(studentPage.locator('.task-list')).toContainText('Entregada');
+  await expect(studentPage.locator('.sp-task-list')).toContainText('Entregada');
   // The dialog stays open after the first submission so the student can attach evidence.
   await studentPage
     .getByRole('dialog')
@@ -254,21 +267,37 @@ test('teacher publishes an activity, the student submits and receives feedback',
   await expect(
     teacherPage.locator('.submission-list').getByRole('link', { name: /evidencia\.png/ }),
   ).toBeVisible();
-  await teacherPage.getByRole('button', { name: `Retroalimentar a Iris Sintética ${s}` }).click();
+  await teacherPage.getByRole('button', { name: `Calificar a Iris Sintética ${s}` }).click();
+  await teacherPage.getByRole('dialog').getByLabel('Puntos (de 20)').fill('18');
   await teacherPage
     .getByRole('dialog')
     .getByLabel('Comentario para el estudiante')
     .fill('Buen resumen; agrega una cita.');
   await teacherPage.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click();
   await expect(teacherPage.locator('.submission-list')).toContainText('Revisada');
+  await expect(teacherPage.locator('.submission-list')).toContainText('18 / 20 pts');
+
+  // Gradebook: the homework is a column; another activity is added and scored; the total adds both.
+  await teacherPage.goto(`/workspace/courses/${course}/grades`);
+  await expect(teacherPage.locator('.gb-table thead')).toContainText(title);
+  await teacherPage.getByRole('button', { name: 'Agregar actividad' }).click();
+  await teacherPage.getByRole('dialog').getByLabel('Nombre de la actividad').fill('Examen corto');
+  await teacherPage.getByRole('dialog').getByLabel('Punteo (puntos que vale)').fill('30');
+  await teacherPage.getByRole('dialog').getByRole('button', { name: 'Guardar actividad' }).click();
+  await teacherPage.getByLabel(`Punteo de Iris Sintética ${s} en Examen corto`).fill('27');
+  await expect(teacherPage.locator('.save-state')).toContainText('Guardado');
+  await expect(teacherPage.locator('td.gb-total').first()).toContainText('45');
+  await expectAccessible(teacherPage);
+  await teacherPage.screenshot({ path: test.info().outputPath('gradebook.png'), fullPage: true });
   await teacherPage.screenshot({
     path: test.info().outputPath('teacher-activities.png'),
     fullPage: true,
   });
 
   await studentPage.reload();
-  await expect(studentPage.locator('.task-list')).toContainText('Buen resumen');
-  await expect(studentPage.locator('.task-list')).toContainText('Revisada');
+  await expect(studentPage.locator('.sp-task-list')).toContainText('Buen resumen');
+  await expect(studentPage.locator('.sp-task-list')).toContainText('Revisada');
+  await expectAccessible(studentPage);
   await studentPage.screenshot({
     path: test.info().outputPath('student-tasks.png'),
     fullPage: true,
@@ -285,10 +314,11 @@ test('teacher publishes an activity, the student submits and receives feedback',
   await expect(teacherPage.locator('.sp-toast')).toContainText('Asistencia guardada');
   await expectAccessible(teacherPage);
   await teacherPage.screenshot({ path: test.info().outputPath('attendance.png'), fullPage: true });
-  await studentPage.reload();
-  await expect(studentPage.locator('.attendance-summary')).toContainText('1 tardanza');
-  await expect(studentPage.getByText('Llegó 10 minutos tarde')).toBeVisible();
+  await openNav(studentPage, 'Asistencia');
+  await expect(studentPage.locator('.sp-day.today')).toHaveAttribute('data-state', 'Late');
+  await expect(studentPage.locator('.sa-detail')).toContainText('Llegó 10 minutos tarde');
   await expectAccessible(studentPage);
+  await studentPage.screenshot({ path: test.info().outputPath('student-attendance.png'), fullPage: true });
   await teacherPage.context().close();
   await studentPage.context().close();
 });

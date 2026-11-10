@@ -8,6 +8,16 @@
 }
 .time-filters label {
   flex: 1 1 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 650;
+}
+.time-filters select {
+  width: 100%;
+  min-height: 42px;
 }
 .time-filters input[type='date'] {
   min-height: 42px;

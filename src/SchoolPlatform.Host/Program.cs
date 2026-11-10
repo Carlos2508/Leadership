@@ -62,6 +62,7 @@ builder.Services.AddScoped<SchoolPlatform.Host.Finance.ClearanceService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Inventory.InventoryService>();
 builder.Services.AddScoped<SchoolPlatform.Host.People.FamilyRegistrationService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Grades.GradeService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Grades.ActivityService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Common.DashboardService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Grades.GradeReportService>();
 builder.Services.AddSingleton<SchoolPlatform.Host.Documents.BrandAssets>();
@@ -85,6 +86,8 @@ builder.Services.AddOptions<SchoolPlatform.Host.Learning.StorageOptions>().BindC
 builder.Services.AddScoped<SchoolPlatform.Host.Attendance.AttendanceService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Communication.CommunicationService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Chat.ChatService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Chat.ChatAttachmentService>();
+builder.Services.AddScoped<SchoolPlatform.Host.Common.PlatformSettingsService>();
 builder.Services.AddScoped<SchoolPlatform.Host.Timetables.TimetableService>();
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
 {
@@ -266,6 +269,7 @@ SchoolPlatform.Host.Academic.AcademicEndpoints.MapCourses(app);
 SchoolPlatform.Host.Finance.FinanceEndpoints.MapFinance(app);
 SchoolPlatform.Host.Inventory.InventoryEndpoints.MapInventory(app);
 SchoolPlatform.Host.Timetables.TimetableEndpoints.MapTimetables(app);
+SchoolPlatform.Host.Common.PlatformSettingsEndpoints.MapPlatformSettings(app);
 SchoolPlatform.Host.Grades.GradeEndpoints.MapGrades(app);
 SchoolPlatform.Host.Learning.LearningEndpoints.MapLearning(app);
 SchoolPlatform.Host.Attendance.AttendanceEndpoints.MapAttendance(app);

@@ -13,7 +13,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AccessApi, PageResult } from '../core/access-api';
 import { Alerts } from '../core/alerts';
-import { ChatContact, ChatInbox, ChatMessage, ChatPage, ChatThread, ChatYear } from '../core/chat';
+import { ChatContact, ChatInbox, ChatMessage, ChatPage, ChatThread, ChatYear, chatAttachmentTypes } from '../core/chat';
 import { PendingChanges } from '../core/pending-changes';
 import { Icon } from '../shared/icon';
 import { Shell } from '../shared/shell';
@@ -25,7 +25,7 @@ import { ChatPresence } from '../shared/chat-presence';
   templateUrl: './messages.html',
 })
 export class Messages implements PendingChanges {
-  private readonly api = inject(AccessApi);
+  readonly api = inject(AccessApi);
   private readonly alerts = inject(Alerts);
   readonly inbox = inject(ChatInbox);
   private readonly router = inject(Router);
@@ -58,7 +58,37 @@ export class Messages implements PendingChanges {
   private selectedId = '';
   private generation = 0;
   private polling = false;
-  private pending?: { clientMessageId: string; body: string };
+  private pending?: { clientMessageId: string; body: string; file?: File };
+  /** File chosen to send with the next message (one per message). */
+  readonly file = signal<File | null>(null);
+  readonly accept = chatAttachmentTypes.join(',');
+  attachmentMaxMb(): number {
+    return this.inbox.summary().attachmentMaxMb || 5;
+  }
+  /** Text of a message, hidden when it only names its attachment. */
+  text(m: ChatMessage): string {
+    return m.attachment && m.body === '\u{1F4CE} ' + m.attachment.fileName ? '' : m.body;
+  }
+  chooseFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const chosen = input.files?.[0] ?? null;
+    input.value = '';
+    if (!chosen) return;
+    const extension = chosen.name.slice(chosen.name.lastIndexOf('.')).toLowerCase();
+    if (!chatAttachmentTypes.includes(extension)) {
+      this.threadError.set(`Ese tipo de archivo no se puede enviar. Usa: ${chatAttachmentTypes.join(', ')}.`);
+      return;
+    }
+    if (chosen.size > this.attachmentMaxMb() * 1024 * 1024) {
+      this.threadError.set(`El archivo pesa ${this.api.size(chosen.size)}; el máximo es ${this.attachmentMaxMb()} MB.`);
+      return;
+    }
+    this.threadError.set('');
+    this.file.set(chosen);
+  }
+  clearFile(): void {
+    if (!this.sending() && !this.retrying()) this.file.set(null);
+  }
   private readThrough = 0;
   private threadPage = 1;
   private listRevision = 0;
@@ -227,17 +257,24 @@ export class Messages implements PendingChanges {
   }
   async send(): Promise<void> {
     const thread = this.current();
-    if (!thread || !thread.canSend || this.sending() || !this.draft.trim()) return;
-    this.pending ??= { clientMessageId: crypto.randomUUID(), body: this.draft.trim() };
+    if (!thread || !thread.canSend || this.sending() || (!this.draft.trim() && !this.file())) return;
+    this.pending ??= { clientMessageId: crypto.randomUUID(), body: this.draft.trim(), file: this.file() ?? undefined };
     const attempt = this.pending;
     this.sending.set(true);
     this.threadError.set('');
     const generation = this.generation;
     try {
-      await this.api.post<ChatMessage>(
-        this.base() + `/conversations/${thread.id}/messages`,
-        attempt,
-      );
+      if (attempt.file) {
+        const data = new FormData();
+        data.append('file', attempt.file);
+        data.append('clientMessageId', attempt.clientMessageId);
+        if (attempt.body) data.append('caption', attempt.body);
+        await this.api.upload<ChatMessage>(this.base() + `/conversations/${thread.id}/attachments`, data);
+      } else
+        await this.api.post<ChatMessage>(this.base() + `/conversations/${thread.id}/messages`, {
+          clientMessageId: attempt.clientMessageId,
+          body: attempt.body,
+        });
       if (generation !== this.generation || this.pending !== attempt) return;
       // Fetch from the last displayed sequence: appending the acknowledgment directly could skip incoming
       // messages committed between the previous poll and this send.
@@ -259,6 +296,7 @@ export class Messages implements PendingChanges {
     this.pending = undefined;
     this.retrying.set(false);
     this.draft = '';
+    this.file.set(null);
     void this.inbox.refresh();
   }
   async loadOlder(): Promise<void> {

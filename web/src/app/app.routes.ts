@@ -155,6 +155,16 @@ export const routes: Routes = [
     loadComponent: () => import('./features/course-grades').then((x) => x.CourseGrades),
   },
   {
+    path: 'workspace/settings',
+    canActivate: [permissionGuard('accounts.manage')],
+    loadComponent: () => import('./features/platform-settings').then((x) => x.PlatformSettings),
+  },
+  {
+    path: 'workspace/grades/templates',
+    canActivate: [permissionGuard('academic.read')],
+    loadComponent: () => import('./features/activity-templates').then((x) => x.ActivityTemplates),
+  },
+  {
     path: 'workspace/grades',
     canActivate: [permissionGuard('academic.read')],
     loadComponent: () => import('./features/grade-publications').then((x) => x.GradePublications),
@@ -194,6 +204,21 @@ export const routes: Routes = [
     path: 'workspace/my/students/:id',
     canActivate: [sessionGuard],
     loadComponent: () => import('./features/my-student').then((x) => x.MyStudent),
+  },
+  {
+    path: 'workspace/my/students/:id/tasks',
+    canActivate: [sessionGuard],
+    loadComponent: () => import('./features/my-student-tasks').then((x) => x.MyStudentTasks),
+  },
+  {
+    path: 'workspace/my/students/:id/grades',
+    canActivate: [sessionGuard],
+    loadComponent: () => import('./features/my-student-grades').then((x) => x.MyStudentGrades),
+  },
+  {
+    path: 'workspace/my/students/:id/attendance',
+    canActivate: [sessionGuard],
+    loadComponent: () => import('./features/my-student-attendance').then((x) => x.MyStudentAttendance),
   },
   {
     path: 'workspace/my/students/:studentId/receipts/:id',
